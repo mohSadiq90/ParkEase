@@ -8,33 +8,25 @@ import {
     View, Text, FlatList, TouchableOpacity,
     StyleSheet, RefreshControl, ActivityIndicator
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useSelector, useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/globalStyles';
-import chatService from '../../services/chat/chatService';
+import { getConversationsThunk } from '../../store/slices/chatSlice';
 
 const ConversationListScreen = ({ navigation }) => {
-    const [conversations, setConversations] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const dispatch = useDispatch();
+    const { conversations, loadingConversations } = useSelector(state => state.chat);
     const [refreshing, setRefreshing] = useState(false);
 
-    useFocusEffect(
-        useCallback(() => {
-            loadConversations();
-        }, [])
-    );
+    useEffect(() => {
+        loadConversations();
+    }, []);
 
     const loadConversations = async () => {
         try {
-            setLoading(true);
-            const result = await chatService.getConversations();
-            if (result.success) {
-                setConversations(result.data?.conversations || []);
-            }
+            await dispatch(getConversationsThunk()).unwrap();
         } catch (error) {
             console.error('Failed to load conversations:', error);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -94,7 +86,7 @@ const ConversationListScreen = ({ navigation }) => {
         </TouchableOpacity>
     );
 
-    if (loading) {
+    if (loadingConversations && !refreshing && conversations.length === 0) {
         return (
             <View style={styles.centered}>
                 <ActivityIndicator size="large" color={colors.primary} />

@@ -9,68 +9,83 @@ import {
     StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../styles/globalStyles';
+import { useSelector, useDispatch } from 'react-redux';
 import { useAuth } from '../../hooks/useAuth';
 import chatService from '../../services/chat/chatService';
+import chatHub from '../../services/chat/chatHub';
+import { getMessagesThunk, sendMessageThunk, markAsReadThunk } from '../../store/slices/chatSlice';
 
 const ChatScreen = ({ route, navigation }) => {
     const { conversationId, parkingSpaceId, participantName, parkingTitle } = route.params;
     const { user } = useAuth();
-    const [messages, setMessages] = useState([]);
+    const dispatch = useDispatch();
+    const messages = useSelector(state => state.chat.messagesByConversation[conversationId] || [])
+        .slice()
+        .reverse(); // Redux state is newest-first, we need oldest-first for non-inverted FlatList
+    
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
-    const [sending, setSending] = useState(false);
     const flatListRef = useRef(null);
-    const pollInterval = useRef(null);
 
     useEffect(() => {
-        loadMessages();
-        markRead();
+        let isMounted = true;
+        let isCurrentConversation = true;
 
-        // Poll for new messages every 5 seconds (lightweight real-time substitute for mobile)
-        pollInterval.current = setInterval(loadMessages, 5000);
-        return () => {
-            if (pollInterval.current) clearInterval(pollInterval.current);
-        };
-    }, [conversationId]);
+        const initChat = async () => {
+            if (!conversationId) return;
+            
+            // Join real-time room
+            chatHub.joinConversation(conversationId);
 
-    const loadMessages = async () => {
-        try {
-            const result = await chatService.getMessages(conversationId);
-            if (result.success) {
-                // Reverse to show oldest first (API returns newest first)
-                setMessages((result.data || []).reverse());
+            try {
+                // Parallel load and mark read
+                await Promise.all([
+                    dispatch(getMessagesThunk({ conversationId })).unwrap(),
+                    dispatch(markAsReadThunk(conversationId)).unwrap()
+                ]);
+            } catch (error) {
+                if (isCurrentConversation) {
+                    console.error('Failed to initialize chat:', error);
+                }
+            } finally {
+                if (isMounted && isCurrentConversation) {
+                    setLoading(false);
+                }
             }
-        } catch (error) {
-            console.error('Failed to load messages:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
 
-    const markRead = async () => {
-        try {
-            await chatService.markAsRead(conversationId);
-        } catch { }
-    };
+        initChat();
+
+        return () => {
+            isMounted = false;
+            isCurrentConversation = false;
+            if (conversationId) {
+                chatHub.leaveConversation(conversationId);
+            }
+        };
+    }, [conversationId, dispatch]);
 
     const handleSend = async () => {
         const content = newMessage.trim();
-        if (!content || sending) return;
+        if (!content) return;
 
-        setSending(true);
+        // Optimistic UI updates
+        const tempId = `temp-${Date.now()}`;
+        setNewMessage('');
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
         try {
-            const result = await chatService.sendMessage(parkingSpaceId, content);
-            if (result.success && result.data) {
-                setMessages(prev => [...prev, result.data]);
-                setNewMessage('');
-                // Auto-scroll
-                setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-            }
+            await dispatch(sendMessageThunk({
+                parkingSpaceId,
+                content,
+                conversationId,
+                tempId,
+                user
+            })).unwrap();
         } catch (error) {
             console.error('Failed to send message:', error);
-        } finally {
-            setSending(false);
+            // Revert message input on failure
+            setNewMessage(content);
         }
     };
 
@@ -155,17 +170,17 @@ const ChatScreen = ({ route, navigation }) => {
                     placeholderTextColor={colors.textTertiary}
                     maxLength={2000}
                     multiline
-                    editable={!sending}
+                    editable={true}
                 />
                 <TouchableOpacity
-                    style={[styles.sendBtn, (!newMessage.trim() || sending) && styles.sendBtnDisabled]}
+                    style={[styles.sendBtn, !newMessage.trim() && styles.sendBtnDisabled]}
                     onPress={handleSend}
-                    disabled={!newMessage.trim() || sending}
+                    disabled={!newMessage.trim()}
                 >
                     <Ionicons
                         name="send"
                         size={20}
-                        color={newMessage.trim() && !sending ? '#fff' : colors.textTertiary}
+                        color={newMessage.trim() ? '#fff' : colors.textTertiary}
                     />
                 </TouchableOpacity>
             </View>
