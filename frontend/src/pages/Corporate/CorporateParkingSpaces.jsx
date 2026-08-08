@@ -16,6 +16,8 @@ const defaultSpace = {
     longitude: 0,
     parkingType: 0,
     totalSpots: 10,
+    fourWheelerPhysicalSpots: 10,
+    twoWheelerPhysicalSpots: 0,
     hourlyRate: 0,
     dailyRate: 0,
     weeklyRate: 0,
@@ -32,6 +34,9 @@ const defaultSpace = {
 
 const defaultAllocation = {
     parkingSpaceId: '',
+    totalSpots: 0,
+    physicalFour: 0,
+    physicalTwo: 0,
     fourWheeler: { totalSlots: 1, fixedSlots: 0, sharedSlots: 1 },
     twoWheeler: { totalSlots: 0, fixedSlots: 0, sharedSlots: 0 },
     monthlyRate: 0,
@@ -86,51 +91,104 @@ const CorporateParkingSpaces = () => {
     };
 
     const updateSpaceForm = (field, value) => {
-        setSpaceForm(prev => ({ ...prev, [field]: value }));
+        setSpaceForm(prev => {
+            const next = { ...prev, [field]: value };
+            if (field === 'totalSpots') {
+                const total = Math.max(1, parseInt(value, 10) || 1);
+                const four = Math.max(0, parseInt(prev.fourWheelerPhysicalSpots, 10) || 0);
+                const two = Math.max(0, parseInt(prev.twoWheelerPhysicalSpots, 10) || 0);
+                // Keep class split when total grows; if total shrinks below sum, give remainder to 4W.
+                if (four + two > total) {
+                    const newFour = Math.min(four, total);
+                    next.totalSpots = total;
+                    next.fourWheelerPhysicalSpots = newFour;
+                    next.twoWheelerPhysicalSpots = Math.max(0, total - newFour);
+                } else if (four + two === 0) {
+                    // Default untyped→typed: all capacity as 4W when user only sets total.
+                    next.totalSpots = total;
+                    next.fourWheelerPhysicalSpots = total;
+                    next.twoWheelerPhysicalSpots = 0;
+                } else {
+                    next.totalSpots = total;
+                }
+            }
+            return next;
+        });
     };
 
-    const toSpaceForm = (space) => ({
-        title: space.title || '',
-        description: space.description || '',
-        address: space.address || '',
-        city: space.city || '',
-        state: space.state || '',
-        country: space.country || 'India',
-        postalCode: space.postalCode || '',
-        latitude: space.latitude ?? 0,
-        longitude: space.longitude ?? 0,
-        parkingType: space.parkingType ?? 0,
-        totalSpots: space.totalSpots || 1,
-        hourlyRate: space.hourlyRate || 0,
-        dailyRate: space.dailyRate || 0,
-        weeklyRate: space.weeklyRate || 0,
-        monthlyRate: space.monthlyRate || 0,
-        openTime: String(space.openTime || '00:00:00').slice(0, 8),
-        closeTime: String(space.closeTime || '23:59:59').slice(0, 8),
-        is24Hours: space.is24Hours ?? true,
-        amenities: space.amenities || [],
-        allowedVehicleTypes: space.allowedVehicleTypes || [0],
-        imageUrls: space.imageUrls || [],
-        specialInstructions: space.specialInstructions || '',
-        zoneCode: space.zoneCode || ''
-    });
+    const toSpaceForm = (space) => {
+        const total = space.totalSpots || 1;
+        const two = space.twoWheelerPhysicalSpots ?? 0;
+        const four = space.fourWheelerPhysicalSpots ?? 0;
+        const typed = two > 0 || four > 0;
+        return {
+            title: space.title || '',
+            description: space.description || '',
+            address: space.address || '',
+            city: space.city || '',
+            state: space.state || '',
+            country: space.country || 'India',
+            postalCode: space.postalCode || '',
+            latitude: space.latitude ?? 0,
+            longitude: space.longitude ?? 0,
+            parkingType: space.parkingType ?? 0,
+            totalSpots: total,
+            fourWheelerPhysicalSpots: typed ? four : total,
+            twoWheelerPhysicalSpots: typed ? two : 0,
+            hourlyRate: space.hourlyRate || 0,
+            dailyRate: space.dailyRate || 0,
+            weeklyRate: space.weeklyRate || 0,
+            monthlyRate: space.monthlyRate || 0,
+            openTime: String(space.openTime || '00:00:00').slice(0, 8),
+            closeTime: String(space.closeTime || '23:59:59').slice(0, 8),
+            is24Hours: space.is24Hours ?? true,
+            amenities: space.amenities || [],
+            allowedVehicleTypes: space.allowedVehicleTypes || [0],
+            imageUrls: space.imageUrls || [],
+            specialInstructions: space.specialInstructions || '',
+            zoneCode: space.zoneCode || ''
+        };
+    };
 
-    const buildSpacePayload = () => ({
-        ...spaceForm,
-        latitude: parseFloat(spaceForm.latitude) || 0,
-        longitude: parseFloat(spaceForm.longitude) || 0,
-        parkingType: parseInt(spaceForm.parkingType),
-        totalSpots: parseInt(spaceForm.totalSpots),
-        hourlyRate: parseFloat(spaceForm.hourlyRate) || 0,
-        dailyRate: parseFloat(spaceForm.dailyRate) || 0,
-        weeklyRate: parseFloat(spaceForm.weeklyRate) || 0,
-        monthlyRate: parseFloat(spaceForm.monthlyRate) || 0,
-        openTime: spaceForm.is24Hours ? '00:00:00' : spaceForm.openTime,
-        closeTime: spaceForm.is24Hours ? '23:59:59' : spaceForm.closeTime
-    });
+    const buildSpacePayload = () => {
+        const totalSpots = Math.max(1, parseInt(spaceForm.totalSpots, 10) || 1);
+        const fourWheelerPhysicalSpots = Math.max(0, parseInt(spaceForm.fourWheelerPhysicalSpots, 10) || 0);
+        const twoWheelerPhysicalSpots = Math.max(0, parseInt(spaceForm.twoWheelerPhysicalSpots, 10) || 0);
+        return {
+            ...spaceForm,
+            latitude: parseFloat(spaceForm.latitude) || 0,
+            longitude: parseFloat(spaceForm.longitude) || 0,
+            parkingType: parseInt(spaceForm.parkingType, 10),
+            totalSpots,
+            fourWheelerPhysicalSpots,
+            twoWheelerPhysicalSpots,
+            hourlyRate: parseFloat(spaceForm.hourlyRate) || 0,
+            dailyRate: parseFloat(spaceForm.dailyRate) || 0,
+            weeklyRate: parseFloat(spaceForm.weeklyRate) || 0,
+            monthlyRate: parseFloat(spaceForm.monthlyRate) || 0,
+            openTime: spaceForm.is24Hours ? '00:00:00' : spaceForm.openTime,
+            closeTime: spaceForm.is24Hours ? '23:59:59' : spaceForm.closeTime
+        };
+    };
+
+    const validatePhysicalCapacity = () => {
+        const total = Math.max(1, parseInt(spaceForm.totalSpots, 10) || 1);
+        const four = Math.max(0, parseInt(spaceForm.fourWheelerPhysicalSpots, 10) || 0);
+        const two = Math.max(0, parseInt(spaceForm.twoWheelerPhysicalSpots, 10) || 0);
+        if (four + two > total) {
+            toast.error('4-wheeler + 2-wheeler physical spots cannot exceed total spots.');
+            return false;
+        }
+        if (four + two === 0) {
+            toast.error('Set at least some 4-wheeler or 2-wheeler physical capacity.');
+            return false;
+        }
+        return true;
+    };
 
     const handleCreateSpace = async (event) => {
         event.preventDefault();
+        if (!validatePhysicalCapacity()) return;
         setCreating(true);
         try {
             const response = await corporateService.createParkingSpace(buildSpacePayload());
@@ -162,6 +220,7 @@ const CorporateParkingSpaces = () => {
     const handleUpdateSpace = async (event) => {
         event.preventDefault();
         if (!editingSpace) return;
+        if (!validatePhysicalCapacity()) return;
 
         setUpdating(true);
         try {
@@ -197,12 +256,21 @@ const CorporateParkingSpaces = () => {
     };
 
     const openAllocation = (space) => {
-        const fourTotal = space.totalSpots || 1;
+        const total = space.totalSpots || 1;
+        const physicalFour = space.fourWheelerPhysicalSpots ?? 0;
+        const physicalTwo = space.twoWheelerPhysicalSpots ?? 0;
+        const typed = physicalFour > 0 || physicalTwo > 0;
+        // Prefill product pools from physical building capacity when typed; else all → 4W.
+        const fourTotal = typed ? physicalFour : total;
+        const twoTotal = typed ? physicalTwo : 0;
         setAllocationForm({
             ...defaultAllocation,
             parkingSpaceId: space.id,
+            physicalFour,
+            physicalTwo,
+            totalSpots: total,
             fourWheeler: { totalSlots: fourTotal, fixedSlots: 0, sharedSlots: fourTotal },
-            twoWheeler: { totalSlots: 0, fixedSlots: 0, sharedSlots: 0 },
+            twoWheeler: { totalSlots: twoTotal, fixedSlots: 0, sharedSlots: twoTotal },
             monthlyRate: space.monthlyRate || 0,
             startDate: new Date().toISOString().slice(0, 10),
             endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
@@ -240,6 +308,23 @@ const CorporateParkingSpaces = () => {
             || twoWheeler.fixedSlots + twoWheeler.sharedSlots > twoWheeler.totalSlots) {
             toast.error('Fixed plus shared cannot exceed total for each vehicle class.');
             return;
+        }
+        const totalSpots = allocationForm.totalSpots || 0;
+        if (combined > totalSpots) {
+            toast.error(`Combined pools cannot exceed ${totalSpots} total spots on this lot.`);
+            return;
+        }
+        const physicalFour = allocationForm.physicalFour ?? 0;
+        const physicalTwo = allocationForm.physicalTwo ?? 0;
+        if (physicalFour > 0 || physicalTwo > 0) {
+            if (fourWheeler.totalSlots > physicalFour) {
+                toast.error(`4-wheeler pool cannot exceed physical capacity (${physicalFour}).`);
+                return;
+            }
+            if (twoWheeler.totalSlots > physicalTwo) {
+                toast.error(`2-wheeler pool cannot exceed physical capacity (${physicalTwo}).`);
+                return;
+            }
         }
 
         setAllocating(true);
@@ -316,6 +401,27 @@ const CorporateParkingSpaces = () => {
                         <Field label="Total Spots" type="number" min="1" value={spaceForm.totalSpots} onChange={value => updateSpaceForm('totalSpots', value)} required />
                         <Field label="Monthly Rate" type="number" min="0" value={spaceForm.monthlyRate} onChange={value => updateSpaceForm('monthlyRate', value)} />
                     </div>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+                        Physical bay capacity (how the lot is built). 4W + 2W must not exceed total spots.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <Field
+                            label="4-Wheeler Bays (Car / SUV)"
+                            type="number"
+                            min="0"
+                            value={spaceForm.fourWheelerPhysicalSpots}
+                            onChange={value => updateSpaceForm('fourWheelerPhysicalSpots', value)}
+                            required
+                        />
+                        <Field
+                            label="2-Wheeler Bays (Bike / Scooter)"
+                            type="number"
+                            min="0"
+                            value={spaceForm.twoWheelerPhysicalSpots}
+                            onChange={value => updateSpaceForm('twoWheelerPhysicalSpots', value)}
+                            required
+                        />
+                    </div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
                         <input type="checkbox" checked={spaceForm.is24Hours} onChange={e => updateSpaceForm('is24Hours', e.target.checked)} />
                         24 hours
@@ -345,8 +451,16 @@ const CorporateParkingSpaces = () => {
                                 <div>
                                     <h3 style={{ color: 'var(--color-text-primary)', margin: '0 0 0.35rem 0' }}>{space.title}</h3>
                                     <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>{space.address}, {space.city}</div>
-                                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem', color: 'var(--color-text-secondary)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
                                         <span>{space.totalSpots} spots</span>
+                                        {(space.fourWheelerPhysicalSpots > 0 || space.twoWheelerPhysicalSpots > 0) ? (
+                                            <>
+                                                <span>4W: {space.fourWheelerPhysicalSpots ?? 0}</span>
+                                                <span>2W: {space.twoWheelerPhysicalSpots ?? 0}</span>
+                                            </>
+                                        ) : (
+                                            <span>Physical split not set</span>
+                                        )}
                                         <span>{space.isActive ? 'Active' : 'Inactive'}</span>
                                         <span>Owned</span>
                                     </div>
@@ -372,9 +486,15 @@ const CorporateParkingSpaces = () => {
             </div>
 
             {allocationForm.parkingSpaceId && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-bg)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
                     <form onSubmit={handleCreateAllocation} style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '1.5rem', width: '100%', maxWidth: '520px' }}>
                         <h2 style={{ color: 'var(--color-text-primary)', margin: '0 0 1rem 0' }}>Activate Internal Allocation</h2>
+                        {(allocationForm.physicalFour > 0 || allocationForm.physicalTwo > 0) && (
+                            <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+                                Physical capacity: {allocationForm.physicalFour} four-wheeler · {allocationForm.physicalTwo} two-wheeler
+                                {' '}(of {allocationForm.totalSpots} total). Product pools cannot exceed these.
+                            </p>
+                        )}
                         <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>4-Wheeler (Car / SUV)</p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                             <Field label="4W Total" type="number" min="0" value={allocationForm.fourWheeler.totalSlots} onChange={value => updatePool('fourWheeler', 'totalSlots', value)} />

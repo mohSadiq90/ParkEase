@@ -70,7 +70,9 @@ public sealed record CompanyOwnedParkingSpaceDetail(
     string? SpecialInstructions,
     string? ZoneCode,
     DateTime CreatedAt,
-    Guid OwnerId);
+    Guid OwnerId,
+    int TwoWheelerPhysicalSpots = 0,
+    int FourWheelerPhysicalSpots = 0);
 
 public sealed record CompanyOwnedParkingSpaceUpdate(
     string? Title = null,
@@ -95,4 +97,6 @@ public sealed record CompanyOwnedParkingSpaceUpdate(
     IReadOnlyList<VehicleType>? AllowedVehicleTypes = null,
     IReadOnlyList<string>? ImageUrls = null,
     string? SpecialInstructions = null,
-    string? ZoneCode = null);
+    string? ZoneCode = null,
+    int? TwoWheelerPhysicalSpots = null,
+    int? FourWheelerPhysicalSpots = null);

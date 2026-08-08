@@ -1081,7 +1081,7 @@ export default function MyBookings() {
                                             key={star}
                                             onClick={() => setReviewRating(star)}
                                             style={{
-                                                color: star <= reviewRating ? 'var(--color-warning)' : 'rgba(255,255,255,0.1)',
+                                                color: star <= reviewRating ? 'var(--color-warning)' : 'var(--color-border)',
                                                 transition: 'color 0.2s, transform 0.1s',
                                             }}
                                             onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
@@ -1209,7 +1209,7 @@ export default function MyBookings() {
                                     Calculating price...
                                 </div>
                             ) : extensionPrice && (
-                                <div className="card mt-2 mb-2" style={{ background: 'rgba(255,255,255,0.05)', border: '1px dashed var(--color-primary)' }}>
+                                <div className="card mt-2 mb-2" style={{ background: 'var(--color-row-elevated)', border: '1px dashed var(--color-primary)' }}>
                                     <div className="flex-between">
                                         <span>Additional Time:</span>
                                         <strong>{extensionPrice.duration} {extensionPrice.durationUnit}</strong>

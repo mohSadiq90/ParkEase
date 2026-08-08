@@ -61,7 +61,9 @@ internal sealed class UpdateCorporateParkingSpaceHandler
             AllowedVehicleTypes: dto.AllowedVehicleTypes,
             ImageUrls: dto.ImageUrls,
             SpecialInstructions: dto.SpecialInstructions,
-            ZoneCode: dto.ZoneCode);
+            ZoneCode: dto.ZoneCode,
+            TwoWheelerPhysicalSpots: dto.TwoWheelerPhysicalSpots,
+            FourWheelerPhysicalSpots: dto.FourWheelerPhysicalSpots);
 
         var result = await _parkingSpaces.UpdateAsync(command.CompanyId, command.ParkingSpaceId, update, ct);
         if (!result.Success || result.Space is null)

@@ -104,8 +104,11 @@ public record InvitationDto(
 // ALLOCATION DTOs
 // G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��
 
-/// <summary>Per vehicle-class slot pool (two-wheeler / four-wheeler).</summary>
-public record SlotPoolDto(int TotalSlots, int FixedSlots, int SharedSlots);
+/// <summary>Per vehicle-class capacity pool (total / fixed / shared).</summary>
+public record SlotPoolDto(
+    [Range(0, 1000)] int TotalSlots,
+    [Range(0, 1000)] int FixedSlots = 0,
+    [Range(0, 1000)] int SharedSlots = 0);
 
 public record ParkingAllocationDto(
     Guid Id,
@@ -215,7 +218,9 @@ public record CorporateParkingSpaceDto(
     bool IsVerified,
     string? SpecialInstructions,
     string? ZoneCode,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int TwoWheelerPhysicalSpots = 0,
+    int FourWheelerPhysicalSpots = 0);
 
 public record UpdateCorporateParkingSpaceDto(
     string? Title,
@@ -240,7 +245,9 @@ public record UpdateCorporateParkingSpaceDto(
     List<VehicleType>? AllowedVehicleTypes,
     List<string>? ImageUrls,
     string? SpecialInstructions,
-    string? ZoneCode = null);
+    string? ZoneCode = null,
+    int? TwoWheelerPhysicalSpots = null,
+    int? FourWheelerPhysicalSpots = null);
 
 public record BookingPolicyDto(
     [Range(1, 100)] int MaxBookingsPerEmployeePerDay = 1,

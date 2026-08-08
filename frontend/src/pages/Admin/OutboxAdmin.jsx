@@ -333,7 +333,7 @@ export default function OutboxAdmin() {
         <div
           role="dialog"
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9000,
+            position: 'fixed', inset: 0, background: 'var(--overlay-bg)', zIndex: 9000,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
           }}
           onClick={() => setSelected(null)}

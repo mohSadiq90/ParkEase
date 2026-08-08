@@ -382,7 +382,7 @@ const CompanyAllocations = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {waitlist.map(entry => (
-                            <div key={entry.id} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: '1rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px' }}>
+                            <div key={entry.id} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: '1rem', alignItems: 'center', background: 'var(--color-row-elevated)', padding: '0.85rem', borderRadius: '8px' }}>
                                 <div>
                                     <div style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{entry.isVisitorBooking ? entry.visitorName : entry.vehicleNumber || 'Employee booking'}</div>
                                     <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.82rem' }}>{entry.isVisitorBooking ? entry.visitorLicensePlate : 'Employee'} · Priority {entry.priorityAtRequest}</div>
@@ -551,7 +551,7 @@ const CompanyAllocations = () => {
                                     )}
                                 </div>
                                 {alloc.policy ? (
-                                    <div style={{ display: 'flex', gap: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px' }}>
+                                    <div style={{ display: 'flex', gap: '1.5rem', background: 'var(--color-row-elevated)', padding: '1rem', borderRadius: '8px' }}>
                                         <div>
                                             <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', display: 'block' }}>Max/Day</span>
                                             <strong className="text-white">{alloc.policy.maxBookingsPerEmployeePerDay}</strong>
@@ -628,7 +628,7 @@ const CompanyAllocations = () => {
             </div>
 
             {sourceModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-bg)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
                     <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '1.5rem', width: '100%', maxWidth: '720px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
                             <div>
@@ -661,7 +661,7 @@ const CompanyAllocations = () => {
 
             {/* Policy Modal */}
             {policyModalObj && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--overlay-bg)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ background: 'var(--color-surface)', width: '100%', maxWidth: '450px', borderRadius: '12px', padding: '2rem', border: '1px solid var(--color-border)' }}>
                         <h2 style={{ marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>Edit Policy - {policyModalObj.parkingSpaceTitle}</h2>
                         <form onSubmit={handleUpdatePolicy}>
@@ -745,7 +745,7 @@ const CompanyAllocations = () => {
 
             {/* Contract / Lease terms modal */}
             {contractModalObj && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--overlay-bg)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ background: 'var(--color-surface)', width: '100%', maxWidth: '480px', borderRadius: '12px', padding: '2rem', border: '1px solid var(--color-border)' }}>
                         <h2 style={{ marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>Edit Contract</h2>
                         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{contractModalObj.parkingSpaceTitle}</p>
@@ -810,7 +810,7 @@ const CompanyAllocations = () => {
 
             {/* Corporate Book Modal (employee / visitor) */}
             {bookModalObj && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-bg)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
                     <div style={{ background: 'var(--color-surface)', width: '100%', maxWidth: '480px', borderRadius: '12px', padding: '2rem', border: '1px solid var(--color-border)', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h2 style={{ marginBottom: '0.35rem', color: 'var(--color-text-primary)' }}>Book corporate space</h2>
                         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>{bookModalObj.parkingSpaceTitle}</p>
@@ -909,7 +909,7 @@ const CompanyAllocations = () => {
 
             {/* Assign Fixed Slot Modal */}
             {fixedSlotModalObj && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--overlay-bg)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ background: 'var(--color-surface)', width: '100%', maxWidth: '400px', borderRadius: '12px', padding: '2rem', border: '1px solid var(--color-border)' }}>
                         <h2 style={{ marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>Assign Fixed Slot</h2>
                         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{fixedSlotModalObj.allocationTitle}</p>

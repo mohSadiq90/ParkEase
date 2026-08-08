@@ -214,7 +214,7 @@ const CompanyMembers = () => {
                     <div style={{ padding: '3rem', textAlign: 'center' }}><div className="spinner" /></div>
                 ) : members.length > 0 ? (
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--color-border)' }}>
+                        <thead style={{ background: 'var(--color-table-head)', borderBottom: '1px solid var(--color-border)' }}>
                             <tr>
                                 <th style={{ padding: '1rem', color: 'var(--color-text-secondary)', fontWeight: '600', fontSize: '0.85rem', textTransform: 'uppercase' }}>Name</th>
                                 <th style={{ padding: '1rem', color: 'var(--color-text-secondary)', fontWeight: '600', fontSize: '0.85rem', textTransform: 'uppercase' }}>Email</th>
@@ -296,7 +296,7 @@ const CompanyMembers = () => {
 
             {/* Add / Invite Modal */}
             {showInviteModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--overlay-bg)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
                     <div style={{ background: 'var(--color-surface)', width: '100%', maxWidth: '460px', borderRadius: '12px', padding: '2rem', border: '1px solid var(--color-border)' }}>
                         <h2 style={{ marginBottom: '0.35rem', color: 'var(--color-text-primary)' }}>Add or invite member</h2>
                         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
@@ -414,7 +414,7 @@ const CompanyMembers = () => {
 
             {/* Edit member modal */}
             {editMember && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--overlay-bg)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ background: 'var(--color-surface)', width: '100%', maxWidth: '440px', borderRadius: '12px', padding: '2rem', border: '1px solid var(--color-border)' }}>
                         <h2 style={{ marginBottom: '0.35rem', color: 'var(--color-text-primary)' }}>Edit Member</h2>
                         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>

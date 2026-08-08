@@ -244,7 +244,9 @@ public class Company : BaseEntity
         DateTime startDate,
         DateTime endDate,
         int parkingCapacity,
-        BookingPolicy? bookingPolicy = null)
+        BookingPolicy? bookingPolicy = null,
+        int twoWheelerPhysicalSpots = 0,
+        int fourWheelerPhysicalSpots = 0)
     {
         EnsureIsActive();
         RequireAdminMembership(adminUserId);
@@ -252,16 +254,12 @@ public class Company : BaseEntity
         ArgumentNullException.ThrowIfNull(twoWheelerQuota);
         ArgumentNullException.ThrowIfNull(fourWheelerQuota);
 
-        var combined = twoWheelerQuota.TotalSlots + fourWheelerQuota.TotalSlots;
-        if (combined <= 0)
-        {
-            throw new InvalidOperationException("At least one vehicle class pool must have capacity.");
-        }
-
-        if (combined > parkingCapacity)
-        {
-            throw new InvalidOperationException($"Cannot allocate more than {parkingCapacity} total spots available.");
-        }
+        EnsureAllocationFitsCapacity(
+            twoWheelerQuota,
+            fourWheelerQuota,
+            parkingCapacity,
+            twoWheelerPhysicalSpots,
+            fourWheelerPhysicalSpots);
 
         EnsureNoOverlappingAllocation(parkingSpaceId, startDate, endDate);
 
@@ -304,7 +302,9 @@ public class Company : BaseEntity
         DateTime startDate,
         DateTime endDate,
         int parkingCapacity,
-        BookingPolicy? bookingPolicy = null)
+        BookingPolicy? bookingPolicy = null,
+        int twoWheelerPhysicalSpots = 0,
+        int fourWheelerPhysicalSpots = 0)
     {
         EnsureIsActive();
         RequireAdminMembership(adminUserId);
@@ -312,16 +312,12 @@ public class Company : BaseEntity
         ArgumentNullException.ThrowIfNull(twoWheelerQuota);
         ArgumentNullException.ThrowIfNull(fourWheelerQuota);
 
-        var combined = twoWheelerQuota.TotalSlots + fourWheelerQuota.TotalSlots;
-        if (combined <= 0)
-        {
-            throw new InvalidOperationException("At least one vehicle class pool must have capacity.");
-        }
-
-        if (combined > parkingCapacity)
-        {
-            throw new InvalidOperationException($"Cannot allocate more than {parkingCapacity} total spots available.");
-        }
+        EnsureAllocationFitsCapacity(
+            twoWheelerQuota,
+            fourWheelerQuota,
+            parkingCapacity,
+            twoWheelerPhysicalSpots,
+            fourWheelerPhysicalSpots);
 
         EnsureNoOverlappingAllocation(parkingSpaceId, startDate, endDate);
 
@@ -804,6 +800,45 @@ public class Company : BaseEntity
         }
 
         return allocation;
+    }
+
+    /// <summary>
+    /// Combined pools must fit TotalSpots. When the lot has typed physical capacity
+    /// (2W or 4W physical &gt; 0), each class pool is also capped by that physical count.
+    /// </summary>
+    private static void EnsureAllocationFitsCapacity(
+        Quota twoWheelerQuota,
+        Quota fourWheelerQuota,
+        int parkingCapacity,
+        int twoWheelerPhysicalSpots,
+        int fourWheelerPhysicalSpots)
+    {
+        var combined = twoWheelerQuota.TotalSlots + fourWheelerQuota.TotalSlots;
+        if (combined <= 0)
+        {
+            throw new InvalidOperationException("At least one vehicle class pool must have capacity.");
+        }
+
+        if (combined > parkingCapacity)
+        {
+            throw new InvalidOperationException($"Cannot allocate more than {parkingCapacity} total spots available.");
+        }
+
+        var hasTypedPhysical = twoWheelerPhysicalSpots > 0 || fourWheelerPhysicalSpots > 0;
+        if (!hasTypedPhysical)
+            return;
+
+        if (twoWheelerQuota.TotalSlots > twoWheelerPhysicalSpots)
+        {
+            throw new InvalidOperationException(
+                $"Cannot allocate more than {twoWheelerPhysicalSpots} two-wheeler spots available on this parking space.");
+        }
+
+        if (fourWheelerQuota.TotalSlots > fourWheelerPhysicalSpots)
+        {
+            throw new InvalidOperationException(
+                $"Cannot allocate more than {fourWheelerPhysicalSpots} four-wheeler spots available on this parking space.");
+        }
     }
 
     /// <summary>

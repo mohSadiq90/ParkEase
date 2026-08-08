@@ -65,7 +65,9 @@ internal sealed class AllocateParkingSlotsHandler
                 command.Dto.StartDate,
                 command.Dto.EndDate,
                 parkingSpace.TotalSpots,
-                policy);
+                policy,
+                parkingSpace.TwoWheelerPhysicalSpots,
+                parkingSpace.FourWheelerPhysicalSpots);
 
             allocation.SetVendorLeaseMetadata(parkingSpace.OwnerId, command.Dto.LeaseReference);
 

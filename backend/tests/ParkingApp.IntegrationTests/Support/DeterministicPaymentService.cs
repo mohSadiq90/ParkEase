@@ -5,8 +5,9 @@ namespace ParkingApp.IntegrationTests.Support;
 
 /// <summary>
 /// Deterministic payment gateway for integration tests (no network, no randomness).
+/// Used by L2 payment lifecycle IT and L4 <see cref="FullApiFactory"/> HTTP journeys.
 /// </summary>
-internal sealed class DeterministicPaymentService : IPaymentService
+public sealed class DeterministicPaymentService : IPaymentService
 {
     public bool VerifySignatureResult { get; set; } = true;
     public bool RefundSucceeds { get; set; } = true;

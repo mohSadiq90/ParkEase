@@ -84,12 +84,20 @@ internal sealed class CompanyRepository : Repository<Company>, ICompanyRepositor
         Guid userId,
         CancellationToken cancellationToken = default)
     {
+        // Accept runs before the invitee has a company claim / tenant context.
+        // Ignore global tenant/soft-delete filters and apply soft-delete explicitly.
+        if (string.IsNullOrWhiteSpace(invitationToken))
+            return null;
+
+        var token = invitationToken.Trim();
         return await _dbSet
+            .IgnoreQueryFilters()
             .AsSplitQuery()
-            .Include(c => c.Invitations.Where(i => !i.IsDeleted && i.InvitationToken == invitationToken))
+            .Include(c => c.Invitations.Where(i => !i.IsDeleted && i.InvitationToken == token))
             .Include(c => c.Memberships.Where(m => !m.IsDeleted && m.UserId == userId))
             .FirstOrDefaultAsync(
-                c => c.Invitations.Any(i => !i.IsDeleted && i.InvitationToken == invitationToken),
+                c => !c.IsDeleted
+                     && c.Invitations.Any(i => !i.IsDeleted && i.InvitationToken == token),
                 cancellationToken);
     }
 
@@ -109,8 +117,11 @@ internal sealed class CompanyRepository : Repository<Company>, ICompanyRepositor
         Guid? adminUserId,
         CancellationToken cancellationToken = default)
     {
-        // Resolve the entry first so includes can target one allocation/membership only.
+        // Background auto-promotion has no HTTP tenant context (CurrentTenantId is null).
+        // Ignore query filters and scope by companyId + soft-delete explicitly, same as
+        // invitation acceptance. Resolve the entry first so includes target one allocation/membership.
         var entryMeta = await _context.Set<CorporateWaitlistEntry>()
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(w => w.Id == waitlistEntryId && w.CompanyId == companyId && !w.IsDeleted)
             .Select(w => new
@@ -134,6 +145,7 @@ internal sealed class CompanyRepository : Repository<Company>, ICompanyRepositor
         var bookingEnd = entryMeta.RequestedEndDateTime;
 
         return await _dbSet
+            .IgnoreQueryFilters()
             .AsSplitQuery()
             .Include(c => c.Memberships.Where(m =>
                 !m.IsDeleted &&
@@ -149,7 +161,7 @@ internal sealed class CompanyRepository : Repository<Company>, ICompanyRepositor
                  (w.Status == WaitlistStatus.Pending &&
                   w.RequestedStartDateTime < bookingEnd &&
                   w.RequestedEndDateTime > bookingStart))))
-            .FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == companyId && !c.IsDeleted, cancellationToken);
     }
 
     public async Task<bool> IsUserMemberAsync(Guid companyId, Guid userId, CancellationToken cancellationToken = default)
@@ -457,24 +469,24 @@ internal sealed class CorporateBookingRepository : Repository<CorporateBooking>,
         public int RecentBookingCreateCount { get; set; }
     }
 
-    public async Task<IReadOnlyList<CorporateBooking>> GetBillableBookingsInPeriodAsync(
+    public Task<IReadOnlyList<CorporateBooking>> GetBillableBookingsInPeriodAsync(
         Guid companyId,
         DateTime periodStartUtc,
         DateTime periodEndExclusiveUtc,
         int maxRows,
         CancellationToken cancellationToken = default)
     {
-        return new System.Collections.Generic.List<CorporateBooking>();
+        return Task.FromResult<IReadOnlyList<CorporateBooking>>(new System.Collections.Generic.List<CorporateBooking>());
     }
 
-    public async Task<IReadOnlyList<CorporateBooking>> GetBillableBookingsForPeriodAsync(
+    public Task<IReadOnlyList<CorporateBooking>> GetBillableBookingsForPeriodAsync(
         Guid companyId,
         DateTime periodStartUtc,
         DateTime periodEndExclusiveUtc,
         int maxRows,
         CancellationToken cancellationToken = default)
     {
-        return new System.Collections.Generic.List<CorporateBooking>();
+        return Task.FromResult<IReadOnlyList<CorporateBooking>>(new System.Collections.Generic.List<CorporateBooking>());
     }
 }
 

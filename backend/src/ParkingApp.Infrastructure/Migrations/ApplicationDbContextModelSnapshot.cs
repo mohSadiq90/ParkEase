@@ -1800,6 +1800,9 @@ namespace ParkingApp.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<int>("FourWheelerPhysicalSpots")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("HasEvCharging")
                         .HasColumnType("boolean");
 
@@ -1907,6 +1910,9 @@ namespace ParkingApp.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("TotalSpots")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TwoWheelerPhysicalSpots")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")

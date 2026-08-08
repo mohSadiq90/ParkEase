@@ -77,20 +77,6 @@ internal sealed class CreateBookingHandler : ICommandHandler<CreateBookingComman
                 null);
         }
 
-        var availability = await _availability.CanCreateAsync(
-            command.UserId,
-            parking,
-            startDateTimeUtc,
-            endDateTimeUtc,
-            command.SlotNumber,
-            command.VehicleNumber,
-            cancellationToken);
-
-        if (!availability.IsAllowed)
-        {
-            return new ApiResponse<BookingDto>(false, availability.ErrorMessage ?? "Booking not available", null);
-        }
-
         if (command.IncludeEvCharging && !parking.HasEvCharging)
         {
             return new ApiResponse<BookingDto>(
@@ -99,93 +85,143 @@ internal sealed class CreateBookingHandler : ICommandHandler<CreateBookingComman
                 null);
         }
 
-        var ancillary = await AncillaryServiceResolver.ResolveForBookingAsync(
-            _unitOfWork,
-            parking.Id,
-            command.AncillaryServiceIds,
-            requireAllActive: true,
-            cancellationToken);
-        if (!ancillary.Success)
+        // Serialize create-path capacity check + insert for this space (same pattern as corporate book).
+        // Prevents TOCTOU double-book when two guests hit capacity-N listings in parallel.
+        var lockKey = BuildSpaceBookingLockKey(parking.Id);
+        const int maxLockAttempts = 8;
+        for (var attempt = 0; attempt < maxLockAttempts; attempt++)
         {
-            return new ApiResponse<BookingDto>(false, ancillary.ErrorMessage ?? "Invalid add-on services", null);
-        }
-
-        var pricing = await _pricingService.CalculateAsync(
-            command.UserId,
-            parking,
-            startDateTimeUtc,
-            endDateTimeUtc,
-            command.PricingType,
-            command.DiscountCode,
-            null,
-            command.IncludeEvCharging,
-            ancillary.Subtotal,
-            ancillary.QuoteLines,
-            cancellationToken);
-
-        var booking = Booking.CreateMarketplace(
-            command.UserId,
-            command.ParkingSpaceId,
-            startDateTimeUtc,
-            endDateTimeUtc,
-            command.PricingType,
-            command.VehicleType,
-            pricing.BaseAmount,
-            pricing.TaxAmount,
-            pricing.ServiceFee,
-            pricing.DiscountAmount,
-            pricing.TotalAmount,
-            pricing.IsPassApplied ? null : command.DiscountCode,
-            pricing.ParkingPassId,
-            command.SlotNumber,
-            command.VehicleNumber,
-            command.VehicleModel,
-            command.VehicleColor,
-            includeEvCharging: pricing.IncludeEvCharging,
-            evChargingFeeAmount: pricing.EvChargingFeeAmount);
-
-        foreach (var service in ancillary.Services)
-        {
-            booking.AddAncillaryLine(service.Name, service.Price, quantity: 1, serviceId: service.Id);
-        }
-
-        // Instant book (typical residential driveway): skip host approval queue.
-        if (parking.InstantBook)
-        {
-            var isPassCovered = booking.ParkingPassId.HasValue && booking.TotalAmount <= 0;
-            if (isPassCovered || booking.TotalAmount <= 0)
+            if (!await _cache.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(15), cancellationToken))
             {
-                booking.Confirm();
-                if (parking.IsBayGuidanceEnabled)
-                {
-                    var peers = await _unitOfWork.Bookings.GetByParkingSpaceIdAsync(parking.Id, cancellationToken);
-                    BayAssignmentHelper.TryApplyOnConfirm(booking, parking, peers);
-                }
+                await Task.Delay(25 * (attempt + 1), cancellationToken);
+                continue;
             }
-            else
-                booking.AwaitPayment();
+
+            try
+            {
+                var availability = await _availability.CanCreateAsync(
+                    command.UserId,
+                    parking,
+                    startDateTimeUtc,
+                    endDateTimeUtc,
+                    command.SlotNumber,
+                    command.VehicleNumber,
+                    cancellationToken);
+
+                if (!availability.IsAllowed)
+                {
+                    return new ApiResponse<BookingDto>(false, availability.ErrorMessage ?? "Booking not available", null);
+                }
+
+                var ancillary = await AncillaryServiceResolver.ResolveForBookingAsync(
+                    _unitOfWork,
+                    parking.Id,
+                    command.AncillaryServiceIds,
+                    requireAllActive: true,
+                    cancellationToken);
+                if (!ancillary.Success)
+                {
+                    return new ApiResponse<BookingDto>(false, ancillary.ErrorMessage ?? "Invalid add-on services", null);
+                }
+
+                var pricing = await _pricingService.CalculateAsync(
+                    command.UserId,
+                    parking,
+                    startDateTimeUtc,
+                    endDateTimeUtc,
+                    command.PricingType,
+                    command.DiscountCode,
+                    null,
+                    command.IncludeEvCharging,
+                    ancillary.Subtotal,
+                    ancillary.QuoteLines,
+                    cancellationToken);
+
+                var booking = Booking.CreateMarketplace(
+                    command.UserId,
+                    command.ParkingSpaceId,
+                    startDateTimeUtc,
+                    endDateTimeUtc,
+                    command.PricingType,
+                    command.VehicleType,
+                    pricing.BaseAmount,
+                    pricing.TaxAmount,
+                    pricing.ServiceFee,
+                    pricing.DiscountAmount,
+                    pricing.TotalAmount,
+                    pricing.IsPassApplied ? null : command.DiscountCode,
+                    pricing.ParkingPassId,
+                    command.SlotNumber,
+                    command.VehicleNumber,
+                    command.VehicleModel,
+                    command.VehicleColor,
+                    includeEvCharging: pricing.IncludeEvCharging,
+                    evChargingFeeAmount: pricing.EvChargingFeeAmount);
+
+                foreach (var service in ancillary.Services)
+                {
+                    booking.AddAncillaryLine(service.Name, service.Price, quantity: 1, serviceId: service.Id);
+                }
+
+                // Instant book (typical residential driveway): skip host approval queue.
+                if (parking.InstantBook)
+                {
+                    var isPassCovered = booking.ParkingPassId.HasValue && booking.TotalAmount <= 0;
+                    if (isPassCovered || booking.TotalAmount <= 0)
+                    {
+                        booking.Confirm();
+                        if (parking.IsBayGuidanceEnabled)
+                        {
+                            var peers = await _unitOfWork.Bookings.GetByParkingSpaceIdAsync(parking.Id, cancellationToken);
+                            BayAssignmentHelper.TryApplyOnConfirm(booking, parking, peers);
+                        }
+                    }
+                    else
+                        booking.AwaitPayment();
+                }
+
+                await _unitOfWork.Bookings.AddAsync(booking, cancellationToken);
+                // BookingRequestedEvent (+ optional approved/confirmed) → outbox handlers
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                var message = parking.InstantBook
+                    ? (booking.Status == BookingStatus.Confirmed
+                        ? "Booking confirmed (instant book)"
+                        : "Booking ready for payment (instant book)")
+                    : "Booking created successfully";
+
+                var created = new ApiResponse<BookingDto>(true, message, booking.ToDto());
+
+                // Release before cache fan-out so a contending create can re-check capacity promptly.
+                await _cache.ReleaseLockAsync(lockKey, cancellationToken);
+
+                await CacheInvalidation.ForBookingChangeAsync(
+                    _cache,
+                    command.ParkingSpaceId,
+                    memberId: booking.UserId,
+                    vendorId: parking.OwnerId,
+                    cancellationToken);
+
+                return created;
+            }
+            finally
+            {
+                // Idempotent if already released on the success path.
+                await _cache.ReleaseLockAsync(lockKey, cancellationToken);
+            }
         }
 
-        await _unitOfWork.Bookings.AddAsync(booking, cancellationToken);
-        // BookingRequestedEvent (+ optional approved/confirmed) → outbox handlers
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        await CacheInvalidation.ForBookingChangeAsync(
-            _cache,
-            command.ParkingSpaceId,
-            memberId: booking.UserId,
-            vendorId: parking.OwnerId,
-            cancellationToken);
-
-        var message = parking.InstantBook
-            ? (booking.Status == BookingStatus.Confirmed
-                ? "Booking confirmed (instant book)"
-                : "Booking ready for payment (instant book)")
-            : "Booking created successfully";
-
-        return new ApiResponse<BookingDto>(true, message, booking.ToDto());
+        return new ApiResponse<BookingDto>(
+            false,
+            "System is processing other bookings for this parking space. Please try again in a few seconds.",
+            null);
     }
+
+    /// <summary>Per-space lock so concurrent creates re-check capacity under mutual exclusion.</summary>
+    internal static string BuildSpaceBookingLockKey(Guid parkingSpaceId) =>
+        $"marketplace:booking:space:{parkingSpaceId:N}";
 }
+
 
 internal sealed class CancelBookingHandler : ICommandHandler<CancelBookingCommand, ApiResponse<BookingDto>>
 {

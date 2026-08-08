@@ -37,6 +37,22 @@ public class ParkingSpace : BaseEntity
     public int TotalSpots { get; internal set; } = 1;
     public int AvailableSpots { get; internal set; } = 1;
 
+    /// <summary>
+    /// Physical 2-wheeler bay capacity for this lot (building fabric).
+    /// When both class physical counts are 0, capacity is treated as untyped (only TotalSpots applies).
+    /// </summary>
+    public int TwoWheelerPhysicalSpots { get; internal set; }
+
+    /// <summary>
+    /// Physical 4-wheeler bay capacity for this lot (building fabric).
+    /// When both class physical counts are 0, capacity is treated as untyped (only TotalSpots applies).
+    /// </summary>
+    public int FourWheelerPhysicalSpots { get; internal set; }
+
+    /// <summary>True when at least one vehicle-class physical capacity is configured on the lot.</summary>
+    public bool HasTypedPhysicalCapacity =>
+        TwoWheelerPhysicalSpots > 0 || FourWheelerPhysicalSpots > 0;
+
     public decimal HourlyRate { get; internal set; }
     public decimal DailyRate { get; internal set; }
     public decimal WeeklyRate { get; internal set; }
@@ -285,6 +301,8 @@ public class ParkingSpace : BaseEntity
         double? longitude = null,
         ParkingType? parkingType = null,
         int? totalSpots = null,
+        int? twoWheelerPhysicalSpots = null,
+        int? fourWheelerPhysicalSpots = null,
         decimal? hourlyRate = null,
         decimal? dailyRate = null,
         decimal? weeklyRate = null,
@@ -349,6 +367,19 @@ public class ParkingSpace : BaseEntity
             AvailableSpots = Math.Min(AvailableSpots, TotalSpots);
             if (AvailableSpots < 1)
                 AvailableSpots = TotalSpots;
+        }
+
+        if (twoWheelerPhysicalSpots.HasValue || fourWheelerPhysicalSpots.HasValue)
+        {
+            SetPhysicalVehicleClassCapacity(
+                twoWheelerPhysicalSpots ?? TwoWheelerPhysicalSpots,
+                fourWheelerPhysicalSpots ?? FourWheelerPhysicalSpots);
+        }
+        else if (TwoWheelerPhysicalSpots + FourWheelerPhysicalSpots > TotalSpots)
+        {
+            throw new ValidationException(
+                "totalSpots",
+                "Total spots cannot be less than configured 2-wheeler + 4-wheeler physical capacity. Reduce physical class capacities first.");
         }
 
         if (hourlyRate.HasValue) HourlyRate = RequireNonNegative(hourlyRate.Value, nameof(hourlyRate));
@@ -945,6 +976,27 @@ public class ParkingSpace : BaseEntity
 
         parking.SyncLocationFromCoordinates();
         return parking;
+    }
+
+    /// <summary>
+    /// Sets physical bay capacity by vehicle class. Sum must not exceed <see cref="TotalSpots"/>.
+    /// Both zeros means untyped capacity (allocation only constrained by TotalSpots).
+    /// </summary>
+    public void SetPhysicalVehicleClassCapacity(int twoWheelerPhysicalSpots, int fourWheelerPhysicalSpots)
+    {
+        if (twoWheelerPhysicalSpots < 0)
+            throw new ValidationException("twoWheelerPhysicalSpots", "2-wheeler physical spots cannot be negative");
+        if (fourWheelerPhysicalSpots < 0)
+            throw new ValidationException("fourWheelerPhysicalSpots", "4-wheeler physical spots cannot be negative");
+        if (twoWheelerPhysicalSpots + fourWheelerPhysicalSpots > TotalSpots)
+        {
+            throw new ValidationException(
+                "physicalSpots",
+                $"2-wheeler ({twoWheelerPhysicalSpots}) + 4-wheeler ({fourWheelerPhysicalSpots}) physical spots cannot exceed total spots ({TotalSpots}).");
+        }
+
+        TwoWheelerPhysicalSpots = twoWheelerPhysicalSpots;
+        FourWheelerPhysicalSpots = fourWheelerPhysicalSpots;
     }
 
     private void SyncLocationFromCoordinates()

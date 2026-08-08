@@ -65,6 +65,8 @@ internal sealed class CompanyOwnedParkingSpaceService : ICompanyOwnedParkingSpac
                 longitude: update.Longitude,
                 parkingType: update.ParkingType,
                 totalSpots: update.TotalSpots,
+                twoWheelerPhysicalSpots: update.TwoWheelerPhysicalSpots,
+                fourWheelerPhysicalSpots: update.FourWheelerPhysicalSpots,
                 hourlyRate: update.HourlyRate,
                 dailyRate: update.DailyRate,
                 weeklyRate: update.WeeklyRate,
@@ -180,7 +182,9 @@ internal sealed class CompanyOwnedParkingSpaceService : ICompanyOwnedParkingSpac
             parking.SpecialInstructions,
             parking.ZoneCode,
             parking.CreatedAt,
-            parking.OwnerId);
+            parking.OwnerId,
+            parking.TwoWheelerPhysicalSpots,
+            parking.FourWheelerPhysicalSpots);
     }
 
     private static IReadOnlyList<string> SplitCsv(string? csv) =>

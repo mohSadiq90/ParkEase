@@ -33,6 +33,9 @@ public class CorporateChannelAuthTests
         _tokens.Setup(t => t.GenerateAccessToken(It.IsAny<User>(), It.IsAny<ProductChannel>(), It.IsAny<Guid?>(), It.IsAny<string?>()))
             .Returns("access");
         _tokens.Setup(t => t.GenerateRefreshToken()).Returns("refresh");
+        _tokens.SetupGet(t => t.AccessTokenExpirationMinutes).Returns(15);
+        _tokens.SetupGet(t => t.RefreshTokenExpirationDays).Returns(15);
+        _tokens.Setup(t => t.CreateRefreshTokenExpiryUtc()).Returns(() => DateTime.UtcNow.AddDays(15));
     }
 
     private static User ActiveUser(string email = "u@test.com") => new()

@@ -20,10 +20,12 @@ const linkStyle = ({ isActive }) => ({
   textDecoration: 'none',
   fontSize: '0.9rem',
   fontWeight: isActive ? 600 : 500,
-  color: isActive ? 'var(--color-text-on-accent)' : 'var(--color-text-secondary)',
+  /* text-on-accent (white) on primary-alpha wash made labels disappear in light mode */
+  color: isActive ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
   background: isActive ? 'var(--color-primary-alpha)' : 'transparent',
   border: isActive ? '1px solid var(--color-primary)' : '1px solid transparent',
   marginBottom: '4px',
+  transition: 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease',
 });
 
 /**
@@ -69,7 +71,28 @@ export default function AdminLayout() {
 
         <nav style={{ flex: 1 }}>
           {navItems.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end} style={linkStyle}>
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              style={linkStyle}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.classList.contains('active')) {
+                  e.currentTarget.style.background = 'var(--color-hover-bg)';
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                const active = e.currentTarget.classList.contains('active')
+                  || e.currentTarget.getAttribute('aria-current') === 'page';
+                e.currentTarget.style.background = active
+                  ? 'var(--color-primary-alpha)'
+                  : 'transparent';
+                e.currentTarget.style.color = active
+                  ? 'var(--color-accent-light)'
+                  : 'var(--color-text-secondary)';
+              }}
+            >
               <span style={{ width: 22, textAlign: 'center' }}>{item.icon}</span>
               {item.label}
             </NavLink>

@@ -161,7 +161,8 @@ public class BookCorporateParkingHandlerTests
                 RecentBookingCreateCount = 0
             });
         _marketplace.Setup(x => x.StageCorporateBookingAsync(It.IsAny<StageCorporateBookingRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MarketplaceBookingCreateResult(bookingId, "QR-TOKEN"));
+            .ReturnsAsync((StageCorporateBookingRequest req, CancellationToken _) =>
+                new MarketplaceBookingCreateResult(req.BookingId ?? bookingId, "QR-TOKEN"));
 
         var handler = new BookCorporateParkingHandler(
             _corporate.Object, _marketplace.Object, _cache.Object, _quotaCache.Object);
@@ -173,8 +174,11 @@ public class BookCorporateParkingHandlerTests
         result.Success.Should().BeTrue(result.Message);
         result.Message.Should().Contain("booked successfully");
         result.Data!.Booking.Should().NotBeNull();
-        result.Data.Booking!.BookingId.Should().Be(bookingId);
+        result.Data.Booking!.BookingId.Should().NotBe(Guid.Empty);
         result.Data.Waitlist.Should().BeNull();
+        _marketplace.Verify(x => x.StageCorporateBookingAsync(
+            It.Is<StageCorporateBookingRequest>(r => r.BookingId == result.Data.Booking!.BookingId),
+            It.IsAny<CancellationToken>()), Times.Once);
         _corporate.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _quotaCache.Verify(x => x.InvalidateCompanyAsync(company.Id, It.IsAny<CancellationToken>()), Times.Once);
         _cache.Verify(x => x.ReleaseLockAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -312,6 +316,9 @@ public class BookCorporateParkingHandlerTests
         result.Data!.Waitlist.Should().NotBeNull();
         result.Data.Booking.Should().BeNull();
         company.CorporateBookings.Should().BeEmpty();
+        // Waitlisted requests must not stage a marketplace Confirmed booking (orphan + false notification).
+        _marketplace.Verify(x => x.StageCorporateBookingAsync(
+            It.IsAny<StageCorporateBookingRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -356,6 +363,8 @@ public class BookCorporateParkingHandlerTests
         result.Message.Should().Contain("waitlist");
         result.Data!.Waitlist.Should().NotBeNull();
         result.Data.Booking.Should().BeNull();
+        _marketplace.Verify(x => x.StageCorporateBookingAsync(
+            It.IsAny<StageCorporateBookingRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -431,7 +440,8 @@ public class BookCorporateParkingHandlerTests
                 It.IsAny<string?>(), VehicleClass.TwoWheeler, It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmptyPreCheck(2)); // shared full; fixed should still work
         _marketplace.Setup(x => x.StageCorporateBookingAsync(It.IsAny<StageCorporateBookingRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MarketplaceBookingCreateResult(bookingId, "QR"));
+            .ReturnsAsync((StageCorporateBookingRequest req, CancellationToken _) =>
+                new MarketplaceBookingCreateResult(req.BookingId ?? bookingId, "QR"));
 
         var handler = new BookCorporateParkingHandler(
             _corporate.Object, _marketplace.Object, _cache.Object, _quotaCache.Object);
@@ -442,8 +452,11 @@ public class BookCorporateParkingHandlerTests
 
         result.Success.Should().BeTrue(result.Message);
         result.Data!.Booking.Should().NotBeNull();
-        result.Data.Booking!.BookingId.Should().Be(bookingId);
+        result.Data.Booking!.BookingId.Should().NotBe(Guid.Empty);
         result.Data.Waitlist.Should().BeNull();
+        _marketplace.Verify(x => x.StageCorporateBookingAsync(
+            It.Is<StageCorporateBookingRequest>(r => r.BookingId == result.Data.Booking!.BookingId),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }
 

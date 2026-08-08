@@ -89,7 +89,12 @@ const defaultFrom = () => {
   return toDateInputValue(d);
 };
 
-const defaultTo = () => toDateInputValue(new Date());
+// Include upcoming reservations — filtering by StartDateTime with To=today hid future bookings.
+const defaultTo = () => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 60);
+  return toDateInputValue(d);
+};
 
 const CompanyBookings = () => {
   const { activeCompanyId, companyDetails, isCorporateMode } = useCompany();

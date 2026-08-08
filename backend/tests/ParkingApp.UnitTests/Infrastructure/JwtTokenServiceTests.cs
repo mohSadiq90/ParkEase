@@ -26,8 +26,43 @@ public class JwtTokenServiceTests
         _mockConfig.Setup(c => c["Jwt:Issuer"]).Returns("TestIssuer");
         _mockConfig.Setup(c => c["Jwt:Audience"]).Returns("TestAudience");
         _mockConfig.Setup(c => c["Jwt:AccessTokenExpirationMinutes"]).Returns("60");
+        _mockConfig.Setup(c => c["Jwt:RefreshTokenExpirationDays"]).Returns("15");
 
         _service = new JwtTokenService(_mockConfig.Object);
+    }
+
+    [Fact]
+    public void Constructor_ShouldReadTokenLifetimes_FromConfig()
+    {
+        _service.AccessTokenExpirationMinutes.Should().Be(60);
+        _service.RefreshTokenExpirationDays.Should().Be(15);
+    }
+
+    [Fact]
+    public void CreateRefreshTokenExpiryUtc_ShouldBeAboutConfiguredDaysFromNow()
+    {
+        var before = DateTime.UtcNow.AddDays(15).AddSeconds(-2);
+        var expiry = _service.CreateRefreshTokenExpiryUtc();
+        var after = DateTime.UtcNow.AddDays(15).AddSeconds(2);
+
+        expiry.Should().BeOnOrAfter(before);
+        expiry.Should().BeOnOrBefore(after);
+    }
+
+    [Fact]
+    public void Constructor_ShouldDefaultRefreshTo15Days_WhenConfigMissing()
+    {
+        var config = new Mock<IConfiguration>();
+        config.Setup(c => c["Jwt:SecretKey"]).Returns(SecretKey);
+        config.Setup(c => c["Jwt:Issuer"]).Returns("TestIssuer");
+        config.Setup(c => c["Jwt:Audience"]).Returns("TestAudience");
+        // Access/refresh keys omitted → defaults
+
+        var service = new JwtTokenService(config.Object);
+
+        service.AccessTokenExpirationMinutes.Should().Be(JwtTokenService.DefaultAccessTokenExpirationMinutes);
+        service.RefreshTokenExpirationDays.Should().Be(JwtTokenService.DefaultRefreshTokenExpirationDays);
+        service.RefreshTokenExpirationDays.Should().Be(15);
     }
 
     [Fact]

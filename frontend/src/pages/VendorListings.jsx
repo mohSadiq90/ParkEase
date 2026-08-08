@@ -1237,7 +1237,7 @@ export default function VendorListings() {
                                                     <div key={booking.id} style={{
                                                         padding: '0.5rem',
                                                         marginBottom: '0.4rem',
-                                                        background: 'rgba(0,0,0,0.2)',
+                                                        background: 'var(--color-row-elevated)',
                                                         borderRadius: '6px',
                                                         fontSize: '0.8rem'
                                                     }}>

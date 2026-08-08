@@ -10,6 +10,17 @@ namespace ParkingApp.Identity.Application.Interfaces;
 public interface ITokenService
 {
     /// <summary>
+    /// Access JWT lifetime in minutes (from <c>Jwt:AccessTokenExpirationMinutes</c>).
+    /// </summary>
+    int AccessTokenExpirationMinutes { get; }
+
+    /// <summary>
+    /// Refresh-token lifetime in days (from <c>Jwt:RefreshTokenExpirationDays</c>).
+    /// Mobile/web stay-signed-in window; product default is 15 days.
+    /// </summary>
+    int RefreshTokenExpirationDays { get; }
+
+    /// <summary>
     /// Mint access token with product channel claim (+ optional corporate company_id / company_role).
     /// </summary>
     string GenerateAccessToken(
@@ -20,4 +31,7 @@ public interface ITokenService
 
     string GenerateRefreshToken();
     bool ValidateRefreshToken(User user, string refreshToken);
+
+    /// <summary>UTC expiry for a newly issued refresh token.</summary>
+    DateTime CreateRefreshTokenExpiryUtc();
 }

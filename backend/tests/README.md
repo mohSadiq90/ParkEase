@@ -5,7 +5,7 @@
 | Project | Purpose |
 | --- | --- |
 | `ParkingApp.UnitTests` | Host / cross-cutting / architecture / legacy integration-style unit tests |
-| `ParkingApp.IntegrationTests` | Application-layer + SQL/HTTP integration: payment lifecycle, reviews isolation, **corporate 2W/4W dual pools** (L2 in-memory lifecycle, **Testcontainers Postgres occupancy/read-store SQL**, **WebApplicationFactory HTTP smoke**) |
+| `ParkingApp.IntegrationTests` | Application-layer + SQL/HTTP integration: payment lifecycle, reviews isolation, **corporate 2W/4W dual pools** (L2/L3/L4), **Auth + isolation + book/pay/check-in + corp lifecycle + IoT LPR L4 HTTP** (`FullApiFactory` + PostGIS Testcontainers, real JWT, deterministic payment) |
 | `Modules/Identity/ParkingApp.Identity.UnitTests` | Identity module isolation tests |
 | `Modules/Marketplace/ParkingApp.Marketplace.UnitTests` | Marketplace module isolation tests |
 | `Modules/Corporate/ParkingApp.Corporate.UnitTests` | Corporate module tests (pilot migration from monolithic suite) |
@@ -91,7 +91,12 @@ dotnet test tests/ParkingApp.IntegrationTests/ParkingApp.IntegrationTests.csproj
 
 # HTTP smoke only (WebApplicationFactory; no Docker)
 dotnet test tests/ParkingApp.IntegrationTests/ParkingApp.IntegrationTests.csproj --filter "Layer=Http"
+
+# Full-pipeline Auth + channel isolation L4 (PostGIS Docker required)
+dotnet test tests/ParkingApp.IntegrationTests/ParkingApp.IntegrationTests.csproj --filter "Feature=Auth|Feature=ChannelIsolation"
 ```
+
+Living coverage tracker: **`docs/IT-Coverage-Matrix.md`**.
 
 Frontend dual-pool UI: `CorporateParkingSpaces.test.jsx`, `CompanyAllocations.test.jsx`, `LeaseBrowse.test.jsx` (Vitest).
 

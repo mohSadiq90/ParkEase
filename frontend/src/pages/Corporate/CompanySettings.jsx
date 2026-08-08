@@ -273,7 +273,7 @@ const CompanySettings = () => {
                       gap: '0.75rem',
                       alignItems: 'center',
                       padding: '0.75rem 0.85rem',
-                      background: 'rgba(255,255,255,0.03)',
+                      background: 'var(--color-row-elevated)',
                       borderRadius: '8px',
                     }}
                   >

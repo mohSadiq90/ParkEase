@@ -84,6 +84,13 @@ internal sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSche
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        // IT-Q1: allow anonymous clients for authz smoke (no credentials → NoResult → 401 on [Authorize]).
+        if (Request.Headers.TryGetValue("X-Test-Anonymous", out var values)
+            && values.Any(v => string.Equals(v, "1", StringComparison.Ordinal)))
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, DualPoolApiFactory.TestUserId.ToString()),

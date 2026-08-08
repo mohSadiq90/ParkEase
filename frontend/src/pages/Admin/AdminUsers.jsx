@@ -99,7 +99,7 @@ export default function AdminUsers() {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
             <thead>
-              <tr style={{ background: 'rgba(0,0,0,0.2)', color: 'var(--color-text-secondary)', textAlign: 'left' }}>
+              <tr style={{ background: 'var(--color-table-head)', color: 'var(--color-text-secondary)', textAlign: 'left' }}>
                 <th style={{ padding: '0.75rem 1rem' }}>User</th>
                 <th style={{ padding: '0.75rem 1rem' }}>Role</th>
                 <th style={{ padding: '0.75rem 1rem' }}>Status</th>

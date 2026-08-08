@@ -60,7 +60,9 @@ internal sealed class CreateOwnedParkingAllocationHandler
                 command.Dto.StartDate,
                 command.Dto.EndDate,
                 parkingSpace.TotalSpots,
-                policy);
+                policy,
+                parkingSpace.TwoWheelerPhysicalSpots,
+                parkingSpace.FourWheelerPhysicalSpots);
 
             await _corporate.SaveChangesAsync(ct);
             await _quotaCache.InvalidateCompanyAsync(company.Id, ct);

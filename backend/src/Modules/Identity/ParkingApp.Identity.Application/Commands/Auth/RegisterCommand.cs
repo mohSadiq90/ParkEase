@@ -33,7 +33,6 @@ internal sealed class RegisterHandler : ICommandHandler<RegisterCommand, ApiResp
     private readonly ITokenService _tokenService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<RegisterHandler> _logger;
-    private const int RefreshTokenExpirationDays = 7;
 
     public RegisterHandler(
         IIdentityUnitOfWork unitOfWork,
@@ -67,7 +66,7 @@ internal sealed class RegisterHandler : ICommandHandler<RegisterCommand, ApiResp
         var channel = ProductChannel.Marketplace;
         var accessToken = _tokenService.GenerateAccessToken(user, channel);
         var refreshToken = _tokenService.GenerateRefreshToken();
-        user.RotateRefreshToken(refreshToken, DateTime.UtcNow.AddDays(RefreshTokenExpirationDays));
+        user.RotateRefreshToken(refreshToken, _tokenService.CreateRefreshTokenExpiryUtc());
         user.BindSession(channel);
 
         await _unitOfWork.Users.AddAsync(user, cancellationToken);
@@ -76,7 +75,8 @@ internal sealed class RegisterHandler : ICommandHandler<RegisterCommand, ApiResp
         _logger.LogInformation("User registered: {Email}, Role: {Role}", user.Email, user.Role);
 
         return new ApiResponse<TokenDto>(true, "Registration successful",
-            AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel));
+            AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel,
+                accessTokenExpirationMinutes: _tokenService.AccessTokenExpirationMinutes));
     }
 }
 
@@ -86,7 +86,6 @@ internal sealed class LoginHandler : ICommandHandler<LoginCommand, ApiResponse<T
     private readonly ITokenService _tokenService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<LoginHandler> _logger;
-    private const int RefreshTokenExpirationDays = 7;
 
     public LoginHandler(
         IIdentityUnitOfWork unitOfWork,
@@ -116,7 +115,7 @@ internal sealed class LoginHandler : ICommandHandler<LoginCommand, ApiResponse<T
         var channel = user.Role == UserRole.Admin ? ProductChannel.Admin : ProductChannel.Marketplace;
         var accessToken = _tokenService.GenerateAccessToken(user, channel);
         var refreshToken = _tokenService.GenerateRefreshToken();
-        user.RecordLogin(refreshToken, DateTime.UtcNow.AddDays(RefreshTokenExpirationDays));
+        user.RecordLogin(refreshToken, _tokenService.CreateRefreshTokenExpiryUtc());
         user.BindSession(channel);
 
         _unitOfWork.Users.Update(user);
@@ -125,7 +124,8 @@ internal sealed class LoginHandler : ICommandHandler<LoginCommand, ApiResponse<T
         _logger.LogInformation("User logged in: {Email}, UserId: {UserId}, Channel: {Channel}", user.Email, user.Id, channel);
 
         return new ApiResponse<TokenDto>(true, "Login successful",
-            AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel));
+            AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel,
+                accessTokenExpirationMinutes: _tokenService.AccessTokenExpirationMinutes));
     }
 }
 
@@ -134,7 +134,6 @@ internal sealed class RefreshTokenHandler : ICommandHandler<RefreshTokenCommand,
     private readonly IIdentityUnitOfWork _unitOfWork;
     private readonly ITokenService _tokenService;
     private readonly ICompanyMembershipLookup _memberships;
-    private const int RefreshTokenExpirationDays = 7;
 
     public RefreshTokenHandler(
         IIdentityUnitOfWork unitOfWork,
@@ -262,14 +261,15 @@ internal sealed class RefreshTokenHandler : ICommandHandler<RefreshTokenCommand,
 
         var accessToken = _tokenService.GenerateAccessToken(user, channel, companyId, companyRole);
         var refreshToken = _tokenService.GenerateRefreshToken();
-        user.RotateRefreshToken(refreshToken, DateTime.UtcNow.AddDays(RefreshTokenExpirationDays));
+        user.RotateRefreshToken(refreshToken, _tokenService.CreateRefreshTokenExpiryUtc());
         user.BindSession(channel, companyId, companyRole);
 
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new ApiResponse<TokenDto>(true, "Token refreshed",
-            AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel, companyId, companyRole));
+            AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel, companyId, companyRole,
+                accessTokenExpirationMinutes: _tokenService.AccessTokenExpirationMinutes));
     }
 
     /// <summary>

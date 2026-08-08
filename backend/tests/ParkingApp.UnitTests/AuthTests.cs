@@ -31,6 +31,9 @@ public class AuthTests
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockUserRepository = new Mock<IUserRepository>();
         _mockTokenService = new Mock<ITokenService>();
+        _mockTokenService.SetupGet(t => t.AccessTokenExpirationMinutes).Returns(15);
+        _mockTokenService.SetupGet(t => t.RefreshTokenExpirationDays).Returns(15);
+        _mockTokenService.Setup(t => t.CreateRefreshTokenExpiryUtc()).Returns(() => DateTime.UtcNow.AddDays(15));
         _mockPasswordHasher = new Mock<IPasswordHasher>();
 
         _mockLoginLogger = new Mock<ILogger<LoginHandler>>();

@@ -453,6 +453,53 @@ public class CompanyAggregateTests
     }
 
     [Fact]
+    public void CreateOwnedParkingAllocation_ShouldRejectTwoWheelerBeyondPhysicalCapacity()
+    {
+        var creatorId = Guid.NewGuid();
+        var company = CreateCompany(creatorId);
+
+        var act = () => company.CreateOwnedParkingAllocation(
+            creatorId,
+            Guid.NewGuid(),
+            Quota.Create(15, 0, 15), // 2W
+            Quota.Create(50, 0, 50), // 4W
+            0m,
+            Utc(2026, 1, 1, 0, 0),
+            Utc(2026, 12, 31, 23, 59),
+            parkingCapacity: 70,
+            bookingPolicy: null,
+            twoWheelerPhysicalSpots: 10,
+            fourWheelerPhysicalSpots: 50);
+
+        act.Should()
+            .Throw<InvalidOperationException>()
+            .WithMessage("*two-wheeler*");
+    }
+
+    [Fact]
+    public void CreateOwnedParkingAllocation_ShouldAcceptPoolsWithinPhysicalCapacity()
+    {
+        var creatorId = Guid.NewGuid();
+        var company = CreateCompany(creatorId);
+
+        var allocation = company.CreateOwnedParkingAllocation(
+            creatorId,
+            Guid.NewGuid(),
+            Quota.Create(10, 2, 8),
+            Quota.Create(50, 10, 40),
+            0m,
+            Utc(2026, 1, 1, 0, 0),
+            Utc(2026, 12, 31, 23, 59),
+            parkingCapacity: 70,
+            bookingPolicy: null,
+            twoWheelerPhysicalSpots: 20,
+            fourWheelerPhysicalSpots: 50);
+
+        allocation.TwoWheelerQuota.TotalSlots.Should().Be(10);
+        allocation.FourWheelerQuota.TotalSlots.Should().Be(50);
+    }
+
+    [Fact]
     public void CreateOwnedParkingAllocation_ShouldRejectOverlappingPeriodForSameParkingSpace()
     {
         var creatorId = Guid.NewGuid();

@@ -10,7 +10,6 @@ using ParkingApp.Marketplace.Application.Interfaces;
 using ParkingApp.Application.Interfaces;
 
 using ParkingApp.Marketplace.Contracts.Enums;
-using ParkingApp.Marketplace.Contracts.Enums;
 using ParkingApp.BuildingBlocks.Enums;
 
 namespace ParkingApp.Marketplace.Infrastructure.ReadModel.Bookings;

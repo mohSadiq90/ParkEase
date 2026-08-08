@@ -474,3 +474,4 @@ ResetOutbox/
 **/ResetOutbox/
 CheckDB.cs
 **/CheckDB.cs
+/docs/channel-isolation-qa-matrix.md

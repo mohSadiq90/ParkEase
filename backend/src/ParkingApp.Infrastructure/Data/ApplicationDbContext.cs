@@ -109,29 +109,35 @@ public class ApplicationDbContext : DbContext,
 
     private void ApplyCorporateTenantFilters(ModelBuilder modelBuilder)
     {
+        // IMPORTANT: never use CurrentTenantId.Value here.
+        // EF Core parameterizes filter expressions client-side; when CompanyId is null
+        // (background jobs, pre-tenant HTTP), .Value throws
+        // "Nullable object must have a value". Compare the Guid? directly instead.
+        // When tenant is null, the filter only enforces soft-delete (cross-tenant OK).
+        // When tenant is set, rows are scoped to that company.
         modelBuilder.Entity<UserCompanyMembership>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<ParkingAllocation>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CorporateBooking>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<FixedSlotAssignment>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<EmployeeInvitation>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CompanyUsage>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CorporateWaitlistEntry>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CorporateInvoice>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CorporateInvoiceLineItem>()
             .HasQueryFilter(e => !e.IsDeleted);

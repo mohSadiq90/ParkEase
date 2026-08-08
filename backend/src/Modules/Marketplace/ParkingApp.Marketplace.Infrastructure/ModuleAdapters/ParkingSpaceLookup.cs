@@ -45,5 +45,7 @@ internal sealed class ParkingSpaceLookup : IParkingSpaceLookup
             space.TotalSpots,
             space.OwnershipType.ToString(),
             space.CompanyOwnerId,
-            space.IsLprEnabled);
+            space.IsLprEnabled,
+            space.TwoWheelerPhysicalSpots,
+            space.FourWheelerPhysicalSpots);
 }

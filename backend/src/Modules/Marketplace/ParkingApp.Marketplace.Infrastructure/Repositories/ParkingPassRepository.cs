@@ -3,7 +3,6 @@ using ParkingApp.Marketplace.Domain.Entities;
 using ParkingApp.Marketplace.Contracts.Enums;
 using ParkingApp.Marketplace.Domain.Interfaces;
 using ParkingApp.Marketplace.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace ParkingApp.Marketplace.Infrastructure.Repositories;
 

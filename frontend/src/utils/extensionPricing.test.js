@@ -5,6 +5,7 @@ import {
   extensionPricingStartIso,
   extensionPricingEndIso,
   resolveExtensionEndIso,
+  resolveBookingRangeIso,
   isValidExtensionDate,
   defaultExtensionEnd,
   billableExtensionDays,
@@ -27,6 +28,39 @@ describe('extensionPricing', () => {
 
   it('dateOnlyToNoonUtcIso anchors at 12:00 UTC', () => {
     expect(dateOnlyToNoonUtcIso('2026-08-05')).toBe('2026-08-05T12:00:00.000Z');
+  });
+
+  it('day-based booking range uses noon-UTC anchors so Aug 3–4 is 2 days not 3', () => {
+    // Regression: local midnight → ISO in IST made start Aug 2 18:30Z and end Aug 4 18:29Z
+    // which UTC inclusive calendar days counted as 3.
+    const { startIso, endIso } = resolveBookingRangeIso('2026-08-03', '2026-08-04', 1);
+    expect(startIso).toBe('2026-08-03T12:00:00.000Z');
+    expect(endIso).toBe('2026-08-04T12:00:00.000Z');
+    const s = new Date(startIso);
+    const e = new Date(endIso);
+    const utcDays =
+      Math.floor(
+        (Date.UTC(e.getUTCFullYear(), e.getUTCMonth(), e.getUTCDate()) -
+          Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate())) /
+          (24 * 60 * 60 * 1000),
+      ) + 1;
+    expect(utcDays).toBe(2);
+  });
+
+  it('day-based booking range for same calendar day is 1 day', () => {
+    const { startIso, endIso } = resolveBookingRangeIso('2026-08-03', '2026-08-03', 1);
+    expect(startIso).toBe(endIso);
+    expect(startIso).toBe('2026-08-03T12:00:00.000Z');
+  });
+
+  it('hourly booking range uses exact datetime-local values', () => {
+    const { startIso, endIso } = resolveBookingRangeIso(
+      '2026-08-03T10:00',
+      '2026-08-03T12:00',
+      0,
+    );
+    expect(startIso).toBe(new Date('2026-08-03T10:00').toISOString());
+    expect(endIso).toBe(new Date('2026-08-03T12:00').toISOString());
   });
 
   it('day-based extension pricing start is next unpaid local day (noon UTC)', () => {

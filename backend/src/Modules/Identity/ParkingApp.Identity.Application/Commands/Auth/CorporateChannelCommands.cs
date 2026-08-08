@@ -41,7 +41,6 @@ internal sealed class CorporateLoginHandler : ICommandHandler<CorporateLoginComm
     private readonly IPasswordHasher _passwordHasher;
     private readonly ICompanyMembershipLookup _memberships;
     private readonly ILogger<CorporateLoginHandler> _logger;
-    private const int RefreshTokenExpirationDays = 7;
 
     public CorporateLoginHandler(
         IIdentityUnitOfWork unitOfWork,
@@ -152,11 +151,12 @@ internal sealed class CorporateLoginHandler : ICommandHandler<CorporateLoginComm
         var channel = ProductChannel.Corporate;
         var accessToken = _tokenService.GenerateAccessToken(user, channel, companyId, companyRole);
         var refreshToken = _tokenService.GenerateRefreshToken();
-        user.RecordLogin(refreshToken, DateTime.UtcNow.AddDays(RefreshTokenExpirationDays));
+        user.RecordLogin(refreshToken, _tokenService.CreateRefreshTokenExpiryUtc());
         user.BindSession(channel, companyId, companyRole);
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel, companyId, companyRole);
+        return AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel, companyId, companyRole,
+            accessTokenExpirationMinutes: _tokenService.AccessTokenExpirationMinutes);
     }
 
     private static IReadOnlyList<CompanyMembershipOptionDto> Map(IReadOnlyList<CompanyMembershipSummary> memberships) =>
@@ -169,7 +169,6 @@ internal sealed class SwitchChannelHandler : ICommandHandler<SwitchChannelComman
     private readonly ITokenService _tokenService;
     private readonly ICompanyMembershipLookup _memberships;
     private readonly ILogger<SwitchChannelHandler> _logger;
-    private const int RefreshTokenExpirationDays = 7;
 
     public SwitchChannelHandler(
         IIdentityUnitOfWork unitOfWork,
@@ -283,7 +282,7 @@ internal sealed class SwitchChannelHandler : ICommandHandler<SwitchChannelComman
 
         var accessToken = _tokenService.GenerateAccessToken(user, channel, companyId, companyRole);
         var refreshToken = _tokenService.GenerateRefreshToken();
-        user.RotateRefreshToken(refreshToken, DateTime.UtcNow.AddDays(RefreshTokenExpirationDays));
+        user.RotateRefreshToken(refreshToken, _tokenService.CreateRefreshTokenExpiryUtc());
         user.BindSession(channel, companyId, companyRole);
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -293,7 +292,8 @@ internal sealed class SwitchChannelHandler : ICommandHandler<SwitchChannelComman
             user.Id, channel, companyId);
 
         return new ApiResponse<TokenDto>(true, "Channel switched",
-            AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel, companyId, companyRole));
+            AuthTokenDtoFactory.Create(accessToken, refreshToken, user, channel, companyId, companyRole,
+                accessTokenExpirationMinutes: _tokenService.AccessTokenExpirationMinutes));
     }
 }
 

@@ -10,9 +10,6 @@ namespace ParkingApp.Identity.Infrastructure.Services;
 /// </summary>
 internal sealed class SessionRebindService : ISessionRebindService
 {
-    private const int RefreshTokenExpirationDays = 7;
-    private const int AccessTokenExpirationMinutes = 15;
-
     private readonly IIdentityUnitOfWork _unitOfWork;
     private readonly ITokenService _tokenService;
 
@@ -44,7 +41,7 @@ internal sealed class SessionRebindService : ISessionRebindService
 
         var accessToken = _tokenService.GenerateAccessToken(user, productChannel, bindCompanyId, bindCompanyRole);
         var refreshToken = _tokenService.GenerateRefreshToken();
-        user.RotateRefreshToken(refreshToken, DateTime.UtcNow.AddDays(RefreshTokenExpirationDays));
+        user.RotateRefreshToken(refreshToken, _tokenService.CreateRefreshTokenExpiryUtc());
         user.BindSession(productChannel, bindCompanyId, bindCompanyRole);
 
         _unitOfWork.Users.Update(user);
@@ -54,7 +51,7 @@ internal sealed class SessionRebindService : ISessionRebindService
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(AccessTokenExpirationMinutes),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(_tokenService.AccessTokenExpirationMinutes),
             Channel = productChannel.ToString(),
             CompanyId = bindCompanyId,
             CompanyRole = bindCompanyRole,

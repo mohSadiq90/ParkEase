@@ -2,15 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useCompany } from '../contexts/CompanyContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import corporateService from '../services/corporateService';
 import showToast from '../utils/toast.jsx';
 
 /**
- * Account/company switcher (PR10b).
- * Marketplace: CTA into Corporate login.
- * Corporate: switch companies via POST /auth/channel; exit via Marketplace channel re-mint.
- * Soft Personal Mode toggle was removed — UX rollback = prior frontend artifact.
+ * Corporate company switcher only.
+ * Marketplace and Corporate are separate products/accounts — no cross-channel CTA or exit.
+ * Within Corporate: switch companies via POST /auth/channel.
  */
 const CompanySwitcher = () => {
     const { activeCompanyId, companyDetails, isCorporateMode, switchCompany } = useCompany();
@@ -96,25 +95,6 @@ const CompanySwitcher = () => {
         }
     };
 
-    const handleSwitchToMarketplaceChannel = async () => {
-        setSwitching(true);
-        try {
-            const result = await switchChannel({ channel: 'Marketplace' });
-            setIsOpen(false);
-            if (result.success) {
-                switchCompany(null);
-                navigate('/dashboard', { replace: true });
-            } else {
-                showToast.error(result.message || 'Could not switch to marketplace');
-            }
-        } catch (error) {
-            console.error('switchChannel marketplace failed', error);
-            showToast.error('Could not switch to marketplace');
-        } finally {
-            setSwitching(false);
-        }
-    };
-
     const handleCreateCompany = async (e) => {
         e.preventDefault();
         setCreateLoading(true);
@@ -157,35 +137,8 @@ const CompanySwitcher = () => {
         }
     };
 
-    // Guests: no switcher. Authenticated Marketplace: CTA into corporate product.
-    // Authenticated Corporate: full company dropdown below.
-    if (!isAuthenticated) return null;
-
-    // Marketplace (or non-Corporate) shell: CTA into corporate product
-    if (channel !== 'Corporate') {
-        return (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                <Link
-                    to="/corporate/login"
-                    className="btn btn-secondary"
-                    style={{
-                        padding: '8px 14px',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                    }}
-                >
-                    <span role="img" aria-label="building">
-                        🏢
-                    </span>
-                    Corporate workspace
-                </Link>
-            </div>
-        );
-    }
+    // Only show on Corporate product sessions — marketplace has no corporate entry point
+    if (!isAuthenticated || channel !== 'Corporate') return null;
 
     const effectiveCompanyId = jwtCompanyId || activeCompanyId;
     const currentName =
@@ -204,7 +157,7 @@ const CompanySwitcher = () => {
                     padding: '8px 16px',
                     background:
                         'linear-gradient(135deg, var(--color-success) 0%, color-mix(in srgb, var(--color-success) 80%, black) 100%)',
-                    color: 'white',
+                    color: 'var(--color-text-on-accent)',
                     border: '1px solid var(--control-border)',
                     borderRadius: '8px',
                     cursor: 'pointer',
@@ -262,25 +215,6 @@ const CompanySwitcher = () => {
                         </span>
                     </div>
 
-                    <button
-                        onClick={handleSwitchToMarketplaceChannel}
-                        disabled={switching}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            width: '100%',
-                            padding: '12px 16px',
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--color-text-primary)',
-                            textAlign: 'left',
-                            cursor: switching ? 'wait' : 'pointer',
-                            fontSize: '0.9rem',
-                        }}
-                    >
-                        <span style={{ marginRight: '8px' }}>🛒</span> Marketplace account
-                    </button>
-
                     {loading || switching ? (
                         <div
                             style={{
@@ -304,7 +238,7 @@ const CompanySwitcher = () => {
                                     padding: '12px 16px',
                                     background:
                                         String(effectiveCompanyId) === String(company.id)
-                                            ? 'rgba(16, 185, 129, 0.1)'
+                                            ? 'rgba(16, 185, 129, 0.12)'
                                             : 'transparent',
                                     border: 'none',
                                     color:
@@ -315,6 +249,18 @@ const CompanySwitcher = () => {
                                     cursor: 'pointer',
                                     fontSize: '0.9rem',
                                     borderTop: '1px solid var(--dropdown-border)',
+                                    transition: 'background 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (String(effectiveCompanyId) !== String(company.id)) {
+                                        e.currentTarget.style.background = 'var(--dropdown-item-hover-bg)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background =
+                                        String(effectiveCompanyId) === String(company.id)
+                                            ? 'rgba(16, 185, 129, 0.12)'
+                                            : 'transparent';
                                 }}
                             >
                                 <span style={{ marginRight: '8px' }}>🏢</span>{' '}

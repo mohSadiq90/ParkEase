@@ -450,7 +450,7 @@ const CompanyInvoices = () => {
 
       {payModal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex',
+          position: 'fixed', inset: 0, background: 'var(--overlay-bg)', display: 'flex',
           alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16,
         }}>
           <div style={{ background: 'var(--color-surface)', borderRadius: 12, padding: 24, maxWidth: 420, width: '100%', border: '1px solid var(--color-border)' }}>
@@ -479,7 +479,7 @@ const CompanyInvoices = () => {
 
       {voidModal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex',
+          position: 'fixed', inset: 0, background: 'var(--overlay-bg)', display: 'flex',
           alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16,
         }}>
           <div style={{ background: 'var(--color-surface)', borderRadius: 12, padding: 24, maxWidth: 420, width: '100%', border: '1px solid var(--color-border)' }}>

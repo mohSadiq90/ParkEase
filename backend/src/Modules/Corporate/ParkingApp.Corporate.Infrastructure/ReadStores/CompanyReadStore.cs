@@ -213,6 +213,8 @@ internal sealed class CompanyReadStore : ICompanyReadStore
                 ps."Longitude" AS Longitude,
                 ps."ParkingType" AS ParkingType,
                 ps."TotalSpots" AS TotalSpots,
+                ps."TwoWheelerPhysicalSpots" AS TwoWheelerPhysicalSpots,
+                ps."FourWheelerPhysicalSpots" AS FourWheelerPhysicalSpots,
                 ps."AvailableSpots" AS AvailableSpots,
                 ps."HourlyRate" AS HourlyRate,
                 ps."DailyRate" AS DailyRate,
@@ -272,7 +274,9 @@ internal sealed class CompanyReadStore : ICompanyReadStore
             r.IsVerified,
             r.SpecialInstructions,
             r.ZoneCode,
-            r.CreatedAt)).ToList();
+            r.CreatedAt,
+            r.TwoWheelerPhysicalSpots,
+            r.FourWheelerPhysicalSpots)).ToList();
     }
 
     public async Task<(IReadOnlyList<CorporateBookingDto> Bookings, int TotalCount)> GetMemberBookingsAsync(
@@ -1228,6 +1232,8 @@ internal sealed class CompanyReadStore : ICompanyReadStore
         public double Longitude { get; set; }
         public int ParkingType { get; set; }
         public int TotalSpots { get; set; }
+        public int TwoWheelerPhysicalSpots { get; set; }
+        public int FourWheelerPhysicalSpots { get; set; }
         public int AvailableSpots { get; set; }
         public decimal HourlyRate { get; set; }
         public decimal DailyRate { get; set; }

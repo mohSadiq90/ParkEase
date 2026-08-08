@@ -99,20 +99,12 @@ internal sealed class BookVisitorParkingHandler
             var duration = command.Dto.EndDateTime - command.Dto.StartDateTime;
             var amount = company.CalculateBookingAmount(quota.HourlyRate, duration);
 
-            var stage = await _marketplaceBookings.StageCorporateBookingAsync(
-                new StageCorporateBookingRequest(
-                    command.UserId,
-                    allocation.ParkingSpaceId,
-                    command.Dto.StartDateTime,
-                    command.Dto.EndDateTime,
-                    amount,
-                    command.Dto.VisitorLicensePlate,
-                    IsVisitor: true,
-                    VehicleType: command.Dto.VehicleType),
-                ct);
-
+            // Reserve first. Only stage a marketplace booking when a slot is actually assigned.
+            // Staging before reserve left orphan Confirmed rows + "Booking Confirmed!" notifications
+            // when the request was waitlisted (no CorporateBooking row → empty bookings page).
+            var bookingId = Guid.NewGuid();
             draft = new CorporateBookingDraft(
-                stage.BookingId,
+                bookingId,
                 allocation.ParkingSpaceId,
                 command.Dto.StartDateTime,
                 command.Dto.EndDateTime,
@@ -139,6 +131,22 @@ internal sealed class BookVisitorParkingHandler
                 preCheck.SharedSlotUsageBySlot,
                 preCheck.AnonymousOccupiedSharedBookings,
                 fraudAssessment);
+
+            if (!reservation.IsWaitlisted)
+            {
+                await _marketplaceBookings.StageCorporateBookingAsync(
+                    new StageCorporateBookingRequest(
+                        command.UserId,
+                        allocation.ParkingSpaceId,
+                        command.Dto.StartDateTime,
+                        command.Dto.EndDateTime,
+                        amount,
+                        command.Dto.VisitorLicensePlate,
+                        IsVisitor: true,
+                        VehicleType: command.Dto.VehicleType,
+                        BookingId: bookingId),
+                    ct);
+            }
 
             await _corporate.SaveChangesAsync(ct);
         }

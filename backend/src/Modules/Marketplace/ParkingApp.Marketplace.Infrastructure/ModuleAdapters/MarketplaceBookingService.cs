@@ -96,6 +96,12 @@ internal sealed class MarketplaceBookingService : IMarketplaceBookingService, IM
                 request.VehicleNumber);
         }
 
+        // Align marketplace row Id with CorporateBooking.BookingId when Corporate reserves first.
+        if (request.BookingId is { } bookingId && bookingId != Guid.Empty)
+        {
+            booking.Id = bookingId;
+        }
+
         await _marketplace.Bookings.AddAsync(booking, cancellationToken);
         
         return new MarketplaceBookingCreateResult(booking.Id, booking.QRCode);

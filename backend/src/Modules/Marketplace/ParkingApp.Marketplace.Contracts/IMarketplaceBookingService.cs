@@ -39,7 +39,11 @@ public sealed record StageCorporateBookingRequest(
     decimal Amount,
     string? VehicleNumber,
     bool IsVisitor,
-    VehicleType VehicleType = VehicleType.Car);
+    VehicleType VehicleType = VehicleType.Car,
+    /// <summary>
+    /// When set, the staged marketplace booking uses this Id so CorporateBooking.BookingId can match.
+    /// </summary>
+    Guid? BookingId = null);
 
 public sealed record MarketplaceBookingCreateResult(
     Guid BookingId,

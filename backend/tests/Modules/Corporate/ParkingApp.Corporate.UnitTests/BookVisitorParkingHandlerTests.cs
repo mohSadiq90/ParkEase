@@ -382,5 +382,7 @@ public class BookVisitorParkingHandlerTests
         result.Message.Should().Contain("waitlist");
         result.Data!.Waitlist.Should().NotBeNull();
         result.Data.Booking.Should().BeNull();
+        _marketplace.Verify(x => x.StageCorporateBookingAsync(
+            It.IsAny<StageCorporateBookingRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

@@ -134,7 +134,9 @@ internal static class CorporateMapping
             space.IsVerified,
             space.SpecialInstructions,
             space.ZoneCode,
-            space.CreatedAt);
+            space.CreatedAt,
+            space.TwoWheelerPhysicalSpots,
+            space.FourWheelerPhysicalSpots);
     }
 
     public static CorporateInvoiceDetailDto ToInvoiceDetailDto(CorporateInvoice invoice)

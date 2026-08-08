@@ -9,48 +9,26 @@ import ImageGallery from '../components/ImageGallery';
 import ParkingSlotModal from '../components/ParkingSlotModal';
 import { getErrorMessage, handleApiError } from '../utils/errorHandler';
 import showToast from '../utils/toast.jsx';
+import {
+    isParkingShareable,
+    shareParking,
+    buildParkingShareContent,
+    buildWhatsAppShareUrl,
+    buildTelegramShareUrl,
+} from '../utils/parkingShare';
 
 const PARKING_TYPES = ['Open', 'Covered', 'Garage', 'Street', 'Underground'];
 import { API_BASE_URL } from '../config';
+import {
+    isDayBasedPricing,
+    toDateOnly,
+    resolveBookingRangeIso,
+} from '../utils/extensionPricing';
 
 const VEHICLE_TYPES = ['Car', 'Motorcycle', 'SUV', 'Truck', 'Van', 'Electric'];
 const PRICING_TYPES = ['Hourly', 'Daily', 'Weekly', 'Monthly'];
 const PAYMENT_METHODS = ['Credit Card', 'Debit Card', 'UPI', 'Net Banking', 'Wallet', 'Cash'];
 const API_BASE = API_BASE_URL;
-
-/** Daily / Weekly / Monthly bill by calendar day, not clock hours. */
-const isDayBasedPricing = (pricingType) => Number(pricingType) > 0;
-
-/** Keep only YYYY-MM-DD from datetime-local or date input value. */
-const toDateOnly = (value) => {
-    if (!value) return '';
-    return String(value).slice(0, 10);
-};
-
-/**
- * Resolve start/end ISO strings for pricing & booking APIs.
- * Hourly: use exact datetime-local values.
- * Day-based: start = local start of start date, end = local end of end date (full days).
- */
-const resolveBookingRangeIso = (startValue, endValue, pricingType) => {
-    if (!startValue || !endValue) return { startIso: null, endIso: null };
-
-    if (isDayBasedPricing(pricingType)) {
-        const startDate = toDateOnly(startValue);
-        const endDate = toDateOnly(endValue);
-        const startLocal = new Date(`${startDate}T00:00:00`);
-        const endLocal = new Date(`${endDate}T23:59:59`);
-        return {
-            startIso: startLocal.toISOString(),
-            endIso: endLocal.toISOString(),
-        };
-    }
-
-    return {
-        startIso: new Date(startValue).toISOString(),
-        endIso: new Date(endValue).toISOString(),
-    };
-};
 
 export default function ParkingDetails() {
     const { id } = useParams();
@@ -63,6 +41,8 @@ export default function ParkingDetails() {
     const [error, setError] = useState(''); // Keep for initial page load errors
     const [isFavorite, setIsFavorite] = useState(false);
     const [favoritesLoading, setFavoritesLoading] = useState(false);
+    const [shareLoading, setShareLoading] = useState(false);
+    const [shareMenuOpen, setShareMenuOpen] = useState(false);
 
     const [booking, setBooking] = useState({
         startDateTime: '',
@@ -91,6 +71,7 @@ export default function ParkingDetails() {
     const [showSlotModal, setShowSlotModal] = useState(false);
 
     useEffect(() => {
+        setShareMenuOpen(false);
         fetchParkingDetails();
         (async () => {
             try {
@@ -156,6 +137,66 @@ export default function ParkingDetails() {
         } catch (err) {
             console.error('Error checking favorite status:', err);
         }
+    };
+
+    const handleShare = async () => {
+        if (!isParkingShareable(parking)) {
+            showToast.error('This parking space cannot be shared.');
+            setShareMenuOpen(false);
+            return;
+        }
+        if (shareLoading) return;
+        setShareLoading(true);
+        setShareMenuOpen(false);
+        try {
+            const result = await shareParking(parking);
+            if (result.ok && result.method === 'clipboard') {
+                showToast.success('Link copied — paste it in WhatsApp, Telegram, or anywhere.');
+            } else if (result.ok && result.method === 'native') {
+                // OS share sheet handled the share; no toast needed.
+            } else if (result.reason === 'cancelled') {
+                // User dismissed share sheet.
+            } else if (result.reason === 'not_shareable') {
+                showToast.error('This parking space cannot be shared.');
+            } else {
+                showToast.error('Could not share this parking space. Try Copy link below.');
+                setShareMenuOpen(true);
+            }
+        } finally {
+            setShareLoading(false);
+        }
+    };
+
+    const openMessengerShare = (builder) => {
+        if (!isParkingShareable(parking)) {
+            showToast.error('This parking space cannot be shared.');
+            return;
+        }
+        const content = buildParkingShareContent(parking);
+        if (!content) return;
+        const href = builder(content);
+        window.open(href, '_blank', 'noopener,noreferrer');
+        setShareMenuOpen(false);
+    };
+
+    const copyShareLink = async () => {
+        if (!isParkingShareable(parking)) {
+            showToast.error('This parking space cannot be shared.');
+            return;
+        }
+        const content = buildParkingShareContent(parking);
+        if (!content) return;
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(content.text);
+                showToast.success('Link copied to clipboard.');
+            } else {
+                showToast.error('Could not copy link.');
+            }
+        } catch {
+            showToast.error('Could not copy link.');
+        }
+        setShareMenuOpen(false);
     };
 
     const toggleFavorite = async () => {
@@ -442,26 +483,125 @@ export default function ParkingDetails() {
                         {/* Image Gallery */}
                         <ImageGallery images={parking.imageUrls} title={parking.title} />
 
-                        <div className="flex-between align-center" style={{ marginBottom: '0.5rem' }}>
+                        <div className="flex-between align-center" style={{ marginBottom: '0.5rem', gap: '0.75rem', flexWrap: 'wrap' }}>
                             <h1 style={{ margin: 0 }}>{parking.title}</h1>
-                            <button
-                                className="btn btn-outline"
-                                onClick={toggleFavorite}
-                                disabled={favoritesLoading}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    fontSize: '1rem',
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: 'var(--radius-full)',
-                                    borderColor: isFavorite ? 'var(--color-primary)' : 'var(--color-border)',
-                                    color: isFavorite ? 'var(--color-primary)' : 'inherit'
-                                }}
-                            >
-                                <span style={{ fontSize: '1.2rem' }}>{isFavorite ? '❤️' : '🤍'}</span>
-                                {isFavorite ? 'Saved' : 'Save'}
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                {isParkingShareable(parking) && (
+                                    <div style={{ position: 'relative' }}>
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline"
+                                            onClick={() => setShareMenuOpen((open) => !open)}
+                                            disabled={shareLoading}
+                                            aria-expanded={shareMenuOpen}
+                                            aria-haspopup="menu"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                fontSize: '1rem',
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: 'var(--radius-full)',
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '1.1rem' }} aria-hidden>🔗</span>
+                                            {shareLoading ? 'Sharing…' : 'Share'}
+                                        </button>
+                                        {shareMenuOpen && (
+                                            <div
+                                                role="menu"
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: 0,
+                                                    top: 'calc(100% + 0.35rem)',
+                                                    minWidth: '11.5rem',
+                                                    background: 'var(--color-surface, #fff)',
+                                                    border: '1px solid var(--color-border)',
+                                                    borderRadius: 'var(--radius-md, 0.5rem)',
+                                                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                                                    zIndex: 20,
+                                                    padding: '0.35rem',
+                                                }}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="btn btn-outline"
+                                                    onClick={handleShare}
+                                                    style={{
+                                                        width: '100%',
+                                                        justifyContent: 'flex-start',
+                                                        border: 'none',
+                                                        marginBottom: '0.15rem',
+                                                    }}
+                                                >
+                                                    Share…
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="btn btn-outline"
+                                                    onClick={() => openMessengerShare(buildWhatsAppShareUrl)}
+                                                    style={{
+                                                        width: '100%',
+                                                        justifyContent: 'flex-start',
+                                                        border: 'none',
+                                                        marginBottom: '0.15rem',
+                                                    }}
+                                                >
+                                                    WhatsApp
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="btn btn-outline"
+                                                    onClick={() => openMessengerShare(buildTelegramShareUrl)}
+                                                    style={{
+                                                        width: '100%',
+                                                        justifyContent: 'flex-start',
+                                                        border: 'none',
+                                                        marginBottom: '0.15rem',
+                                                    }}
+                                                >
+                                                    Telegram
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="btn btn-outline"
+                                                    onClick={copyShareLink}
+                                                    style={{
+                                                        width: '100%',
+                                                        justifyContent: 'flex-start',
+                                                        border: 'none',
+                                                    }}
+                                                >
+                                                    Copy link
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    className="btn btn-outline"
+                                    onClick={toggleFavorite}
+                                    disabled={favoritesLoading}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        fontSize: '1rem',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: 'var(--radius-full)',
+                                        borderColor: isFavorite ? 'var(--color-primary)' : 'var(--color-border)',
+                                        color: isFavorite ? 'var(--color-primary)' : 'inherit'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.2rem' }}>{isFavorite ? '❤️' : '🤍'}</span>
+                                    {isFavorite ? 'Saved' : 'Save'}
+                                </button>
+                            </div>
                         </div>
                         <div className="parking-location" style={{ fontSize: '1.1rem' }}>
                             📍 {parking.address}, {parking.city}, {parking.state}

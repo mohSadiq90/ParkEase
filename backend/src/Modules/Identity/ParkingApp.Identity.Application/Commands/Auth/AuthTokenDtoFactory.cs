@@ -7,11 +7,11 @@ namespace ParkingApp.Identity.Application.Commands.Auth;
 
 /// <summary>
 /// Builds property-init <see cref="TokenDto"/> responses for auth mint paths.
-/// ExpiresAt uses the same default as Jwt:AccessTokenExpirationMinutes (15) when config is unavailable in Application.
+/// Prefer passing access TTL from the token service so ExpiresAt matches the minted JWT.
 /// </summary>
 internal static class AuthTokenDtoFactory
 {
-    /// <summary>Default access-token lifetime minutes (mirrors Jwt:AccessTokenExpirationMinutes default).</summary>
+    /// <summary>Fallback access-token lifetime minutes when caller does not supply TTL (mirrors Jwt default).</summary>
     public const int DefaultAccessTokenExpirationMinutes = 15;
 
     public static TokenDto Create(

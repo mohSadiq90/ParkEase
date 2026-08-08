@@ -91,22 +91,14 @@ public sealed class DualPoolHttpSmokeTests : IClassFixture<DualPoolApiFactory>
     [Trait("Layer", "Http")]
     public async Task Allocations_RequireAuthentication()
     {
-        // Client without auth scheme success — factory always authenticates TestAuth.
-        // Smoke: anonymous factory client is not used; assert unauthenticated path via raw handler.
-        await using var anonFactory = new DualPoolApiFactory();
-        var anon = anonFactory.WithWebHostBuilder(b =>
-        {
-            // keep defaults; auth always test — so instead verify 401 by clearing auth:
-        }).CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
-
-        // Explicitly no Authorization header is fine with TestAuth (auto-auth).
-        // Contract: dual-pool endpoint is under /api/v1/corporate and returns envelope JSON.
-        var response = await anon.GetAsync(
+        // IT-Q1: TestAuth is auto-success unless X-Test-Anonymous:1 → NoResult → [Authorize] challenges 401.
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
             $"/api/v1/corporate/companies/{DualPoolApiFactory.TestCompanyId}/allocations");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await response.Content.ReadAsStringAsync()).Should().Contain("twoWheeler");
+        request.Headers.Add("X-Test-Anonymous", "1");
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

@@ -68,7 +68,7 @@ export default function BookedSlots({ reservations, compact = false, totalSpots 
                         <div key={group.slotNumber ?? 'unassigned'} style={{
                             color: 'var(--color-text-muted)',
                             padding: '4px',
-                            background: 'rgba(255, 255, 255, 0.05)',
+                            background: 'var(--color-row-elevated)',
                             borderRadius: '4px'
                         }}>
                             {showSlotLabel && (
@@ -114,9 +114,9 @@ export default function BookedSlots({ reservations, compact = false, totalSpots 
                         <div key={group.slotNumber ?? 'unassigned'} style={{
                             color: 'var(--color-text-muted)',
                             padding: '8px 10px',
-                            background: 'rgba(255, 255, 255, 0.05)',
+                            background: 'var(--color-row-elevated)',
                             borderRadius: '6px',
-                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                            border: '1px solid var(--color-border)'
                         }}>
                             {showSlotLabel && (
                                 <div style={{ color: 'var(--color-text)', fontWeight: 600, marginBottom: '6px' }}>
@@ -139,7 +139,7 @@ export default function BookedSlots({ reservations, compact = false, totalSpots 
                                         <span style={{ opacity: 0.5 }}>→</span>
                                         <span>{formatDateTime(res.endDateTime)}</span>
                                         {res.userName && (
-                                            <span style={{ marginLeft: '0.25rem', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.85em', fontStyle: 'italic' }}>
+                                            <span style={{ marginLeft: '0.25rem', color: 'var(--color-text-secondary)', fontSize: '0.85em', fontStyle: 'italic' }}>
                                                 • {res.userName}
                                             </span>
                                         )}

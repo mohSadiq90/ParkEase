@@ -37,6 +37,9 @@ public class AuthCommandsTests
         _mockUow.Setup(u => u.Users).Returns(_mockUserRepo.Object);
 
         _mockTokenService = new Mock<ITokenService>();
+        _mockTokenService.SetupGet(t => t.AccessTokenExpirationMinutes).Returns(15);
+        _mockTokenService.SetupGet(t => t.RefreshTokenExpirationDays).Returns(15);
+        _mockTokenService.Setup(t => t.CreateRefreshTokenExpiryUtc()).Returns(() => DateTime.UtcNow.AddDays(15));
         _mockPasswordHasher = new Mock<IPasswordHasher>();
         _mockRegisterLogger = new Mock<ILogger<RegisterHandler>>();
         _mockLoginLogger = new Mock<ILogger<LoginHandler>>();

@@ -43,7 +43,7 @@ export const themeStyles = {
   tableHead: {
     color: 'var(--color-text-secondary)',
     textAlign: 'left',
-    background: 'var(--color-bg-glass)',
+    background: 'var(--color-table-head)',
   },
   overlay: {
     position: 'fixed',

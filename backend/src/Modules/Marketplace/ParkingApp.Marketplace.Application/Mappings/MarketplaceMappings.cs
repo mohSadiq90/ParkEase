@@ -241,6 +241,7 @@ public static class MarketplaceMappings
             dto.ImageUrls,
             dto.SpecialInstructions,
             dto.ZoneCode);
+        ApplyPhysicalVehicleClassCapacity(parking, dto);
         if (dto.IsLprEnabled)
             parking.SetLprEnabled(true);
         if (dto.IsDynamicPricingEnabled
@@ -329,6 +330,7 @@ public static class MarketplaceMappings
             dto.ImageUrls,
             dto.SpecialInstructions,
             dto.ZoneCode);
+        ApplyPhysicalVehicleClassCapacity(parking, dto);
         if (dto.IsLprEnabled)
             parking.SetLprEnabled(true);
         if (dto.IsDynamicPricingEnabled
@@ -362,6 +364,16 @@ public static class MarketplaceMappings
                 dto.EvRatePerKwh);
         }
         return parking;
+    }
+
+    private static void ApplyPhysicalVehicleClassCapacity(ParkingSpace parking, CreateParkingSpaceDto dto)
+    {
+        if (!dto.TwoWheelerPhysicalSpots.HasValue && !dto.FourWheelerPhysicalSpots.HasValue)
+            return;
+
+        parking.SetPhysicalVehicleClassCapacity(
+            dto.TwoWheelerPhysicalSpots ?? 0,
+            dto.FourWheelerPhysicalSpots ?? 0);
     }
 
     public static BookingDto ToDto(this Booking booking) => new(

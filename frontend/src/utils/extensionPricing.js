@@ -35,6 +35,31 @@ export const dateOnlyToNoonUtcIso = (dateOnly) => {
   return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0)).toISOString();
 };
 
+/**
+ * Resolve start/end ISO strings for create-booking and price-quote APIs.
+ * Hourly: exact datetime-local values.
+ * Day-based: noon-UTC anchors on the selected local calendar dates so inclusive
+ * day math matches the dates the user picked (browser-local midnight → ISO shifts
+ * the start into the previous UTC day in IST/etc., e.g. 3–4 Aug billed as 3 days).
+ */
+export const resolveBookingRangeIso = (startValue, endValue, pricingType) => {
+  if (!startValue || !endValue) return { startIso: null, endIso: null };
+
+  if (isDayBasedPricing(pricingType)) {
+    const startDate = toDateOnly(startValue);
+    const endDate = toDateOnly(endValue);
+    return {
+      startIso: dateOnlyToNoonUtcIso(startDate),
+      endIso: dateOnlyToNoonUtcIso(endDate),
+    };
+  }
+
+  return {
+    startIso: new Date(startValue).toISOString(),
+    endIso: new Date(endValue).toISOString(),
+  };
+};
+
 /** First calendar day after the booking end (local), as YYYY-MM-DD. */
 export const firstExtensionEndDateOnly = (currentEnd) => {
   const end = new Date(currentEnd);

@@ -121,7 +121,11 @@ public record CreateParkingSpaceDto(
     bool IsValetEnabled = false,
     string? DefaultFacilityLevel = null,
     string? DefaultFacilityZone = null,
-    string? IndoorGuidanceNotes = null
+    string? IndoorGuidanceNotes = null,
+    /// <summary>Physical 2-wheeler bay capacity. Omit with 4W for untyped total-only capacity.</summary>
+    [Range(0, 1000)] int? TwoWheelerPhysicalSpots = null,
+    /// <summary>Physical 4-wheeler bay capacity. Omit with 2W for untyped total-only capacity.</summary>
+    [Range(0, 1000)] int? FourWheelerPhysicalSpots = null
 );
 
 public record UpdateParkingSpaceDto(
@@ -169,7 +173,9 @@ public record UpdateParkingSpaceDto(
     bool? IsValetEnabled = null,
     string? DefaultFacilityLevel = null,
     string? DefaultFacilityZone = null,
-    string? IndoorGuidanceNotes = null
+    string? IndoorGuidanceNotes = null,
+    [Range(0, 1000)] int? TwoWheelerPhysicalSpots = null,
+    [Range(0, 1000)] int? FourWheelerPhysicalSpots = null
 );
 
 public record ParkingSearchDto(

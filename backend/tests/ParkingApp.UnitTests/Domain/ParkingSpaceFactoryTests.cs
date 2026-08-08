@@ -44,7 +44,34 @@ public class ParkingSpaceFactoryTests
         parking.OwnershipType.Should().Be(ParkingSpaceOwnershipType.CompanyOwned);
         parking.IsCorporateOnly.Should().BeTrue();
         parking.IsVerified.Should().BeTrue();
+        parking.HasTypedPhysicalCapacity.Should().BeFalse();
         parking.DomainEvents.Should().ContainSingle(e => e is ParkingSpaceCreatedEvent);
+    }
+
+    [Fact]
+    public void SetPhysicalVehicleClassCapacity_WithinTotal_Succeeds()
+    {
+        var parking = ParkingSpace.CreateForCompany(
+            OwnerId, CompanyId, "HQ Lot", "Desc", "Addr", "City", "ST", "IN", "560001",
+            12.9, 77.6, ParkingType.Covered, 70, 0, 0, 0, 0);
+
+        parking.SetPhysicalVehicleClassCapacity(20, 50);
+
+        parking.TwoWheelerPhysicalSpots.Should().Be(20);
+        parking.FourWheelerPhysicalSpots.Should().Be(50);
+        parking.HasTypedPhysicalCapacity.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SetPhysicalVehicleClassCapacity_ExceedsTotal_Throws()
+    {
+        var parking = ParkingSpace.CreateForCompany(
+            OwnerId, CompanyId, "HQ Lot", "Desc", "Addr", "City", "ST", "IN", "560001",
+            12.9, 77.6, ParkingType.Covered, 70, 0, 0, 0, 0);
+
+        var act = () => parking.SetPhysicalVehicleClassCapacity(40, 40);
+
+        act.Should().Throw<ValidationException>().WithMessage("*cannot exceed total spots*");
     }
 
     [Fact]
