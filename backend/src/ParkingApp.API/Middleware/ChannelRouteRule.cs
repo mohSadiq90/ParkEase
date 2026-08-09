@@ -165,6 +165,11 @@ public static class ChannelRouteMatrix
             new("auth-login-corporate", "POST", "/api/auth/login/corporate", ChannelAccess.AllProductChannels | ChannelAccess.PlatformAdminRole),
             new("auth-channel", "POST", "/api/auth/channel", ChannelAccess.AllProductChannels | ChannelAccess.PlatformAdminRole),
             new("auth-channel-context", "GET", "/api/auth/channel-context", ChannelAccess.AllProductChannels | ChannelAccess.PlatformAdminRole),
+            // Marketplace social login (token-exchange) — discoverable explicit rules (auth-prefix also covers)
+            new("auth-external", "POST", "/api/auth/external", ChannelAccess.AllProductChannels | ChannelAccess.PlatformAdminRole),
+            new("auth-external-link", "POST", "/api/auth/external/link", ChannelAccess.AllProductChannels | ChannelAccess.PlatformAdminRole),
+            new("auth-external-providers", "GET", "/api/auth/external/providers", ChannelAccess.AllProductChannels | ChannelAccess.PlatformAdminRole),
+            new("auth-set-password", "POST", "/api/auth/set-password", ChannelAccess.AllProductChannels | ChannelAccess.PlatformAdminRole),
             new("auth-prefix", "*", "/api/auth/**", ChannelAccess.AllProductChannels | ChannelAccess.PlatformAdminRole),
 
             // ── Users / vehicles / device tokens ──

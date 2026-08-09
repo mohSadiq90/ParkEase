@@ -12,11 +12,20 @@ describe('config API endpoints', () => {
   });
 
   it('exposes BASE, UPLOADS, and HUBS under /api and root paths', async () => {
-    const { API_BASE_URL, API_ENDPOINTS } = await import('./config.js');
+    const {
+      API_BASE_URL,
+      API_ENDPOINTS,
+      GOOGLE_CLIENT_ID,
+      APPLE_CLIENT_ID,
+      APPLE_REDIRECT_URI,
+    } = await import('./config.js');
 
     expect(API_ENDPOINTS.BASE).toBe(`${API_BASE_URL}/api`);
     expect(API_ENDPOINTS.UPLOADS).toBe(`${API_BASE_URL}/uploads`);
     expect(API_ENDPOINTS.HUBS).toBe(`${API_BASE_URL}/hubs`);
+    expect(typeof GOOGLE_CLIENT_ID).toBe('string');
+    expect(typeof APPLE_CLIENT_ID).toBe('string');
+    expect(typeof APPLE_REDIRECT_URI).toBe('string');
   });
 
   it('defaults to localhost API in non-production when VITE_API_URL unset', async () => {

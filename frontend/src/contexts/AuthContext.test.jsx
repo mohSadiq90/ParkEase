@@ -4,11 +4,14 @@ import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
 import { AuthProvider, useAuth } from './AuthContext';
 
 const mockLogin = vi.fn();
+const mockLoginExternal = vi.fn();
 const mockLoginCorporate = vi.fn();
 const mockSwitchChannel = vi.fn();
 const mockGetChannelContext = vi.fn();
 const mockRegister = vi.fn();
 const mockLogout = vi.fn();
+const mockSetPassword = vi.fn();
+const mockLinkExternal = vi.fn();
 const mockSetTokens = vi.fn();
 const mockClearTokens = vi.fn();
 const mockApplySession = vi.fn();
@@ -17,11 +20,14 @@ const mockGetToken = vi.fn();
 vi.mock('../services/api', () => ({
   default: {
     login: (...args) => mockLogin(...args),
+    loginExternal: (...args) => mockLoginExternal(...args),
     loginCorporate: (...args) => mockLoginCorporate(...args),
     switchChannel: (...args) => mockSwitchChannel(...args),
     getChannelContext: (...args) => mockGetChannelContext(...args),
     register: (...args) => mockRegister(...args),
     logout: (...args) => mockLogout(...args),
+    setPassword: (...args) => mockSetPassword(...args),
+    linkExternal: (...args) => mockLinkExternal(...args),
     setTokens: (...args) => mockSetTokens(...args),
     clearTokens: (...args) => mockClearTokens(...args),
     applySession: (...args) => mockApplySession(...args),
@@ -42,6 +48,39 @@ function ResultProbe() {
         }}
       >
         login
+      </button>
+      <button
+        type="button"
+        onClick={async () => {
+          const r = await auth.loginExternal({
+            provider: 'Google',
+            idToken: 'id-token',
+          });
+          setLast(r);
+        }}
+      >
+        loginExternal
+      </button>
+      <button
+        type="button"
+        onClick={async () => {
+          const r = await auth.setPassword('TestPass1!');
+          setLast(r);
+        }}
+      >
+        setPassword
+      </button>
+      <button
+        type="button"
+        onClick={async () => {
+          const r = await auth.linkExternal({
+            provider: 'Google',
+            idToken: 'link-token',
+          });
+          setLast(r);
+        }}
+      >
+        linkExternal
       </button>
       <button
         type="button"
@@ -223,6 +262,163 @@ describe('AuthContext', () => {
     );
     expect(screen.getByTestId('authenticated').textContent).toBe('true');
     expect(screen.getByTestId('channel').textContent).toBe('Marketplace');
+  });
+
+  it('loginExternal applies nested data.session only', async () => {
+    mockLoginExternal.mockResolvedValue({
+      success: true,
+      data: {
+        session: {
+          accessToken: 'ext-at',
+          refreshToken: 'ext-rt',
+          channel: 'Marketplace',
+          user: { email: 'g@b.com', role: 1 },
+        },
+        isNewUser: true,
+        requiresPhone: true,
+        linkedProviders: ['Google'],
+      },
+    });
+    mockApplySession.mockReturnValue({
+      channel: 'Marketplace',
+      companyId: null,
+      companyRole: null,
+      isBootstrap: false,
+      user: { email: 'g@b.com', role: 1 },
+    });
+
+    render(
+      <AuthProvider>
+        <ResultProbe />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('false');
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'loginExternal' }).click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('result').textContent).toContain('"success":true');
+    });
+    expect(mockApplySession).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: 'ext-at', channel: 'Marketplace' })
+    );
+    // Must not apply the outer envelope as session
+    expect(mockApplySession).not.toHaveBeenCalledWith(
+      expect.objectContaining({ isNewUser: true })
+    );
+    const result = JSON.parse(screen.getByTestId('result').textContent);
+    expect(result.isNewUser).toBe(true);
+    expect(result.requiresPhone).toBe(true);
+  });
+
+  it('loginExternal account_exists does not apply session', async () => {
+    mockLoginExternal.mockRejectedValue({
+      code: 'account_exists',
+      response: {
+        data: {
+          success: false,
+          code: 'account_exists',
+          message: 'An account with this email already exists.',
+        },
+        status: 409,
+      },
+    });
+
+    render(
+      <AuthProvider>
+        <ResultProbe />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('false');
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'loginExternal' }).click();
+    });
+
+    await waitFor(() => {
+      const result = JSON.parse(screen.getByTestId('result').textContent);
+      expect(result.success).toBe(false);
+      expect(result.code).toBe('account_exists');
+    });
+    expect(mockApplySession).not.toHaveBeenCalled();
+  });
+
+  it('setPassword applies nested data.session', async () => {
+    mockSetPassword.mockResolvedValue({
+      success: true,
+      data: {
+        session: {
+          accessToken: 'new-at',
+          refreshToken: 'new-rt',
+          channel: 'Marketplace',
+          user: { email: 's@b.com', role: 1 },
+        },
+      },
+    });
+    mockApplySession.mockReturnValue({
+      channel: 'Marketplace',
+      companyId: null,
+      companyRole: null,
+      isBootstrap: false,
+      user: { email: 's@b.com', role: 1 },
+    });
+
+    render(
+      <AuthProvider>
+        <ResultProbe />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('false');
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'setPassword' }).click();
+    });
+
+    await waitFor(() => {
+      expect(mockSetPassword).toHaveBeenCalledWith({ newPassword: 'TestPass1!' });
+      expect(mockApplySession).toHaveBeenCalledWith(
+        expect.objectContaining({ accessToken: 'new-at', refreshToken: 'new-rt' })
+      );
+    });
+  });
+
+  it('linkExternal returns linkedProviders without applying session', async () => {
+    mockLinkExternal.mockResolvedValue({
+      success: true,
+      data: { linkedProviders: ['Google', 'Apple'] },
+    });
+
+    render(
+      <AuthProvider>
+        <ResultProbe />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('false');
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'linkExternal' }).click();
+    });
+
+    await waitFor(() => {
+      const result = JSON.parse(screen.getByTestId('result').textContent);
+      expect(result.success).toBe(true);
+      expect(result.linkedProviders).toEqual(['Google', 'Apple']);
+    });
+    expect(mockApplySession).not.toHaveBeenCalled();
   });
 
   it('login failure returns message without setting user', async () => {

@@ -4,6 +4,7 @@ using ParkingApp.Application.DTOs;
 using ParkingApp.Identity.Application.DTOs;
 using UserDto = ParkingApp.Identity.Application.DTOs.UserDto;
 using ParkingApp.Application.Interfaces;
+using ParkingApp.Identity.Application.ExternalAuth;
 using ParkingApp.Identity.Application.Mappings;
 using ParkingApp.Identity.Domain.Interfaces;
 using ParkingApp.Marketplace.Contracts;
@@ -46,7 +47,14 @@ internal sealed class GetCurrentUserHandler : IQueryHandler<GetCurrentUserQuery,
         if (user == null)
             return new ApiResponse<UserDto>(false, "User not found", null);
 
-        var dto = user.ToDto();
+        var logins = await _unitOfWork.ExternalLogins.GetByUserIdAsync(query.UserId, cancellationToken);
+        var linked = logins
+            .Select(l => ExternalAuthProviderParser.ToWireName(l.Provider))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var dto = user.ToDto(linked);
         await _cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(10), cancellationToken);
         return new ApiResponse<UserDto>(true, null, dto);
     }
@@ -122,6 +130,12 @@ internal sealed class DeleteUserHandler : ICommandHandler<DeleteUserCommand, Api
 
             var deviceTokens = await _unitOfWork.DeviceTokens.FindAsync(t => t.UserId == command.UserId, cancellationToken);
             _unitOfWork.DeviceTokens.HardDeleteRange(deviceTokens);
+
+            // Explicit hard-delete of external logins (KD-SL-19); EF cascade is a secondary safety net.
+            var externalLogins = await _unitOfWork.ExternalLogins.FindAsync(
+                l => l.UserId == command.UserId,
+                cancellationToken);
+            _unitOfWork.ExternalLogins.HardDeleteRange(externalLogins);
 
             _unitOfWork.Users.HardDelete(user);
 

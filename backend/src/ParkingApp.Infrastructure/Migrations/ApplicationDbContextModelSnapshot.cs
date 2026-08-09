@@ -739,6 +739,54 @@ namespace ParkingApp.Infrastructure.Migrations
                     b.ToTable("DeviceTokens");
                 });
 
+            modelBuilder.Entity("ParkingApp.Identity.Domain.Entities.UserExternalLogin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastUsedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LinkedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderEmail")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ProviderSubject")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Provider", "ProviderSubject")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Provider")
+                        .IsUnique();
+
+                    b.ToTable("UserExternalLogins", (string)null);
+                });
+
             modelBuilder.Entity("ParkingApp.Identity.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -778,7 +826,6 @@ namespace ParkingApp.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
@@ -2579,6 +2626,17 @@ namespace ParkingApp.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ParkingApp.Identity.Domain.Entities.UserExternalLogin", b =>
+                {
+                    b.HasOne("ParkingApp.Identity.Domain.Entities.User", "User")
+                        .WithMany("ExternalLogins")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ParkingApp.Identity.Domain.Entities.Vehicle", b =>
                 {
                     b.HasOne("ParkingApp.Identity.Domain.Entities.User", "User")
@@ -2849,6 +2907,8 @@ namespace ParkingApp.Infrastructure.Migrations
             modelBuilder.Entity("ParkingApp.Identity.Domain.Entities.User", b =>
                 {
                     b.Navigation("DeviceTokens");
+
+                    b.Navigation("ExternalLogins");
 
                     b.Navigation("Vehicles");
                 });

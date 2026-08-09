@@ -32,6 +32,10 @@ public class AuthControllerTests
     private readonly Mock<IDispatcher> _dispatcherMock;
     private readonly Mock<IValidator<RegisterDto>> _registerValidatorMock;
     private readonly Mock<IValidator<LoginDto>> _loginValidatorMock;
+    private readonly Mock<IValidator<ExternalLoginDto>> _externalLoginValidatorMock;
+    private readonly Mock<IValidator<LinkExternalLoginDto>> _linkExternalLoginValidatorMock;
+    private readonly Mock<IValidator<SetPasswordDto>> _setPasswordValidatorMock;
+    private readonly Mock<IValidator<ChangePasswordDto>> _changePasswordValidatorMock;
     private readonly AuthController _controller;
 
     public AuthControllerTests()
@@ -39,12 +43,32 @@ public class AuthControllerTests
         _dispatcherMock = new Mock<IDispatcher>();
         _registerValidatorMock = new Mock<IValidator<RegisterDto>>();
         _loginValidatorMock = new Mock<IValidator<LoginDto>>();
+        _externalLoginValidatorMock = new Mock<IValidator<ExternalLoginDto>>();
+        _externalLoginValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<ExternalLoginDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+        _linkExternalLoginValidatorMock = new Mock<IValidator<LinkExternalLoginDto>>();
+        _linkExternalLoginValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<LinkExternalLoginDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+        _setPasswordValidatorMock = new Mock<IValidator<SetPasswordDto>>();
+        _setPasswordValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<SetPasswordDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+        _changePasswordValidatorMock = new Mock<IValidator<ChangePasswordDto>>();
+        _changePasswordValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<ChangePasswordDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
 
         var isolation = Options.Create(new ChannelIsolationOptions { Enabled = false });
         _controller = new AuthController(
             _dispatcherMock.Object, 
             _registerValidatorMock.Object, 
             _loginValidatorMock.Object,
+            _externalLoginValidatorMock.Object,
+            _linkExternalLoginValidatorMock.Object,
+            _setPasswordValidatorMock.Object,
+            _changePasswordValidatorMock.Object,
             isolation);
     }
 

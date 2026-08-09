@@ -740,6 +740,88 @@ a.nav-link:hover {
   color: var(--color-text-secondary);
 }
 
+/* Marketplace social login (PR4) — never used on CorporateLogin */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0 1rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.social-auth {
+  width: 100%;
+}
+
+.social-auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.google-signin-host {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.google-signin-host.is-disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.apple-signin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border: 1px solid #000;
+  border-radius: 4px;
+  background: #000;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.apple-signin-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.apple-signin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.apple-signin-icon {
+  flex-shrink: 0;
+}
+
+.social-auth-error {
+  text-align: center;
+  color: var(--color-danger, #c0392b);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
 /* Dashboard */
 .dashboard-header {
   margin-bottom: 2rem;

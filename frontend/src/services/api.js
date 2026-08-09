@@ -347,6 +347,61 @@ class ApiService {
     });
   }
 
+  /**
+   * Marketplace social login token-exchange (POST /api/auth/external).
+   * Success payload nests session under data.session — callers must applySession(data.session).
+   */
+  async loginExternal({
+    provider,
+    idToken,
+    nonce,
+    firstName,
+    lastName,
+    linkPassword,
+    proofProvider,
+    proofIdToken,
+    proofNonce,
+  } = {}) {
+    const body = { provider, idToken };
+    if (nonce) body.nonce = nonce;
+    if (firstName) body.firstName = firstName;
+    if (lastName) body.lastName = lastName;
+    if (linkPassword) body.linkPassword = linkPassword;
+    if (proofProvider) body.proofProvider = proofProvider;
+    if (proofIdToken) body.proofIdToken = proofIdToken;
+    if (proofNonce) body.proofNonce = proofNonce;
+    return this.request('/auth/external', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** Enabled IdP names for UI (GET /api/auth/external/providers). Empty when master switch off. */
+  async getExternalProviders() {
+    return this.request('/auth/external/providers');
+  }
+
+  /** Authenticated link of an IdP to the current user (POST /api/auth/external/link). */
+  async linkExternal({ provider, idToken, nonce } = {}) {
+    const body = { provider, idToken };
+    if (nonce) body.nonce = nonce;
+    return this.request('/auth/external/link', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  /**
+   * Bootstrap password for social-only users (POST /api/auth/set-password).
+   * Success returns a new session (old refresh revoked) under data.session.
+   */
+  async setPassword({ newPassword } = {}) {
+    return this.request('/auth/set-password', {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  }
+
   async deleteProfile() {
     return this.request('/users/me', { method: 'DELETE' });
   }

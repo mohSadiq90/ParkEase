@@ -45,6 +45,7 @@ public class UnitOfWork : IUnitOfWork, ICorporateUnitOfWork
     private INotificationRepository? _notifications;
     private IVehicleRepository? _vehicles;
     private IDeviceTokenRepository? _deviceTokens;
+    private IUserExternalLoginRepository? _externalLogins;
     private ICompanyRepository? _companies;
     private ICorporateBookingRepository? _corporateBookings;
     private IEmployeeInvitationRepository? _employeeInvitations;
@@ -85,6 +86,7 @@ public class UnitOfWork : IUnitOfWork, ICorporateUnitOfWork
     public INotificationRepository Notifications => _notifications ??= new NotificationRepository(_context);
     public IVehicleRepository Vehicles => _vehicles ??= new VehicleRepository(_context);
     public IDeviceTokenRepository DeviceTokens => _deviceTokens ??= new DeviceTokenRepository(_context);
+    public IUserExternalLoginRepository ExternalLogins => _externalLogins ??= new UserExternalLoginRepository(_context);
     public ICompanyRepository Companies => _companies ??= new CompanyRepository(_context);
     public ICorporateBookingRepository CorporateBookings => _corporateBookings ??= new CorporateBookingRepository(_context);
     public IEmployeeInvitationRepository EmployeeInvitations => _employeeInvitations ??= new EmployeeInvitationRepository(_context);
@@ -179,6 +181,12 @@ public class UnitOfWork : IUnitOfWork, ICorporateUnitOfWork
             await _transaction.DisposeAsync();
             _transaction = null;
         }
+    }
+
+    public void ClearChangeTracker()
+    {
+        _context.ChangeTracker.Clear();
+        _pendingOutboxMessageIds.Clear();
     }
 
     public void Dispose()

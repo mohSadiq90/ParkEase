@@ -12,14 +12,7 @@ internal class RegisterDtoValidator : AbstractValidator<RegisterDto>
             .EmailAddress().WithMessage("Invalid email format")
             .MaximumLength(255).WithMessage("Email must not exceed 255 characters");
 
-        RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required")
-            .MinimumLength(8).WithMessage("Password must be at least 8 characters")
-            .MaximumLength(100).WithMessage("Password must not exceed 100 characters")
-            .Matches(@"[A-Z]").WithMessage("Password must contain at least one uppercase letter")
-            .Matches(@"[a-z]").WithMessage("Password must contain at least one lowercase letter")
-            .Matches(@"[0-9]").WithMessage("Password must contain at least one digit")
-            .Matches(@"[^a-zA-Z0-9]").WithMessage("Password must contain at least one special character");
+        RuleFor(x => x.Password).ApplyPasswordPolicy();
 
         RuleFor(x => x.FirstName)
             .NotEmpty().WithMessage("First name is required")
@@ -47,5 +40,72 @@ internal class LoginDtoValidator : AbstractValidator<LoginDto>
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required");
+    }
+}
+
+internal class ExternalLoginDtoValidator : AbstractValidator<ExternalLoginDto>
+{
+    public ExternalLoginDtoValidator()
+    {
+        RuleFor(x => x.Provider)
+            .NotEmpty().WithMessage("Provider is required")
+            .MaximumLength(32).WithMessage("Provider must not exceed 32 characters");
+
+        RuleFor(x => x.IdToken)
+            .NotEmpty().WithMessage("Id token is required")
+            .MaximumLength(16_384).WithMessage("Id token is too long");
+
+        RuleFor(x => x.Nonce)
+            .MaximumLength(512).WithMessage("Nonce is too long")
+            .When(x => x.Nonce is not null);
+
+        RuleFor(x => x.FirstName)
+            .MaximumLength(100).WithMessage("First name must not exceed 100 characters")
+            .When(x => x.FirstName is not null);
+
+        RuleFor(x => x.LastName)
+            .MaximumLength(100).WithMessage("Last name must not exceed 100 characters")
+            .When(x => x.LastName is not null);
+
+        RuleFor(x => x.LinkPassword)
+            .MaximumLength(100).WithMessage("Link password is too long")
+            .When(x => x.LinkPassword is not null);
+    }
+}
+
+internal class LinkExternalLoginDtoValidator : AbstractValidator<LinkExternalLoginDto>
+{
+    public LinkExternalLoginDtoValidator()
+    {
+        RuleFor(x => x.Provider)
+            .NotEmpty().WithMessage("Provider is required")
+            .MaximumLength(32).WithMessage("Provider must not exceed 32 characters");
+
+        RuleFor(x => x.IdToken)
+            .NotEmpty().WithMessage("Id token is required")
+            .MaximumLength(16_384).WithMessage("Id token is too long");
+
+        RuleFor(x => x.Nonce)
+            .MaximumLength(512).WithMessage("Nonce is too long")
+            .When(x => x.Nonce is not null);
+    }
+}
+
+internal class SetPasswordDtoValidator : AbstractValidator<SetPasswordDto>
+{
+    public SetPasswordDtoValidator()
+    {
+        RuleFor(x => x.NewPassword).ApplyPasswordPolicy();
+    }
+}
+
+internal class ChangePasswordDtoValidator : AbstractValidator<ChangePasswordDto>
+{
+    public ChangePasswordDtoValidator()
+    {
+        RuleFor(x => x.CurrentPassword)
+            .NotEmpty().WithMessage("Current password is required");
+
+        RuleFor(x => x.NewPassword).ApplyPasswordPolicy();
     }
 }

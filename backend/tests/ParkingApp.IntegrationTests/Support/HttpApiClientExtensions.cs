@@ -147,4 +147,77 @@ public static class HttpApiClientExtensions
                 $"Register failed: {response.StatusCode} {await response.Content.ReadAsStringAsync(cancellationToken)}");
         return (email, body.Data);
     }
+
+    public static async Task<(HttpResponseMessage Response, ApiResponse<ExternalAuthSessionDto>? Body)> ExternalLoginAsync(
+        this HttpClient client,
+        string provider,
+        string idToken,
+        string? nonce = null,
+        string? linkPassword = null,
+        string? firstName = null,
+        string? lastName = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/external",
+            new ExternalLoginDto(provider, idToken, nonce, firstName, lastName, linkPassword),
+            JsonOptions,
+            cancellationToken);
+        var body = await response.ReadApiResponseAsync<ExternalAuthSessionDto>(cancellationToken);
+        return (response, body);
+    }
+
+    public static async Task<(HttpResponseMessage Response, ApiResponse<ExternalProvidersDto>? Body)> GetExternalProvidersAsync(
+        this HttpClient client,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetAsync("/api/auth/external/providers", cancellationToken);
+        var body = await response.ReadApiResponseAsync<ExternalProvidersDto>(cancellationToken);
+        return (response, body);
+    }
+
+    public static async Task<(HttpResponseMessage Response, ApiResponse<LinkExternalLoginResultDto>? Body)> LinkExternalAsync(
+        this HttpClient client,
+        string provider,
+        string idToken,
+        string? nonce = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/external/link",
+            new LinkExternalLoginDto(provider, idToken, nonce),
+            JsonOptions,
+            cancellationToken);
+        var body = await response.ReadApiResponseAsync<LinkExternalLoginResultDto>(cancellationToken);
+        return (response, body);
+    }
+
+    public static async Task<(HttpResponseMessage Response, ApiResponse<SetPasswordResultDto>? Body)> SetPasswordAsync(
+        this HttpClient client,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/set-password",
+            new SetPasswordDto(newPassword),
+            JsonOptions,
+            cancellationToken);
+        var body = await response.ReadApiResponseAsync<SetPasswordResultDto>(cancellationToken);
+        return (response, body);
+    }
+
+    public static async Task<(HttpResponseMessage Response, ApiResponse<bool>? Body)> ChangePasswordAsync(
+        this HttpClient client,
+        string currentPassword,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/change-password",
+            new ChangePasswordDto(currentPassword, newPassword),
+            JsonOptions,
+            cancellationToken);
+        var body = await response.ReadApiResponseAsync<bool>(cancellationToken);
+        return (response, body);
+    }
 }

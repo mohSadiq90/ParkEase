@@ -34,11 +34,25 @@ public class MappingExtensionsTests
         var dto = user.ToDto();
 
         dto.Id.Should().Be(user.Id);
-        dto.Email.Should().Be(user.Email);
+        dto.Email.Should().Be(user.Email?.Value ?? user.Email?.ToString());
         dto.FirstName.Should().Be(user.FirstName);
         dto.LastName.Should().Be(user.LastName);
         dto.Role.Should().Be(user.Role);
         dto.PhoneNumber.Should().Be(user.PhoneNumber);
+        dto.HasPassword.Should().BeTrue();
+        (dto.LinkedProviders ?? Array.Empty<string>()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void UserMapping_SocialOnly_HasPasswordFalse_AndLinkedProviders()
+    {
+        var user = User.RegisterFromExternal("social@example.com", "Soc", "User", emailVerified: true);
+        user.LinkExternalLogin(ExternalAuthProvider.Google, "sub-1", "social@example.com");
+
+        var dto = user.ToDto();
+
+        dto.HasPassword.Should().BeFalse();
+        dto.LinkedProviders.Should().Contain("Google");
     }
 
     [Fact]

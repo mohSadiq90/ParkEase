@@ -10,6 +10,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using ParkingApp.API.Options;
 using ParkingApp.Application.Interfaces;
+using ParkingApp.Identity.Application.Interfaces;
+using ParkingApp.Identity.Application.Options;
 using ParkingApp.Infrastructure.Services;
 using ParkingApp.Marketplace.Application.Interfaces;
 using ParkingApp.Notifications.Contracts;
@@ -20,6 +22,7 @@ namespace ParkingApp.IntegrationTests.Support;
 /// L4 full-pipeline HTTP host: real JWT, real dispatcher, EF Migrate against Testcontainers PostGIS.
 /// Channel isolation is configurable. Background hosted services are stripped for stable IT runs.
 /// Payment gateway is replaced with <see cref="DeterministicPaymentService"/> (no Stripe network).
+/// External auth uses <see cref="FakeExternalTokenValidator"/> (no real JWKS).
 /// </summary>
 public sealed class FullApiFactory : WebApplicationFactory<Program>
 {
@@ -29,18 +32,26 @@ public sealed class FullApiFactory : WebApplicationFactory<Program>
 
     private readonly string _connectionString;
     private readonly bool _channelIsolationEnabled;
+    private readonly bool _externalAuthEnabled;
 
-    public FullApiFactory(string connectionString, bool channelIsolationEnabled = false)
+    public FullApiFactory(
+        string connectionString,
+        bool channelIsolationEnabled = false,
+        bool externalAuthEnabled = true)
     {
         _connectionString = connectionString
             ?? throw new ArgumentNullException(nameof(connectionString));
         _channelIsolationEnabled = channelIsolationEnabled;
+        _externalAuthEnabled = externalAuthEnabled;
     }
 
     public bool ChannelIsolationEnabled => _channelIsolationEnabled;
 
     /// <summary>Shared deterministic gateway instance (signature verify / order ids for HTTP IT).</summary>
     public DeterministicPaymentService PaymentService { get; } = new();
+
+    /// <summary>Stub IdP validator registered for this host (CI-safe).</summary>
+    public FakeExternalTokenValidator FakeExternalTokens { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -64,6 +75,12 @@ public sealed class FullApiFactory : WebApplicationFactory<Program>
                 ["ChannelIsolation:EnforceCompanyClaimMatch"] = "true",
                 ["ChannelIsolation:VendorAllocationAllowlistEnabled"] = "true",
                 ["ChannelIsolation:TreatMissingClaimAs"] = "Marketplace",
+                ["ExternalAuth:Enabled"] = _externalAuthEnabled ? "true" : "false",
+                ["ExternalAuth:RateLimitPerMinute"] = "1000",
+                ["ExternalAuth:Providers:Google:Enabled"] = _externalAuthEnabled ? "true" : "false",
+                ["ExternalAuth:Providers:Google:ClientIds:0"] = "test-google-client",
+                ["ExternalAuth:Providers:Apple:Enabled"] = _externalAuthEnabled ? "true" : "false",
+                ["ExternalAuth:Providers:Apple:ClientIds:0"] = "test.apple.client",
                 ["Logging:File:Enabled"] = "false",
                 ["Logging:Serilog:MinimumLevel"] = "Warning",
                 ["Storage:Provider"] = "Local",
@@ -92,6 +109,10 @@ public sealed class FullApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IPushNotificationService, NoOpPushNotificationService>();
             services.RemoveAll<INotificationCoordinator>();
             services.AddSingleton<INotificationCoordinator, NoOpNotificationCoordinator>();
+
+            // Never call real Google/Apple JWKS in CI
+            services.RemoveAll<IExternalTokenValidator>();
+            services.AddSingleton<IExternalTokenValidator>(FakeExternalTokens);
 
             // Force JWT validation to the IT signing key (Program may have bound a different secret).
             // MapInboundClaims=true so JWT "sub" → ClaimTypes.NameIdentifier (AuthController.GetUserId).
@@ -122,6 +143,22 @@ public sealed class FullApiFactory : WebApplicationFactory<Program>
                 options.EnforceCompanyClaimMatch = true;
                 options.VendorAllocationAllowlistEnabled = true;
                 options.TreatMissingClaimAs = "Marketplace";
+            });
+
+            services.PostConfigure<ExternalAuthOptions>(options =>
+            {
+                options.Enabled = _externalAuthEnabled;
+                options.RateLimitPerMinute = 1000;
+                options.Providers["Google"] = new ExternalProviderOptions
+                {
+                    Enabled = _externalAuthEnabled,
+                    ClientIds = new List<string> { "test-google-client" }
+                };
+                options.Providers["Apple"] = new ExternalProviderOptions
+                {
+                    Enabled = _externalAuthEnabled,
+                    ClientIds = new List<string> { "test.apple.client" }
+                };
             });
         });
     }

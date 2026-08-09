@@ -5,13 +5,66 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Register from './Register';
 
 const mockRegister = vi.fn();
+const mockLoginExternal = vi.fn();
 const mockNavigate = vi.fn();
 const mockToastError = vi.fn();
+const mockGetExternalProviders = vi.fn();
 
 const mockSwitchChannel = vi.fn();
 
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ register: mockRegister, switchChannel: mockSwitchChannel }),
+  useAuth: () => ({
+    register: mockRegister,
+    loginExternal: mockLoginExternal,
+    switchChannel: mockSwitchChannel,
+  }),
+}));
+
+vi.mock('../services/api', () => ({
+  default: {
+    getExternalProviders: (...args) => mockGetExternalProviders(...args),
+  },
+}));
+
+vi.mock('../config', () => ({
+  GOOGLE_CLIENT_ID: 'test-google-client-id.apps.googleusercontent.com',
+  APPLE_CLIENT_ID: 'com.parkease.web',
+  APPLE_REDIRECT_URI: 'https://app.example.com',
+  API_BASE_URL: 'http://localhost:5129',
+  API_ENDPOINTS: { BASE: 'http://localhost:5129/api', UPLOADS: '', HUBS: '' },
+}));
+
+vi.mock('../utils/loadGoogleGis', () => ({
+  loadGoogleGis: vi.fn().mockResolvedValue({
+    accounts: {
+      id: {
+        initialize: vi.fn(),
+        renderButton: vi.fn((el) => {
+          if (el) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Continue with Google';
+            el.appendChild(btn);
+          }
+        }),
+      },
+    },
+  }),
+}));
+
+vi.mock('../utils/loadAppleAuth', () => ({
+  loadAppleAuth: vi.fn().mockResolvedValue({
+    auth: {
+      init: vi.fn(),
+      signIn: vi.fn().mockResolvedValue({
+        authorization: { id_token: 'apple-jwt' },
+      }),
+    },
+  }),
+}));
+
+vi.mock('../utils/appleNonce', () => ({
+  createAppleNonce: vi.fn(() => 'register-test-nonce'),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -51,6 +104,10 @@ async function fillValidForm(user, { password = 'password1', confirm = 'password
 describe('Register page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetExternalProviders.mockResolvedValue({
+      success: true,
+      data: { providers: [] },
+    });
   });
 
   afterEach(() => {
@@ -63,6 +120,38 @@ describe('Register page', () => {
     expect(screen.getByPlaceholderText('john@example.com')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/login');
+  });
+
+  it('hides social when providers empty', async () => {
+    renderRegister();
+    await waitFor(() => {
+      expect(mockGetExternalProviders).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId('social-auth-section')).not.toBeInTheDocument();
+  });
+
+  it('shows social on marketplace when Google enabled', async () => {
+    mockGetExternalProviders.mockResolvedValue({
+      success: true,
+      data: { providers: ['Google'] },
+    });
+    renderRegister();
+    await waitFor(() => {
+      expect(screen.getByTestId('social-auth-section')).toBeInTheDocument();
+    });
+  });
+
+  it('does not show social on corporate register tab', async () => {
+    mockGetExternalProviders.mockResolvedValue({
+      success: true,
+      data: { providers: ['Google'] },
+    });
+    renderRegister('/register?channel=corporate');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /create corporate account/i })).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('social-auth-section')).not.toBeInTheDocument();
+    expect(mockGetExternalProviders).not.toHaveBeenCalled();
   });
 
   it('shows invite copy when returnUrl is invite path', () => {

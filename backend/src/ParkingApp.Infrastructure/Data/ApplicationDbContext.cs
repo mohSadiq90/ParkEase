@@ -60,6 +60,7 @@ public class ApplicationDbContext : DbContext,
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+    public DbSet<UserExternalLogin> ExternalLogins => Set<UserExternalLogin>();
 
     // Corporate Module
     public DbSet<Company> Companies => Set<Company>();

@@ -132,6 +132,121 @@ export function AuthProvider({ children }) {
     };
 
     /**
+     * Marketplace social login (token-exchange). Applies nested data.session only (never flat tokens).
+     * @param {{ provider: string, idToken: string, nonce?: string, firstName?: string, lastName?: string, linkPassword?: string }} params
+     */
+    const loginExternal = async ({
+        provider,
+        idToken,
+        nonce,
+        firstName,
+        lastName,
+        linkPassword,
+        proofProvider,
+        proofIdToken,
+        proofNonce,
+    } = {}) => {
+        try {
+            const response = await api.loginExternal({
+                provider,
+                idToken,
+                nonce,
+                firstName,
+                lastName,
+                linkPassword,
+                proofProvider,
+                proofIdToken,
+                proofNonce,
+            });
+            if (response.success && response.data?.session) {
+                applySession(response.data.session);
+                return {
+                    success: true,
+                    channel: response.data.session.channel || 'Marketplace',
+                    isNewUser: !!response.data.isNewUser,
+                    requiresPhone: !!response.data.requiresPhone,
+                    linkedProviders: response.data.linkedProviders || [],
+                };
+            }
+            return {
+                success: false,
+                message: getErrorMessage(response),
+                errors: response.errors,
+                code: response.code
+                    || (Array.isArray(response.errors) ? response.errors[0] : null),
+            };
+        } catch (error) {
+            const data = error.response?.data;
+            return {
+                success: false,
+                message: data ? getErrorMessage(data) : error.message,
+                errors: data?.errors,
+                code: error.code
+                    || data?.code
+                    || (Array.isArray(data?.errors) ? data.errors[0] : null),
+            };
+        }
+    };
+
+    /**
+     * Bootstrap password for social-only users (POST /api/auth/set-password).
+     * Applies nested data.session (old refresh revoked).
+     */
+    const setPassword = async (newPassword) => {
+        try {
+            const response = await api.setPassword({ newPassword });
+            if (response.success && response.data?.session) {
+                applySession(response.data.session);
+                return { success: true };
+            }
+            return {
+                success: false,
+                message: getErrorMessage(response),
+                errors: response.errors,
+                code: response.code,
+            };
+        } catch (error) {
+            const data = error.response?.data;
+            return {
+                success: false,
+                message: data ? getErrorMessage(data) : error.message,
+                errors: data?.errors,
+                code: error.code || data?.code,
+            };
+        }
+    };
+
+    /**
+     * Authenticated link of an IdP to the current account (POST /api/auth/external/link).
+     * @param {{ provider: string, idToken: string, nonce?: string }} params
+     */
+    const linkExternal = async ({ provider, idToken, nonce } = {}) => {
+        try {
+            const response = await api.linkExternal({ provider, idToken, nonce });
+            if (response.success) {
+                return {
+                    success: true,
+                    linkedProviders: response.data?.linkedProviders || [],
+                };
+            }
+            return {
+                success: false,
+                message: getErrorMessage(response),
+                errors: response.errors,
+                code: response.code,
+            };
+        } catch (error) {
+            const data = error.response?.data;
+            return {
+                success: false,
+                message: data ? getErrorMessage(data) : error.message,
+                errors: data?.errors,
+                code: error.code || data?.code,
+            };
+        }
+    };
+
+    /**
      * Corporate product login. May return tokens, bootstrap session, or company selection required.
      * @returns {{ success: boolean, isBootstrap?: boolean, requiresCompanySelection?: boolean, memberships?: array, message?: string, code?: string }}
      */
@@ -301,6 +416,9 @@ export function AuthProvider({ children }) {
             value={{
                 user,
                 login,
+                loginExternal,
+                setPassword,
+                linkExternal,
                 loginCorporate,
                 switchChannel,
                 applySession,

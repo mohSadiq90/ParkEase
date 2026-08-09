@@ -81,6 +81,8 @@ try
         builder.Configuration.GetSection(IotLprOptions.SectionName));
     builder.Services.Configure<ChannelIsolationOptions>(
         builder.Configuration.GetSection(ChannelIsolationOptions.SectionName));
+    builder.Services.Configure<ParkingApp.Identity.Application.Options.ExternalAuthOptions>(
+        builder.Configuration.GetSection(ParkingApp.Identity.Application.Options.ExternalAuthOptions.SectionName));
 
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddNotificationServices(builder.Configuration);

@@ -38,6 +38,14 @@ public class SecurityHeadersMiddlewareTests
         
         headers.Should().ContainKey("Permissions-Policy");
         headers["Permissions-Policy"].ToString().Should().Be("geolocation=(), microphone=(), camera=()");
+
+        // OAuth popups (Google GIS / Apple) need same-origin-allow-popups, not same-origin
+        headers.Should().ContainKey("Cross-Origin-Opener-Policy");
+        headers["Cross-Origin-Opener-Policy"].ToString().Should().Be("same-origin-allow-popups");
+
+        var csp = headers["Content-Security-Policy"].ToString();
+        csp.Should().Contain("https://accounts.google.com");
+        csp.Should().Contain("https://appleid.cdn-apple.com");
     }
 }
 

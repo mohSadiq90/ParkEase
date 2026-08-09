@@ -347,6 +347,27 @@ internal sealed class ChangePasswordHandler : ICommandHandler<ChangePasswordComm
         var user = await _unitOfWork.Users.GetByIdAsync(command.UserId, cancellationToken);
         if (user == null) return new ApiResponse<bool>(false, "User not found", false);
 
+        if (!user.IsActive)
+        {
+            return new ApiResponse<bool>(
+                false,
+                "Account disabled",
+                false,
+                new List<string> { "account_disabled" },
+                "account_disabled");
+        }
+
+        // Social-only users must bootstrap via set-password first (PR3)
+        if (!user.HasPassword)
+        {
+            return new ApiResponse<bool>(
+                false,
+                "Password is not set. Use set-password to create one.",
+                false,
+                new List<string> { "password_not_set" },
+                "password_not_set");
+        }
+
         if (!_passwordHasher.Verify(command.Dto.CurrentPassword, user.PasswordHash))
             return new ApiResponse<bool>(false, "Invalid password", false, new List<string> { "Current password is incorrect" });
 

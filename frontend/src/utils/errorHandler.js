@@ -3,11 +3,20 @@
  * @param {Object} response - API response object
  * @returns {string} - Formatted error message
  */
+/** True when a string looks like an API machine code (e.g. account_exists), not user copy. */
+const isMachineCode = (value) =>
+    typeof value === 'string' && /^[a-z][a-z0-9_]*$/.test(value);
+
 export const getErrorMessage = (response) => {
     // If there are specific validation errors, show them
     if (response?.errors) {
         // Handle array of errors
         if (Array.isArray(response.errors) && response.errors.length > 0) {
+            // Prefer human Message when Errors is only machine codes (ApiResponse pattern)
+            const onlyCodes = response.errors.every(isMachineCode);
+            if (onlyCodes && response.message && !isMachineCode(response.message)) {
+                return response.message;
+            }
             return response.errors.join(', ');
         }
 

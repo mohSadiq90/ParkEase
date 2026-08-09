@@ -32,6 +32,15 @@ describe('ApiService token helpers', () => {
     expect(localStorage.getItem('refreshToken')).toBe('refresh-1');
   });
 
+  it('exposes external auth helpers (loginExternal, getExternalProviders, linkExternal, setPassword)', async () => {
+    const mod = await import('./api.js');
+    const api = mod.default;
+    expect(typeof api.loginExternal).toBe('function');
+    expect(typeof api.getExternalProviders).toBe('function');
+    expect(typeof api.linkExternal).toBe('function');
+    expect(typeof api.setPassword).toBe('function');
+  });
+
   it('clearTokens removes session keys', async () => {
     const mod = await import('./api.js');
     const api = mod.default;

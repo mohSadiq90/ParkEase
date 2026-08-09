@@ -5,7 +5,9 @@ import AuthChannelSelector, {
     authPath,
     channelFromSearchParams,
 } from '../components/AuthChannelSelector';
+import SocialAuthSection from '../components/SocialAuthSection';
 import showToast from '../utils/toast.jsx';
+import { externalAuthErrorMessage } from '../utils/externalAuthErrors';
 import { postAuthDestination, safeReturnUrl } from '../utils/safeReturnUrl';
 
 export default function Login() {
@@ -13,7 +15,7 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [memberships, setMemberships] = useState(null);
-    const { login, loginCorporate, isAdmin } = useAuth();
+    const { login, loginExternal, loginCorporate, isAdmin } = useAuth();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const returnUrl = safeReturnUrl(searchParams.get('returnUrl'));
@@ -105,6 +107,49 @@ export default function Login() {
         setLoading(false);
     };
 
+    /** Marketplace Google credential → token-exchange → applySession via loginExternal. */
+    const handleGoogleCredential = async (idToken) => {
+        if (isCorporate || loading) return;
+        setLoading(true);
+        const result = await loginExternal({ provider: 'Google', idToken });
+        if (result.success) {
+            showToast.success(
+                result.isNewUser
+                    ? 'Welcome — account created. Set a password in Profile for recovery.'
+                    : 'Signed in'
+            );
+            finishMarketplace();
+        } else {
+            showToast.error(externalAuthErrorMessage(result));
+        }
+        setLoading(false);
+    };
+
+    /** Marketplace Apple id_token + raw nonce (required) + optional first-auth names. */
+    const handleAppleCredential = async ({ idToken, nonce, firstName, lastName }) => {
+        if (isCorporate || loading) return;
+        setLoading(true);
+        const result = await loginExternal({
+            provider: 'Apple',
+            idToken,
+            nonce,
+            firstName,
+            lastName,
+        });
+        if (result.success) {
+            showToast.success(
+                result.isNewUser
+                    ? 'Welcome — account created. Set a password in Profile for recovery.'
+                    : 'Signed in'
+            );
+            finishMarketplace();
+        } else {
+            showToast.error(externalAuthErrorMessage(result));
+        }
+        setLoading(false);
+    };
+
+
     const registerLink = authPath('/register', { channel, returnUrl });
 
     const subtitle = (() => {
@@ -195,6 +240,16 @@ export default function Login() {
                         </button>
                     </form>
                 )}
+
+                {/* Social only on Marketplace tab — never corporate channel (PR4 AC) */}
+                {!isCorporate && !memberships && (
+                    <SocialAuthSection
+                        onGoogleCredential={handleGoogleCredential}
+                        onAppleCredential={handleAppleCredential}
+                        disabled={loading}
+                    />
+                )}
+
 
                 <p className="auth-footer">
                     Don&apos;t have an account? <Link to={registerLink}>Sign up</Link>

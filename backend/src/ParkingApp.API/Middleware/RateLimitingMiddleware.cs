@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using ParkingApp.API.Options;
 using ParkingApp.Application.DTOs;
+using ParkingApp.Identity.Application.Options;
 
 namespace ParkingApp.API.Middleware;
 
@@ -10,17 +11,21 @@ namespace ParkingApp.API.Middleware;
 /// Skips CORS preflight, health checks, hubs, and static SPA/asset paths so free-tier
 /// page loads do not burn the API budget.
 /// IoT LPR routes use a stricter per-IP budget from <see cref="IotLprOptions.RateLimitPerMinute"/>.
+/// External auth routes use a stricter per-IP budget from <see cref="ExternalAuthOptions.RateLimitPerMinute"/>.
 /// </summary>
 public class RateLimitingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<RateLimitingMiddleware> _logger;
     private readonly IOptionsMonitor<IotLprOptions>? _iotOptions;
+    private readonly IOptionsMonitor<ExternalAuthOptions>? _externalAuthOptions;
     private static readonly ConcurrentDictionary<string, Queue<DateTime>> _requestTimes = new();
     private static readonly ConcurrentDictionary<string, Queue<DateTime>> _iotRequestTimes = new();
+    private static readonly ConcurrentDictionary<string, Queue<DateTime>> _externalAuthRequestTimes = new();
     private static readonly Timer _cleanupTimer;
     private const int MaxRequests = 100;
     private const int DefaultIotMaxRequests = 30;
+    private const int DefaultExternalAuthMaxRequests = 20;
     private const int WindowSeconds = 60;
     private const int CleanupIntervalMinutes = 5;
 
@@ -40,11 +45,13 @@ public class RateLimitingMiddleware
     public RateLimitingMiddleware(
         RequestDelegate next,
         ILogger<RateLimitingMiddleware> logger,
-        IOptionsMonitor<IotLprOptions>? iotOptions = null)
+        IOptionsMonitor<IotLprOptions>? iotOptions = null,
+        IOptionsMonitor<ExternalAuthOptions>? externalAuthOptions = null)
     {
         _next = next;
         _logger = logger;
         _iotOptions = iotOptions;
+        _externalAuthOptions = externalAuthOptions;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -83,6 +90,29 @@ public class RateLimitingMiddleware
             return;
         }
 
+        if (IsExternalAuthPath(context.Request.Path))
+        {
+            var externalLimit = ResolveExternalAuthLimitPerMinute();
+            if (!IsRequestAllowed(clientId, _externalAuthRequestTimes, externalLimit))
+            {
+                _logger.LogWarning(
+                    "External auth rate limit exceeded Client={ClientId} LimitPerMinute={Limit}",
+                    clientId, externalLimit);
+                context.Response.StatusCode = 429;
+                context.Response.Headers.Append("Retry-After", WindowSeconds.ToString());
+                await context.Response.WriteAsJsonAsync(new ApiResponse<object>(
+                    false,
+                    "Rate limit exceeded. Please try again later.",
+                    null,
+                    new List<string> { "rate_limited" },
+                    "rate_limited"));
+                return;
+            }
+
+            await _next(context);
+            return;
+        }
+
         if (!IsRequestAllowed(clientId, _requestTimes, MaxRequests))
         {
             _logger.LogWarning("Rate limit exceeded for client: {ClientId}", clientId);
@@ -102,9 +132,22 @@ public class RateLimitingMiddleware
         return Math.Clamp(configured, 1, 10_000);
     }
 
+    private int ResolveExternalAuthLimitPerMinute()
+    {
+        var configured = _externalAuthOptions?.CurrentValue.RateLimitPerMinute ?? DefaultExternalAuthMaxRequests;
+        return Math.Clamp(configured, 1, 10_000);
+    }
+
     /// <summary>Exposed for unit tests.</summary>
     public static bool IsIotPath(PathString path) =>
         path.StartsWithSegments("/api/iot", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Stricter budget for token-exchange and related external auth mutations.
+    /// GET providers is included (cheap but still per-IP).
+    /// </summary>
+    public static bool IsExternalAuthPath(PathString path) =>
+        path.StartsWithSegments("/api/auth/external", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Exposed for unit tests.</summary>
     public static bool ShouldSkipRateLimit(PathString path)
@@ -176,6 +219,7 @@ public class RateLimitingMiddleware
 
         CleanupStore(_requestTimes, cutoff);
         CleanupStore(_iotRequestTimes, cutoff);
+        CleanupStore(_externalAuthRequestTimes, cutoff);
     }
 
     private static void CleanupStore(ConcurrentDictionary<string, Queue<DateTime>> store, DateTime cutoff)

@@ -38,6 +38,7 @@ public class UserModuleTests
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly Mock<IVehicleRepository> _mockVehicleRepository;
     private readonly Mock<IDeviceTokenRepository> _mockDeviceTokenRepository;
+    private readonly Mock<IUserExternalLoginRepository> _mockExternalLoginRepository;
     private readonly Mock<IMarketplaceUserDataCleanup> _mockMarketplaceCleanup;
     private readonly Mock<IMessagingUserDataCleanup> _mockMessagingCleanup;
     private readonly Mock<ICacheService> _mockCache;
@@ -50,6 +51,7 @@ public class UserModuleTests
         _mockUserRepository = new Mock<IUserRepository>();
         _mockVehicleRepository = new Mock<IVehicleRepository>();
         _mockDeviceTokenRepository = new Mock<IDeviceTokenRepository>();
+        _mockExternalLoginRepository = new Mock<IUserExternalLoginRepository>();
         _mockMarketplaceCleanup = new Mock<IMarketplaceUserDataCleanup>();
         _mockMessagingCleanup = new Mock<IMessagingUserDataCleanup>();
         _mockCache = new Mock<ICacheService>();
@@ -59,11 +61,17 @@ public class UserModuleTests
         _mockUnitOfWork.Setup(u => u.Users).Returns(_mockUserRepository.Object);
         _mockUnitOfWork.Setup(u => u.Vehicles).Returns(_mockVehicleRepository.Object);
         _mockUnitOfWork.Setup(u => u.DeviceTokens).Returns(_mockDeviceTokenRepository.Object);
+        _mockUnitOfWork.Setup(u => u.ExternalLogins).Returns(_mockExternalLoginRepository.Object);
 
         _mockVehicleRepository.Setup(r => r.FindAsync(It.IsAny<Expression<Func<Vehicle, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Vehicle>());
         _mockDeviceTokenRepository.Setup(r => r.FindAsync(It.IsAny<Expression<Func<DeviceToken, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DeviceToken>());
+        _mockExternalLoginRepository.Setup(r => r.FindAsync(It.IsAny<Expression<Func<UserExternalLogin, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserExternalLogin>());
+        _mockExternalLoginRepository
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<UserExternalLogin>());
     }
 
     [Fact]

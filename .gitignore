@@ -475,3 +475,7 @@ ResetOutbox/
 CheckDB.cs
 **/CheckDB.cs
 /docs/channel-isolation-qa-matrix.md
+/backend/src/ParkingApp.API/appsettings.Production.json
+/backend/src/ParkingApp.API/appsettings.Staging.json
+/frontend/.env.production.example
+/frontend/.env.staging.example

@@ -6,6 +6,17 @@ describe('getErrorMessage', () => {
     expect(getErrorMessage({ errors: ['a', 'b'] })).toBe('a, b');
   });
 
+  it('prefers human message over machine-code errors array', () => {
+    expect(
+      getErrorMessage({
+        message:
+          'An account with this email already exists. Sign in with your existing method, then link this provider in account settings.',
+        errors: ['account_exists'],
+        code: 'account_exists',
+      }),
+    ).toMatch(/already exists/i);
+  });
+
   it('flattens object validation errors', () => {
     expect(
       getErrorMessage({ errors: { email: ['required'], name: ['too short'] } })

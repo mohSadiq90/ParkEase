@@ -97,7 +97,74 @@ public record ChangePasswordDto(
     [Required][MinLength(8)] string NewPassword
 );
 
+// ─── External / social auth (Marketplace only) ───────────────────────────────
+
+/// <summary>
+/// Token-exchange body for POST /api/auth/external. Provider is a case-insensitive string (KD-SL-21).
+/// LinkPassword / step-up fields are reserved for PR3 linking; PR2 always returns account_exists on email collision.
+/// </summary>
+public record ExternalLoginDto(
+    [Required] string Provider,
+    [Required] string IdToken,
+    string? Nonce = null,
+    string? FirstName = null,
+    string? LastName = null,
+    string? LinkPassword = null,
+    string? ProofProvider = null,
+    string? ProofIdToken = null,
+    string? ProofNonce = null
+);
+
+/// <summary>Authenticated link (PR3). Reserved DTO shape.</summary>
+public record LinkExternalLoginDto(
+    [Required] string Provider,
+    [Required] string IdToken,
+    string? Nonce = null
+);
+
+/// <summary>
+/// Bootstrap password for social-only users (PR3 / KD-SL-25).
+/// </summary>
+public record SetPasswordDto(
+    [Required] string NewPassword
+);
+
+/// <summary>Normative success payload for POST /api/auth/external.</summary>
+public record ExternalAuthSessionDto
+{
+    public required TokenDto Session { get; init; }
+    public bool IsNewUser { get; init; }
+    public bool RequiresPhone { get; init; }
+    public IReadOnlyList<string> LinkedProviders { get; init; } = Array.Empty<string>();
+}
+
+/// <summary>GET /api/auth/external/providers — enabled provider names only (no secrets).</summary>
+public record ExternalProvidersDto
+{
+    public IReadOnlyList<string> Providers { get; init; } = Array.Empty<string>();
+}
+
+/// <summary>Success payload for POST /api/auth/external/link.</summary>
+public record LinkExternalLoginResultDto
+{
+    public IReadOnlyList<string> LinkedProviders { get; init; } = Array.Empty<string>();
+}
+
+/// <summary>
+/// Success payload for POST /api/auth/set-password (KD-SL-25 bootstrap).
+/// Clients must store the new session tokens (old refresh is revoked).
+/// </summary>
+public record SetPasswordResultDto
+{
+    public required TokenDto Session { get; init; }
+}
+
 // User DTOs
+/// <summary>
+/// Current-user / session user projection.
+/// <see cref="HasPassword"/> and <see cref="LinkedProviders"/> support Profile set-password + link UX
+/// (authenticated only — not returned on unauthenticated collision responses).
+/// </summary>
 public record UserDto(
     Guid Id,
     string Email,
@@ -107,7 +174,9 @@ public record UserDto(
     UserRole Role,
     bool IsEmailVerified,
     bool IsPhoneVerified,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    bool HasPassword = true,
+    IReadOnlyList<string>? LinkedProviders = null
 );
 
 public record UpdateUserDto(

@@ -13,7 +13,7 @@ internal sealed class BcryptPasswordHasher : IPasswordHasher
         return BCrypt.Net.BCrypt.HashPassword(password);
     }
 
-    public bool Verify(string password, string passwordHash)
+    public bool Verify(string password, string? passwordHash)
     {
         if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(passwordHash))
             return false;

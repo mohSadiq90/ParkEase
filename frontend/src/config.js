@@ -9,3 +9,21 @@ export const API_ENDPOINTS = {
   UPLOADS: `${API_BASE_URL}/uploads`,
   HUBS: `${API_BASE_URL}/hubs`,
 };
+
+/**
+ * Google Identity Services OAuth client ID (web).
+ * Required for Marketplace "Continue with Google". Leave unset to hide the button.
+ */
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+/**
+ * Apple Sign-In Services ID (web).
+ * Required for Marketplace "Continue with Apple". Leave unset to hide the button.
+ */
+export const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID || '';
+
+/**
+ * Apple Sign-In redirect URI (must match Services ID config in Apple Developer).
+ * Defaults to window origin at runtime when empty (see SocialAuthSection).
+ */
+export const APPLE_REDIRECT_URI = import.meta.env.VITE_APPLE_REDIRECT_URI || '';
