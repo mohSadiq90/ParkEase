@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using ParkingApp.API.Middleware;
 using ParkingApp.API.Options;
@@ -251,9 +252,11 @@ try
 
     var app = builder.Build();
 
-    // Apply migrations and seed database
-    using (var scope = app.Services.CreateScope())
+    // Apply migrations and seed database (HTTP smoke factories disable this).
+    var applyMigrations = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
+    if (applyMigrations)
     {
+        using var scope = app.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         context.Database.Migrate();
     }
@@ -393,7 +396,10 @@ try
 
     app.Run();
 }
-catch (Exception ex)
+// HostAbortedException is thrown by WebApplicationFactory / HostFactoryResolver to stop the
+// entry point after the host is captured. Swallowing it causes:
+// "The entry point exited without ever building an IHost."
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
 }

@@ -58,6 +58,12 @@ public sealed class FullApiFactory : WebApplicationFactory<Program>
         // Force Development: process/host may default to Production (breaks JWT HTTPS metadata + secrets).
         builder.UseSetting(WebHostDefaults.EnvironmentKey, Environments.Development);
         builder.UseEnvironment(Environments.Development);
+        // Host settings are visible early; ConfigureAppConfiguration alone can lose to appsettings placeholders.
+        builder.UseSetting("ConnectionStrings:DefaultConnection", _connectionString);
+        builder.UseSetting("ConnectionStrings:Redis", "");
+        builder.UseSetting("Database:ApplyMigrationsOnStartup", "true");
+        builder.UseSetting("Storage:Provider", "Local");
+        builder.UseSetting("Logging:File:Enabled", "false");
 
         builder.ConfigureAppConfiguration((_, config) =>
         {
@@ -84,7 +90,9 @@ public sealed class FullApiFactory : WebApplicationFactory<Program>
                 ["Logging:File:Enabled"] = "false",
                 ["Logging:Serilog:MinimumLevel"] = "Warning",
                 ["Storage:Provider"] = "Local",
-                ["API_BASE_URL"] = "http://localhost"
+                ["API_BASE_URL"] = "http://localhost",
+                // Full pipeline owns migrate against Testcontainers
+                ["Database:ApplyMigrationsOnStartup"] = "true"
             });
         });
 
@@ -92,6 +100,10 @@ public sealed class FullApiFactory : WebApplicationFactory<Program>
         {
             // Avoid outbox / background DB work during HTTP IT
             services.RemoveAll<IHostedService>();
+
+            // CI has no user secrets: Program may have bound the appsettings placeholder.
+            // Re-bind EF + Dapper to the Testcontainers connection string.
+            TestDbContextRegistration.ReplacePostgres(services, _connectionString);
 
             // Guarantee in-memory cache even if host already bound Redis from secrets
             services.RemoveAll<ICacheService>();

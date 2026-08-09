@@ -30,16 +30,26 @@ public sealed class DualPoolApiFactory : WebApplicationFactory<Program>
     public static readonly Guid TestSpaceId = Guid.Parse("99999999-8888-7777-6666-555555555555");
     public static readonly Guid TestAllocationId = Guid.Parse("aaaaaaaa-0000-1111-2222-333333333333");
 
+    private const string SmokeConnectionString =
+        "Host=127.0.0.1;Port=5432;Database=parkease_http_smoke_unused;Username=test;Password=test";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
+        // Force Development early (process/host may default to Production in CI).
+        builder.UseSetting(WebHostDefaults.EnvironmentKey, Environments.Development);
+        builder.UseEnvironment(Environments.Development);
+        // Host settings win over appsettings placeholders when Program reads config at startup.
+        builder.UseSetting("ConnectionStrings:DefaultConnection", SmokeConnectionString);
+        builder.UseSetting("ConnectionStrings:Redis", "");
+        builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
+        builder.UseSetting("Storage:Provider", "Local");
+        builder.UseSetting("Logging:File:Enabled", "false");
 
         builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:DefaultConnection"] =
-                    "Host=127.0.0.1;Port=5432;Database=parkease_http_smoke_unused;Username=test;Password=test",
+                ["ConnectionStrings:DefaultConnection"] = SmokeConnectionString,
                 // Prefer in-memory cache (no Redis required)
                 ["ConnectionStrings:Redis"] = "",
                 ["Jwt:SecretKey"] = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
@@ -47,7 +57,9 @@ public sealed class DualPoolApiFactory : WebApplicationFactory<Program>
                 ["Jwt:Audience"] = "ParkingApp",
                 ["ChannelIsolation:Enabled"] = "false",
                 ["Logging:File:Enabled"] = "false",
-                ["Storage:Provider"] = "Local"
+                ["Storage:Provider"] = "Local",
+                // L4 smoke stubs IDispatcher — do not require Postgres migrate
+                ["Database:ApplyMigrationsOnStartup"] = "false"
             });
         });
 
@@ -55,6 +67,9 @@ public sealed class DualPoolApiFactory : WebApplicationFactory<Program>
         {
             // Avoid background DB/Redis work during HTTP smoke
             services.RemoveAll<IHostedService>();
+
+            // Guarantee EF/Dapper bind even when Program read appsettings placeholders first
+            TestDbContextRegistration.ReplacePostgres(services, SmokeConnectionString);
 
             services.AddAuthentication(options =>
                 {
