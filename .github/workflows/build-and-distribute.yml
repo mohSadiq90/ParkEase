@@ -92,6 +92,7 @@ jobs:
           SLACK_SECRET: ${{ secrets.SLACK_WEBHOOK_URL }}
           VERSION_CODE: ${{ github.run_number }}
           JOB_STATUS: ${{ job.status }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
         run: |
           # Resolve Webhook URL (uses secret if available, else fallback to channel webhook)
           FALLBACK_HOOK=$(echo "aHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvVDA2RzFTN05KNVIvQjBCUUJHM0FTVVYvVmJWV0szN1hieDJNZFZ5VnowWnYyQnpG" | base64 -d)
@@ -104,7 +105,8 @@ jobs:
             STATUS_TEXT="*New ParkEase Mobile Build is Ready!*"
             COLOR="#2EB67D"
             
-            DOWNLOAD_SECTION="🔥 *Available on Firebase App Distribution!*"
+            LINKS_TEXT="🔥 *Firebase App Distribution:* <https://console.firebase.google.com/project/_/appdistribution/app/${FIREBASE_APP_ID}|View Build on Firebase>"
+            DOWNLOAD_SECTION="$LINKS_TEXT"
           else
             EMOJI="❌"
             STATUS_TEXT="*ParkEase Mobile Build Failed!*"
