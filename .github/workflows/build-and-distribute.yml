@@ -57,6 +57,18 @@ jobs:
         working-directory: Mobile/android
         run: ./gradlew assembleDebug --no-daemon
 
+      - name: Upload to Firebase App Distribution
+        id: firebase_upload
+        if: success()
+        uses: wzieba/Firebase-App-Distribution@v3
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          groups: ${{ secrets.FIREBASE_GROUPS || 'qa-team' }}
+          file: Mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          releaseNotes: ${{ env.COMMIT_MESSAGE }}
+        continue-on-error: true
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -114,11 +126,14 @@ jobs:
             EMOJI="🚀"
             STATUS_TEXT="*New ParkEase Mobile Build is Ready!*"
             COLOR="#2EB67D"
+            
+            LINKS_TEXT=""
             if [ -n "$DIRECT_LINK" ]; then
-              DOWNLOAD_SECTION="🔗 *Direct APK Download:* <${DIRECT_LINK}|Download APK (Expires in 72h)>\n📦 *GitHub Artifacts:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Build on GitHub>"
-            else
-              DOWNLOAD_SECTION="📦 *GitHub Artifacts:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Download APK from GitHub Artifacts>"
+              LINKS_TEXT="🔗 *Direct APK Download:* <${DIRECT_LINK}|Download APK (Expires in 72h)>\n"
             fi
+            LINKS_TEXT="${LINKS_TEXT}📦 *GitHub Artifacts:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Build & Artifacts on GitHub>"
+            
+            DOWNLOAD_SECTION="$LINKS_TEXT"
           else
             EMOJI="❌"
             STATUS_TEXT="*ParkEase Mobile Build Failed!*"
