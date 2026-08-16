@@ -459,3 +459,6 @@ ResetOutbox/
 **/ResetOutbox/
 CheckDB.cs
 **/CheckDB.cs
+deploy-mobile.sh
+Mobile/parkease-*.json
+Mobile/google-services.json

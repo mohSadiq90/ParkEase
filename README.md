@@ -295,6 +295,13 @@ npx expo start
 
 Configure API base URL in `Mobile/src/config/environment.js`.
 
+**Local Deployment to Firebase App Distribution:**
+To manually build the Android APK, upload it to Firebase App Distribution, and send a Slack notification to `#qa-builds-android`, you can run the local deployment script:
+```bash
+./deploy-mobile.sh
+```
+*(Note: Requires `Mobile/parkease-*.json` service account key and `Mobile/google-services.json` to be present locally. These are intentionally ignored from Git).*
+
 ### 5. Tests
 
 ```bash
