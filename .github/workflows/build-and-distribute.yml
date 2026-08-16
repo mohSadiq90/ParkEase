@@ -40,6 +40,12 @@ jobs:
         working-directory: Mobile
         run: npx expo prebuild --platform android --clean --no-install
 
+      - name: Configure Deterministic Debug Keystore
+        working-directory: Mobile
+        run: |
+          mkdir -p android/app
+          cp debug.keystore android/app/debug.keystore
+
       - name: Get Commit Message
         run: |
           echo "COMMIT_MESSAGE<<EOF" >> $GITHUB_ENV
