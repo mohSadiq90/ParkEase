@@ -121,7 +121,7 @@ jobs:
           echo "DIRECT_LINK=$DIRECT_LINK" >> $GITHUB_ENV
           echo "Generated Direct Download Link: $DIRECT_LINK"
 
-      - name: Send Slack Notification
+      - name: Send Slack Notification to #qa-builds-android
         if: always()
         env:
           SLACK_SECRET: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -154,6 +154,7 @@ jobs:
           fi
 
           curl -X POST -H 'Content-type: application/json' --data '{
+            "channel": "#qa-builds-android",
             "text": "'"$EMOJI"' '"$STATUS_TEXT"'",
             "attachments": [
               {
@@ -163,7 +164,7 @@ jobs:
                     "type": "section",
                     "text": {
                       "type": "mrkdwn",
-                      "text": "'"$EMOJI"' '"$STATUS_TEXT"'"
+                      "text": "'"$EMOJI"' '"$STATUS_TEXT"' [ *#qa-builds-android* ]"
                     }
                   },
                   {
@@ -175,7 +176,7 @@ jobs:
                       },
                       {
                         "type": "mrkdwn",
-                        "text": "*Branch:*\n'"${GITHUB_REF_NAME}"'"
+                        "text": "*Channel / Branch:*\n#qa-builds-android (`'"${GITHUB_REF_NAME}"'`)"
                       }
                     ]
                   },
