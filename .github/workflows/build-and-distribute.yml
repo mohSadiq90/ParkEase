@@ -123,13 +123,6 @@ jobs:
                 "blocks": [
                   {
                     "type": "section",
-                    "text": {
-                      "type": "mrkdwn",
-                      "text": "'"$EMOJI"' '"$STATUS_TEXT"' [ *#qa-builds-android* ]"
-                    }
-                  },
-                  {
-                    "type": "section",
                     "fields": [
                       {
                         "type": "mrkdwn",
@@ -137,7 +130,7 @@ jobs:
                       },
                       {
                         "type": "mrkdwn",
-                        "text": "*Channel / Branch:*\n#qa-builds-android (`'"${GITHUB_REF_NAME}"'`)"
+                        "text": "*Branch:*\n`'"${GITHUB_REF_NAME}"'`"
                       }
                     ]
                   },
