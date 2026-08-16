@@ -57,27 +57,6 @@ jobs:
         working-directory: Mobile/android
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Upload to Firebase App Distribution
-        id: firebase_upload
-        if: success()
-        env:
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
-          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-          FIREBASE_GROUPS: ${{ secrets.FIREBASE_GROUPS || 'QA' }}
-        run: |
-          APK_PATH="Mobile/android/app/build/outputs/apk/debug/app-debug.apk"
-          if [ -n "$FIREBASE_APP_ID" ] && [ -n "$FIREBASE_SERVICE_ACCOUNT_KEY" ]; then
-            echo "Uploading APK to Firebase App Distribution..."
-            echo "$FIREBASE_SERVICE_ACCOUNT_KEY" > /tmp/firebase-key.json
-            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-key.json
-            npx --yes firebase-tools appdistribution:distribute "$APK_PATH" \
-              --app "$FIREBASE_APP_ID" \
-              --groups "$FIREBASE_GROUPS" \
-              --release-notes "$COMMIT_MESSAGE"
-          else
-            echo "Firebase credentials (FIREBASE_APP_ID / FIREBASE_SERVICE_ACCOUNT_KEY) not set, skipping Firebase App Distribution."
-            exit 1
-          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -105,8 +84,7 @@ jobs:
             STATUS_TEXT="*New ParkEase Mobile Build is Ready!*"
             COLOR="#2EB67D"
             
-            LINKS_TEXT="🔥 *Firebase App Distribution:* <https://console.firebase.google.com/project/_/appdistribution/app/${FIREBASE_APP_ID}|View Build on Firebase>"
-            DOWNLOAD_SECTION="$LINKS_TEXT"
+            DOWNLOAD_SECTION=""
           else
             EMOJI="❌"
             STATUS_TEXT="*ParkEase Mobile Build Failed!*"
