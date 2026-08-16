@@ -60,14 +60,26 @@ jobs:
       - name: Upload to Firebase App Distribution
         id: firebase_upload
         if: success()
-        uses: wzieba/Firebase-App-Distribution@v3
-        with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-          groups: ${{ secrets.FIREBASE_GROUPS || 'qa-team' }}
-          file: Mobile/android/app/build/outputs/apk/debug/app-debug.apk
-          releaseNotes: ${{ env.COMMIT_MESSAGE }}
-        continue-on-error: true
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          FIREBASE_GROUPS: ${{ secrets.FIREBASE_GROUPS || 'qa-team' }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          APK_PATH="Mobile/android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ -n "$FIREBASE_APP_ID" ] && { [ -n "$FIREBASE_SERVICE_ACCOUNT_KEY" ] || [ -n "$FIREBASE_TOKEN" ]; }; then
+            echo "Uploading APK to Firebase App Distribution..."
+            if [ -n "$FIREBASE_SERVICE_ACCOUNT_KEY" ]; then
+              echo "$FIREBASE_SERVICE_ACCOUNT_KEY" > /tmp/firebase-key.json
+              export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-key.json
+            fi
+            npx --yes firebase-tools appdistribution:distribute "$APK_PATH" \
+              --app "$FIREBASE_APP_ID" \
+              --groups "$FIREBASE_GROUPS" \
+              --release-notes "$COMMIT_MESSAGE" || echo "Firebase upload warning: check credentials"
+          else
+            echo "Firebase credentials (FIREBASE_APP_ID / FIREBASE_SERVICE_ACCOUNT_KEY) not set, skipping Firebase App Distribution."
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
