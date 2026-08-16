@@ -63,7 +63,7 @@ jobs:
         env:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-          FIREBASE_GROUPS: ${{ secrets.FIREBASE_GROUPS || 'qa-team' }}
+          FIREBASE_GROUPS: ${{ secrets.FIREBASE_GROUPS || 'QA' }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           APK_PATH="Mobile/android/app/build/outputs/apk/debug/app-debug.apk"
@@ -75,6 +75,7 @@ jobs:
             fi
             npx --yes firebase-tools appdistribution:distribute "$APK_PATH" \
               --app "$FIREBASE_APP_ID" \
+              --token "$FIREBASE_TOKEN" \
               --groups "$FIREBASE_GROUPS" \
               --release-notes "$COMMIT_MESSAGE" || echo "Firebase upload warning: check credentials"
           else
@@ -87,39 +88,6 @@ jobs:
           name: parkease-mobile-debug-apk
           path: Mobile/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
-
-      - name: Generate Direct Download Link
-        id: generate_link
-        run: |
-          APK_PATH="Mobile/android/app/build/outputs/apk/debug/app-debug.apk"
-          DIRECT_LINK=""
-          if [ -f "$APK_PATH" ]; then
-            # 1. Try litterbox (Catbox) - fast 72h direct link
-            LITTER_RESP=$(curl -s -F "reqtype=fileupload" -F "time=72h" -F "fileToUpload=@$APK_PATH" https://litterbox.catbox.moe/resources/internals/api.php 2>/dev/null || echo "")
-            if [[ "$LITTER_RESP" =~ ^https:// ]]; then
-              DIRECT_LINK="$LITTER_RESP"
-            fi
-
-            # 2. Fallback to tmpfiles.org
-            if [ -z "$DIRECT_LINK" ]; then
-              TMP_RESP=$(curl -s -F "file=@$APK_PATH" https://tmpfiles.org/api/v1/upload 2>/dev/null || echo "")
-              TMP_URL=$(echo "$TMP_RESP" | grep -o 'https://tmpfiles.org/[^"]*' | sed 's/tmpfiles.org\//tmpfiles.org\/dl\//' | head -1)
-              if [ -n "$TMP_URL" ]; then
-                DIRECT_LINK="$TMP_URL"
-              fi
-            fi
-
-            # 3. Fallback to file.io
-            if [ -z "$DIRECT_LINK" ]; then
-              FILEIO_RESP=$(curl -s -L -F "file=@$APK_PATH" https://file.io 2>/dev/null || echo "")
-              FILEIO_URL=$(echo "$FILEIO_RESP" | grep -o '"link":"[^"]*' | cut -d'"' -f4 || echo "")
-              if [ -n "$FILEIO_URL" ]; then
-                DIRECT_LINK="$FILEIO_URL"
-              fi
-            fi
-          fi
-          echo "DIRECT_LINK=$DIRECT_LINK" >> $GITHUB_ENV
-          echo "Generated Direct Download Link: $DIRECT_LINK"
 
       - name: Send Slack Notification to #qa-builds-android
         if: always()
@@ -139,11 +107,7 @@ jobs:
             STATUS_TEXT="*New ParkEase Mobile Build is Ready!*"
             COLOR="#2EB67D"
             
-            LINKS_TEXT=""
-            if [ -n "$DIRECT_LINK" ]; then
-              LINKS_TEXT="🔗 *Direct APK Download:* <${DIRECT_LINK}|Download APK (Expires in 72h)>\n"
-            fi
-            LINKS_TEXT="${LINKS_TEXT}📦 *GitHub Artifacts:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Build & Artifacts on GitHub>"
+            LINKS_TEXT="📦 *GitHub Artifacts:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Build & Artifacts on GitHub>"
             
             DOWNLOAD_SECTION="$LINKS_TEXT"
           else
