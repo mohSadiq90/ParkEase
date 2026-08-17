@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,9 +42,11 @@ const VendorDashboardScreen = ({ navigation }) => {
     const { vendorDashboard: data, loading } = useSelector((s) => s.dashboard);
     const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        dispatch(getVendorDashboardThunk());
-    }, [dispatch]);
+    useFocusEffect(
+        useCallback(() => {
+            dispatch(getVendorDashboardThunk());
+        }, [dispatch])
+    );
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
