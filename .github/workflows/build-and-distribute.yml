@@ -61,6 +61,7 @@ jobs:
         working-directory: Mobile/android
         run: |
           set -o pipefail
+          cp -a ../assets/android-icons/. app/src/main/res/
           ./gradlew assembleRelease --no-daemon 2>&1 | tee gradle_build.log
 
       - name: Upload APK Artifact
