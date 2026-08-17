@@ -20,9 +20,9 @@ export function renderWithProviders(
       reducer: {
         auth: authReducer,
         parking: parkingReducer,
-        bookings: bookingReducer,
+        booking: bookingReducer,
         dashboard: dashboardReducer,
-        reviews: reviewReducer,
+        review: reviewReducer,
         ui: uiReducer,
       },
       preloadedState,
