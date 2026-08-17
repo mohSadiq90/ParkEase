@@ -37,7 +37,13 @@ function renderE2E() {
   );
 }
 
+import { Alert } from 'react-native';
+
 describe('Member E2E Flow (Discovery to Booking)', () => {
+  beforeEach(() => {
+    jest.spyOn(Alert, 'alert');
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -186,5 +192,114 @@ describe('Member E2E Flow (Discovery to Booking)', () => {
     // The mock for `/bookings/member` returns the new booking with status 0 (Pending)
     const pendingBookingTitle = await findByText('Central Park Garage');
     expect(pendingBookingTitle).toBeTruthy();
+  });
+
+  it('shows an offline error message when trying to book without network connectivity', async () => {
+    // We can simulate an offline scenario by mocking the API to throw a network error.
+    apiClient.get.mockImplementation((url) => {
+      if (url.includes('me')) {
+        return Promise.reject({ response: { status: 401 } });
+      }
+      if (url.includes('search')) {
+        return Promise.resolve({
+          data: {
+            success: true,
+            data: {
+              parkingSpaces: [
+                { id: '1', title: 'Central Park Garage', pricePerHour: 10, distance: 2.5, city: 'New York' }
+              ],
+              totalCount: 1
+            }
+          }
+        });
+      }
+      if (url.includes('reviews/parking-space/')) {
+        return Promise.resolve({ data: { success: true, data: [] } });
+      }
+      if (url.includes('parking/')) {
+        return Promise.resolve({
+          data: {
+            success: true,
+            data: { id: '1', title: 'Central Park Garage', pricePerHour: 10, totalSpots: 50, city: 'New York', address: '123 Main', parkingType: 2, hourlyRate: 10, is24Hours: true }
+          }
+        });
+      }
+      return Promise.resolve({ data: { success: true, data: {} } });
+    });
+
+    apiClient.post.mockImplementation((url) => {
+      if (url.includes('register')) {
+        return Promise.resolve({
+          data: {
+            success: true,
+            data: { token: 'fake-token', user: { id: 'user1', firstName: 'Test', role: 2 } }
+          }
+        });
+      }
+      if (url.includes('bookings')) {
+        // SIMULATE NETWORK ERROR
+        return Promise.reject({ message: 'Network Error' });
+      }
+      return Promise.resolve({ data: { success: true, data: {} } });
+    });
+
+    const { getByText, getByPlaceholderText, findByText, getAllByPlaceholderText, getAllByText } = renderE2E();
+
+    // The app starts with a session check, then goes to Auth screen
+    const switchToSignupBtn = await findByText("Sign Up");
+    fireEvent.press(switchToSignupBtn);
+
+    // Fill Registration Form
+    fireEvent.changeText(getByPlaceholderText('First'), 'Test');
+    fireEvent.changeText(getByPlaceholderText('Last'), 'User');
+    const emails = getAllByPlaceholderText('Enter your email');
+    fireEvent.changeText(emails[emails.length - 1], 'test@example.com');
+    fireEvent.changeText(getByPlaceholderText('Enter phone number'), '1234567890');
+    fireEvent.changeText(getByPlaceholderText('Min. 8 characters'), 'password123');
+    
+    // Select Member role
+    const memberRoleText = getAllByText('Member')[1];
+    if (memberRoleText) {
+        fireEvent.press(memberRoleText);
+    }
+
+    // Submit Registration
+    const signupBtns = getAllByText('Create Account');
+    fireEvent.press(signupBtns[signupBtns.length - 1]);
+
+    // Wait for Dashboard to render (Home Tab)
+    await findByText('Home'); // wait until tabs are visible
+    const searchTab = getByText('Search');
+    fireEvent.press(searchTab);
+
+    // Wait to navigate to Search Screen
+    const searchHeader = await findByText('Find Parking');
+    expect(searchHeader).toBeTruthy();
+
+    // 2. Search for parking
+    fireEvent.changeText(getByPlaceholderText('Search by city or location...'), 'New York');
+    const searchBtn2 = getByText('Search'); // the bottom tab label
+    fireEvent.press(searchBtn2);
+    const spotCard = await findByText('Central Park Garage');
+    fireEvent.press(spotCard);
+
+    // 3. Go to Booking
+    const bookNowBtn = await findByText('Book Now');
+    fireEvent.press(bookNowBtn);
+
+    // 4. Submit Booking
+    const confirmBookingBtn = await findByText('Confirm Booking');
+    
+    await act(async () => {
+      fireEvent.press(confirmBookingBtn);
+    });
+
+    // 5. Verify the error message is displayed
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Booking Failed',
+        'Network Error'
+      );
+    });
   });
 });
