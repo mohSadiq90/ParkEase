@@ -125,7 +125,7 @@ try
             "http://127.0.0.1:5173",
             "http://localhost:5174",
             "https://localhost:5174",
-            "https://parkease.azurewebsites.net",
+            "https://parkeaseapp.runasp.net",
             "http://parkeaseapp.runasp.net",
             "https://parkeaseapp.runasp.net",
             "http://masjidfinder.runasp.net",
