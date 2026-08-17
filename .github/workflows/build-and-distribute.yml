@@ -36,7 +36,7 @@ jobs:
         working-directory: Mobile
         run: |
           set -o pipefail
-          npm ci 2>&1 | tee npm_install.log
+          npm ci --legacy-peer-deps 2>&1 | tee npm_install.log
 
       - name: Expo Prebuild Android
         working-directory: Mobile
@@ -105,86 +105,17 @@ jobs:
               --arg branch "$GITHUB_REF_NAME" \
               '{
                 "channel": "#qa-builds-android",
-                "text": "🚀 *New ParkEase Mobile Build is Ready!*",
-                "attachments": [
-                  {
-                    "color": "#2EB67D",
-                    "blocks": [
-                      {
-                        "type": "section",
-                        "fields": [
-                          {
-                            "type": "mrkdwn",
-                            "text": "*Build Number:*\n#\($bnum)"
-                          },
-                          {
-                            "type": "mrkdwn",
-                            "text": "*Branch:*\n`\($branch)`"
-                          }
-                        ]
-                      },
-                      {
-                        "type": "section",
-                        "text": {
-                          "type": "mrkdwn",
-                          "text": "*Changelog:*\n\($clog)"
-                        }
-                      },
-                      {
-                        "type": "section",
-                        "text": {
-                          "type": "mrkdwn",
-                          "text": "🔥 *Firebase App Distribution:* <https://console.firebase.google.com/project/_/appdistribution/app/1:422771999600:android:3d23fc1d587d77f91a05b5|View Build on Firebase>"
-                        }
-                      }
-                    ]
-                  }
-                ]
+                "text": "🚀 *New ParkEase Mobile Build is Ready!*\n\n*Build Number:* #\($bnum)\n*Branch:* `\($branch)`\n\n*Changelog:*\n\($clog)\n\n🔥 <https://console.firebase.google.com/project/_/appdistribution/app/1:422771999600:android:3d23fc1d587d77f91a05b5|View Build on Firebase>"
               }')
           else
             PAYLOAD=$(jq -n \
               --arg bnum "$VERSION_CODE" \
-              --arg clog "$COMMIT_MESSAGE" \
               --arg branch "$GITHUB_REF_NAME" \
               --arg err "$ERROR_DETAILS" \
               --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
               '{
                 "channel": "#qa-builds-android",
-                "text": "❌ *ParkEase Mobile Build Failed!*",
-                "attachments": [
-                  {
-                    "color": "#E01E5A",
-                    "blocks": [
-                      {
-                        "type": "section",
-                        "fields": [
-                          {
-                            "type": "mrkdwn",
-                            "text": "*Build Number:*\n#\($bnum)"
-                          },
-                          {
-                            "type": "mrkdwn",
-                            "text": "*Branch:*\n`\($branch)`"
-                          }
-                        ]
-                      },
-                      {
-                        "type": "section",
-                        "text": {
-                          "type": "mrkdwn",
-                          "text": "*Error Logs (Last 15 lines):*\n```\n\($err)\n```"
-                        }
-                      },
-                      {
-                        "type": "section",
-                        "text": {
-                          "type": "mrkdwn",
-                          "text": "🔍 *<\($run_url)|View Full Actions Log>*"
-                        }
-                      }
-                    ]
-                  }
-                ]
+                "text": "❌ *ParkEase Mobile Build Failed!*\n\n*Build Number:* #\($bnum)\n*Branch:* `\($branch)`\n\n*Error Logs (Last 15 lines):*\n```\n\($err)\n```\n\n🔍 <\($run_url)|View Full Actions Log>"
               }')
           fi
 
