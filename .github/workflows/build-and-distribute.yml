@@ -34,11 +34,15 @@ jobs:
 
       - name: Install Mobile Dependencies
         working-directory: Mobile
-        run: npm ci
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee npm_install.log
 
       - name: Expo Prebuild Android
         working-directory: Mobile
-        run: npx expo prebuild --platform android --clean --no-install
+        run: |
+          set -o pipefail
+          npx expo prebuild --platform android --clean --no-install 2>&1 | tee prebuild.log
 
       - name: Configure Deterministic Debug Keystore
         working-directory: Mobile
@@ -55,8 +59,9 @@ jobs:
 
       - name: Build Debug APK
         working-directory: Mobile/android
-        run: ./gradlew assembleDebug --no-daemon
-
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --no-daemon 2>&1 | tee gradle_build.log
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -85,57 +90,102 @@ jobs:
           # Resolve Webhook URL (uses secret if available, else fallback to channel webhook)
           FALLBACK_HOOK=$(echo "aHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvVDA2RzFTN05KNVIvQjBCUUJHM0FTVVYvVmJWV0szN1hieDJNZFZ5VnowWnYyQnpG" | base64 -d)
           WEBHOOK_URL="${SLACK_SECRET:-$FALLBACK_HOOK}"
-
-          CLEAN_MSG=$(echo "$COMMIT_MESSAGE" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
           
-          if [ "$JOB_STATUS" = "success" ]; then
-            EMOJI="🚀"
-            STATUS_TEXT="*New ParkEase Mobile Build is Ready!*"
-            COLOR="#2EB67D"
-            
-            DOWNLOAD_SECTION=""
-          else
-            EMOJI="❌"
-            STATUS_TEXT="*ParkEase Mobile Build Failed!*"
-            COLOR="#E01E5A"
-            DOWNLOAD_SECTION="🔍 *Build Logs:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Error Details>"
+          # Find the most recently modified log file in Mobile directory or android subdirectory
+          FAILED_LOG=$(ls -t Mobile/*.log Mobile/android/*.log 2>/dev/null | head -n 1)
+          ERROR_DETAILS="No error details found."
+          if [ "$JOB_STATUS" != "success" ] && [ -n "$FAILED_LOG" ]; then
+             ERROR_DETAILS=$(tail -n 15 "$FAILED_LOG")
           fi
 
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "channel": "#qa-builds-android",
-            "text": "'"$EMOJI"' '"$STATUS_TEXT"'",
-            "attachments": [
-              {
-                "color": "'"$COLOR"'",
-                "blocks": [
+          if [ "$JOB_STATUS" = "success" ]; then
+            PAYLOAD=$(jq -n \
+              --arg bnum "$VERSION_CODE" \
+              --arg clog "$COMMIT_MESSAGE" \
+              --arg branch "$GITHUB_REF_NAME" \
+              '{
+                "channel": "#qa-builds-android",
+                "text": "🚀 *New ParkEase Mobile Build is Ready!*",
+                "attachments": [
                   {
-                    "type": "section",
-                    "fields": [
+                    "color": "#2EB67D",
+                    "blocks": [
                       {
-                        "type": "mrkdwn",
-                        "text": "*Build Number:*\n#'"$VERSION_CODE"'"
+                        "type": "section",
+                        "fields": [
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Build Number:*\n#\($bnum)"
+                          },
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Branch:*\n`\($branch)`"
+                          }
+                        ]
                       },
                       {
-                        "type": "mrkdwn",
-                        "text": "*Branch:*\n`'"${GITHUB_REF_NAME}"'`"
+                        "type": "section",
+                        "text": {
+                          "type": "mrkdwn",
+                          "text": "*Changelog:*\n\($clog)"
+                        }
+                      },
+                      {
+                        "type": "section",
+                        "text": {
+                          "type": "mrkdwn",
+                          "text": "🔥 *Firebase App Distribution:* <https://console.firebase.google.com/project/_/appdistribution/app/1:422771999600:android:3d23fc1d587d77f91a05b5|View Build on Firebase>"
+                        }
                       }
                     ]
-                  },
-                  {
-                    "type": "section",
-                    "text": {
-                      "type": "mrkdwn",
-                      "text": "*Changelog:*\n'"${CLEAN_MSG}"'"
-                    }
-                  },
-                  {
-                    "type": "section",
-                    "text": {
-                      "type": "mrkdwn",
-                      "text": "'"${DOWNLOAD_SECTION}"'"
-                    }
                   }
                 ]
-              }
-            ]
-          }' "$WEBHOOK_URL"
+              }')
+          else
+            PAYLOAD=$(jq -n \
+              --arg bnum "$VERSION_CODE" \
+              --arg clog "$COMMIT_MESSAGE" \
+              --arg branch "$GITHUB_REF_NAME" \
+              --arg err "$ERROR_DETAILS" \
+              --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{
+                "channel": "#qa-builds-android",
+                "text": "❌ *ParkEase Mobile Build Failed!*",
+                "attachments": [
+                  {
+                    "color": "#E01E5A",
+                    "blocks": [
+                      {
+                        "type": "section",
+                        "fields": [
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Build Number:*\n#\($bnum)"
+                          },
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Branch:*\n`\($branch)`"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "section",
+                        "text": {
+                          "type": "mrkdwn",
+                          "text": "*Error Logs (Last 15 lines):*\n```\n\($err)\n```"
+                        }
+                      },
+                      {
+                        "type": "section",
+                        "text": {
+                          "type": "mrkdwn",
+                          "text": "🔍 *<\($run_url)|View Full Actions Log>*"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }')
+          fi
+
+          curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$WEBHOOK_URL"
