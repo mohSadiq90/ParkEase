@@ -37,3 +37,7 @@ This document tracks the step-by-step implementation of all identified feature g
 - [x] **Step 7: Full-Stack CI/CD GitHub Actions Pipeline**
   - Create `.github/workflows/ci.yml` with automated test and build jobs for Backend, Frontend, and Mobile.
   - Git commit: `ci: add full-stack CI workflow for Backend, Mobile, and Frontend`.
+
+- [x] **Step 8: Remote Repository Synchronization**
+  - Push all committed milestones and features to remote repository (`origin main`).
+  - Remote: `github.com:mohSadiq90/ParkEase.git`.

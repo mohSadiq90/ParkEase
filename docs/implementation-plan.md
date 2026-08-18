@@ -15,15 +15,15 @@ This document outlines all core features, missing functionality assessments, imp
 | **Parking Discovery** | Geolocation Search, Filters, Radius, Map Clusters | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Parking Passes** | Weekly & Monthly Subscriptions with Discount Tiers | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Parking Passes** | Digital Gate Access Pass / QR Token Display | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
-| **Availability Forecasting** | ML & Deterministic 24-hr Occupancy Forecast API | ✅ Completed | ✅ Completed | ⚠️ In Progress | **90% Done** |
-| **Availability Forecasting** | UI Hourly Occupancy Projection & Peak Prediction | ✅ Completed | ✅ Completed | ⚠️ Planned | **100% Web Done** |
+| **Availability Forecasting** | ML & Deterministic 24-hr Occupancy Forecast API | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
+| **Availability Forecasting** | UI Hourly Occupancy Projection & Peak Prediction | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Bookings & Extensions** | Slot-based Booking, Dynamic Pricing, Overlap Prevention | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Bookings & Extensions** | Booking Extensions (Request, Vendor Approval, Pay) | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Bookings & Extensions** | Check-in / Check-out Occupancy State Tracking | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
-| **Invoices & Receipts** | Printable/PDF Digital Receipt Modal with Itemized GST | ✅ Completed | ✅ Completed | ⚠️ Planned | **100% Web Done** |
+| **Invoices & Receipts** | Printable/PDF Digital Receipt Modal with Itemized GST | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Invoices & Receipts** | Automated Refund Status Badges & Transparency | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Reviews & Feedback** | Multi-media User Ratings & Reviews | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
-| **Reviews & Feedback** | Owner/Host Review Responses ("👑 Response from Host") | ✅ Completed | ✅ Completed | ⚠️ Planned | **100% Web Done** |
+| **Reviews & Feedback** | Owner/Host Review Responses ("👑 Response from Host") | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Realtime Chat & Alerts** | SignalR Real-time 1-on-1 Chat with Space Hosts | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Realtime Chat & Alerts** | In-app Notification Center & Realtime Event Triggers | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Corporate Parking** | Organization Management, Members, Invitations | ✅ Completed | ✅ Completed | ⚠️ Web First | **100% Web Done** |
