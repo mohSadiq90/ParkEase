@@ -451,9 +451,6 @@ RecoveredFiles/
 *.txt
 *.patch
 
-# Docs folder
-docs/
-
 # Local tools / one-off utilities
 ResetOutbox/
 **/ResetOutbox/
