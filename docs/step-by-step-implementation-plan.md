@@ -15,7 +15,7 @@ This document tracks the step-by-step implementation of all identified feature g
   - Render verified Host Responses (`👑 Response from Host`) in Mobile review cards.
   - Git commit: `feat(mobile): add occupancy forecast and host review response to ParkingDetailScreen`.
 
-- [ ] **Step 3: Mobile Gate Pass, Slot Details & Refund Alerts**
+- [x] **Step 3: Mobile Gate Pass, Slot Details & Refund Alerts**
   - Add digital gate access tokens and allocated slot number badges in `BookingDetailScreen.js`.
   - Add automated refund tracking alert on cancelled / rejected bookings.
   - Git commit: `feat(mobile): add gate pass token and refund status in BookingDetailScreen`.

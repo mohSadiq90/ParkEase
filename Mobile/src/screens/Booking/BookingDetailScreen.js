@@ -74,6 +74,34 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         <Text style={styles.refCode}>Ref: {booking.bookingReference}</Text>
                     </Card>
 
+                    {/* Refund Notice if Cancelled or Rejected */}
+                    {[BookingStatus.Cancelled, BookingStatus.Rejected].includes(booking.status) && (
+                        <Card style={{ backgroundColor: colors.dangerSoft, borderLeftWidth: 3, borderLeftColor: colors.danger }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Ionicons name="information-circle" size={18} color={colors.danger} />
+                                <Text style={{ ...typography.caption, color: colors.danger, fontWeight: '700' }}>
+                                    Refund Status: {booking.totalAmount > 0 ? 'Automatic refund initiated (3-5 business days)' : 'No charges incurred'}
+                                </Text>
+                            </View>
+                        </Card>
+                    )}
+
+                    {/* Digital Gate Access Token for Confirmed/Active Bookings */}
+                    {[BookingStatus.Confirmed, BookingStatus.InProgress, BookingStatus.Completed].includes(booking.status) && (
+                        <Card style={{ backgroundColor: colors.primarySoft, borderLeftWidth: 4, borderLeftColor: colors.primary }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '700', textTransform: 'uppercase' }}>Digital Gate Token</Text>
+                                    <Text style={{ ...typography.label, color: colors.textPrimary, fontFamily: 'monospace', marginTop: 2 }}>
+                                        {booking.id?.substring(0, 18).toUpperCase()}
+                                    </Text>
+                                    <Text style={{ ...typography.caption, color: colors.success, marginTop: 2 }}>✓ Verified Paid & Active</Text>
+                                </View>
+                                <Ionicons name="qr-code-outline" size={32} color={colors.primary} />
+                            </View>
+                        </Card>
+                    )}
+
                     {/* Parking Info */}
                     <Card>
                         <Text style={styles.sectionTitle}>Parking Location</Text>
@@ -82,6 +110,11 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
                             <Text style={styles.parkingAddress}>{booking.parkingSpaceAddress || 'N/A'}</Text>
                         </View>
+                        {booking.slotNumber && (
+                            <View style={{ marginTop: spacing.sm, alignSelf: 'flex-start', backgroundColor: colors.primarySoft, paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: spacing.radius.full }}>
+                                <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '700' }}>🅿️ Slot P{booking.slotNumber}</Text>
+                            </View>
+                        )}
                     </Card>
 
                     {/* Booking Details */}
@@ -90,7 +123,7 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         <InfoRow icon="calendar-outline" label="Start" value={formatDateTime(booking.startDateTime)} />
                         <InfoRow icon="calendar-outline" label="End" value={formatDateTime(booking.endDateTime)} />
                         <InfoRow icon="pricetag-outline" label="Pricing" value={PricingTypeLabels[booking.pricingType]} />
-                        <InfoRow icon="car-outline" label="Vehicle" value={VehicleTypeLabels[booking.vehicleType] || 'N/A'} />
+                        <InfoRow icon="car-outline" label="Vehicle" value={booking.vehicleNumber ? `${booking.vehicleNumber} (${VehicleTypeLabels[booking.vehicleType] || 'Vehicle'})` : (VehicleTypeLabels[booking.vehicleType] || 'N/A')} />
                     </Card>
 
                     {/* Payment */}
