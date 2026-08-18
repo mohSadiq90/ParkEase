@@ -13,7 +13,8 @@ export const getReviewsThunk = createAsyncThunk(
     async (parkingSpaceId, { rejectWithValue }) => {
         try {
             const response = await apiClient.get(ENDPOINTS.REVIEWS.BY_PARKING_SPACE(parkingSpaceId));
-            return response.data.data || response.data;
+            const data = response.data?.data || response.data;
+            return Array.isArray(data) ? data : (data?.reviews || []);
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
         }

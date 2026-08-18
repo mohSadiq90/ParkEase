@@ -150,28 +150,33 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                     )}
 
                     {/* Reviews */}
-                    <Card style={styles.section}>
-                        <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
-                        {reviews.slice(0, 3).map((review) => (
-                            <View key={review.id} style={styles.reviewItem}>
-                                <View style={styles.reviewHeader}>
-                                    <Text style={styles.reviewerName}>{review.userName}</Text>
-                                    <StarRating rating={review.rating} size={14} />
-                                </View>
-                                {review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
-                                {review.ownerResponse && (
-                                    <View style={styles.ownerReplyBox}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                                            <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
-                                            <Text style={styles.ownerReplyHeader}>Response from Host</Text>
+                    {(() => {
+                        const reviewList = Array.isArray(reviews) ? reviews : (reviews?.reviews || []);
+                        return (
+                            <Card style={styles.section}>
+                                <Text style={styles.sectionTitle}>Reviews ({reviewList.length})</Text>
+                                {reviewList.slice(0, 3).map((review) => (
+                                    <View key={review.id} style={styles.reviewItem}>
+                                        <View style={styles.reviewHeader}>
+                                            <Text style={styles.reviewerName}>{review.userName}</Text>
+                                            <StarRating rating={review.rating} size={14} />
                                         </View>
-                                        <Text style={styles.ownerReplyText}>{review.ownerResponse}</Text>
+                                        {review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
+                                        {review.ownerResponse && (
+                                            <View style={styles.ownerReplyBox}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                                                    <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+                                                    <Text style={styles.ownerReplyHeader}>Response from Host</Text>
+                                                </View>
+                                                <Text style={styles.ownerReplyText}>{review.ownerResponse}</Text>
+                                            </View>
+                                        )}
+                                        <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
                                     </View>
-                                )}
-                                <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
-                            </View>
-                        ))}
-                    </Card>
+                                ))}
+                            </Card>
+                        );
+                    })()}
 
                     {/* Book Button */}
                     <Button

@@ -20,12 +20,12 @@ This document tracks the step-by-step implementation of all identified feature g
   - Add automated refund tracking alert on cancelled / rejected bookings.
   - Git commit: `feat(mobile): add gate pass token and refund status in BookingDetailScreen`.
 
-- [ ] **Step 4: Unit Test Suites for Mobile Profile & Search Screens**
+- [x] **Step 4: Unit Test Suites for Mobile Profile & Search Screens**
   - Write test suite `Mobile/src/screens/Profile/__tests__/ProfileScreens.test.js` covering `MyVehiclesScreen`, `FavoritesScreen`, and `MyPassesScreen`.
   - Write tests for updated `ParkingDetailScreen` and `BookingDetailScreen`.
   - Git commit: `test(mobile): add unit tests for profile, vehicles, favorites, passes, and booking details`.
 
-- [ ] **Step 5: Full Test Suite Verification & Milestone Finalization**
+- [x] **Step 5: Full Test Suite Verification & Milestone Finalization**
   - Run `npm test` across Mobile test suites to ensure 100% pass rate.
   - Verify all documentation and progress status.
   - Git commit: `chore: finalize test suites and mark all implementation steps complete`.
