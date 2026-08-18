@@ -18,16 +18,24 @@ import LoadingScreen from '../../components/Common/LoadingScreen';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { ParkingTypeLabels, PricingTypeLabels } from '../../utils/constants';
+import apiClient from '../../services/api/apiClient';
 
 const ParkingDetailScreen = ({ navigation, route }) => {
     const { parkingId } = route.params;
     const dispatch = useDispatch();
     const { selectedParking: parking, detailLoading } = useSelector((s) => s.parking);
     const { reviews } = useSelector((s) => s.review);
+    const [forecast, setForecast] = React.useState(null);
 
     useEffect(() => {
         dispatch(getParkingDetailThunk(parkingId));
         dispatch(getReviewsThunk(parkingId));
+
+        apiClient.get(`/parking-availability/${parkingId}/forecast?horizonHours=12`)
+            .then(res => {
+                if (res.success && res.data) setForecast(res.data);
+            })
+            .catch(() => {});
     }, [dispatch, parkingId]);
 
     if (detailLoading || !parking) return <LoadingScreen />;
@@ -121,6 +129,26 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                         </Card>
                     )}
 
+                    {/* Spot Availability Prediction & Forecast */}
+                    {forecast && (
+                        <Card style={[styles.section, { borderLeftWidth: 4, borderLeftColor: colors.primary }]}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Ionicons name="sparkles" size={18} color={colors.primary} />
+                                    <Text style={{ ...typography.label, color: colors.textPrimary }}>Availability Forecast</Text>
+                                </View>
+                                <View style={{ backgroundColor: colors.successSoft, paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: spacing.radius.full }}>
+                                    <Text style={{ ...typography.caption, color: colors.successDark, fontWeight: '700' }}>
+                                        {forecast.currentAvailabilityBand || forecast.CurrentAvailabilityBand || 'High'} Demand
+                                    </Text>
+                                </View>
+                            </View>
+                            <Text style={styles.description}>
+                                Predicted free spots: <Text style={{ fontWeight: '700', color: colors.primary }}>{forecast.currentPredictedAvailableSpots ?? forecast.CurrentPredictedAvailableSpots ?? parking.availableSpots}</Text> / {parking.totalSpots} spots · Confidence: {Math.round((forecast.currentConfidenceScore ?? forecast.CurrentConfidenceScore ?? 0.85) * 100)}%
+                            </Text>
+                        </Card>
+                    )}
+
                     {/* Reviews */}
                     <Card style={styles.section}>
                         <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
@@ -131,6 +159,15 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                                     <StarRating rating={review.rating} size={14} />
                                 </View>
                                 {review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
+                                {review.ownerResponse && (
+                                    <View style={styles.ownerReplyBox}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                                            <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+                                            <Text style={styles.ownerReplyHeader}>Response from Host</Text>
+                                        </View>
+                                        <Text style={styles.ownerReplyText}>{review.ownerResponse}</Text>
+                                    </View>
+                                )}
                                 <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
                             </View>
                         ))}
@@ -185,6 +222,9 @@ const styles = StyleSheet.create({
     reviewerName: { ...typography.label, color: colors.textPrimary },
     reviewComment: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
     reviewDate: { ...typography.caption, color: colors.textTertiary, marginTop: spacing.xs },
+    ownerReplyBox: { marginTop: spacing.sm, padding: spacing.sm, backgroundColor: colors.primarySoft, borderRadius: spacing.radius.sm, borderLeftWidth: 3, borderLeftColor: colors.primary },
+    ownerReplyHeader: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+    ownerReplyText: { ...typography.caption, color: colors.textPrimary, marginTop: 2 },
     bookButton: { marginTop: spacing.lg },
 });
 
