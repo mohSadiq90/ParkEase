@@ -108,7 +108,14 @@ const ProfileScreen = ({ navigation }) => {
                     </Card>
                 ) : null}
 
-                {/* Menu */}
+                {/* Features Menu */}
+                <Card style={{ marginBottom: spacing.md }}>
+                    <MenuItem icon="car-sport-outline" label="My Garage (Vehicles)" value="Manage registered plates" onPress={() => navigation.navigate('MyVehicles')} />
+                    <MenuItem icon="heart-outline" label="Saved Favorites" value="Quick-book pinned locations" onPress={() => navigation.navigate('Favorites')} />
+                    <MenuItem icon="ticket-outline" label="Parking Passes" value="Active gate access tokens" onPress={() => navigation.navigate('MyPasses')} />
+                </Card>
+
+                {/* Account Settings Menu */}
                 <Card>
                     <MenuItem icon="person-outline" label="Edit Profile" value={`${user?.firstName} ${user?.lastName}`} onPress={() => setEditing(true)} />
                     <MenuItem icon="mail-outline" label="Email" value={user?.email} onPress={() => { }} />

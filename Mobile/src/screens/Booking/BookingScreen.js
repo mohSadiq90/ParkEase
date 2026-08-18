@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Modal, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -112,6 +112,8 @@ const BookingScreen = ({ navigation, route }) => {
         }));
         if (!result.error) {
             navigation.goBack();
+        } else {
+            Alert.alert('Booking Failed', result.payload || 'A network error occurred. Please try again.');
         }
     };
 

@@ -112,6 +112,9 @@ export default function MyBookings() {
     const [parkingReservations, setParkingReservations] = useState([]);
     const [extensionTotalSpots, setExtensionTotalSpots] = useState(undefined);
 
+    // Receipt Modal State
+    const [receiptBooking, setReceiptBooking] = useState(null);
+
     const { subscribeToRefresh } = useNotificationContext();
 
     const fetchBookings = useCallback(async () => {
@@ -626,13 +629,21 @@ export default function MyBookings() {
                                                 🧭 Get Directions
                                             </a>
                                         )}
-                                        {booking.status === 3 && ( // Completed
+                                        {/* Receipt button for confirmed, in-progress or completed bookings */}
+                                        {[1, 2, 3].includes(booking.status) && (
                                             <button
+                                                type="button"
                                                 className="btn btn-outline"
-                                                onClick={() => handleOpenReviewModal(booking.id, booking.parkingSpaceId)}
+                                                onClick={() => setReceiptBooking(booking)}
                                             >
-                                                ⭐ Leave Review
+                                                🧾 Receipt
                                             </button>
+                                        )}
+                                        {/* Refund status note for cancelled / rejected bookings */}
+                                        {[4, 7].includes(booking.status) && (
+                                            <div style={{ width: '100%', padding: '0.4rem 0.6rem', background: 'rgba(239, 68, 68, 0.08)', borderRadius: '6px', fontSize: '0.8rem', color: '#f87171' }}>
+                                                💳 Refund Status: {booking.totalAmount > 0 ? 'Automatic refund initiated (3-5 business days)' : 'No charges incurred'}
+                                            </div>
                                         )}
                                         <Link to={`/parking/${booking.parkingSpaceId}`} className="btn btn-secondary">
                                             View Parking
@@ -802,6 +813,177 @@ export default function MyBookings() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Printable Digital Receipt Modal */}
+            {receiptBooking && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(0, 0, 0, 0.75)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9500,
+                    padding: '1rem'
+                }}>
+                    <div style={{
+                        background: '#1e293b',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '20px',
+                        maxWidth: '520px',
+                        width: '100%',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        padding: '2rem',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.35rem', fontWeight: '700', color: '#f8fafc', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>🧾</span> Booking Receipt
+                                </h2>
+                                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
+                                    Ref: <span style={{ fontFamily: 'monospace', color: '#818cf8', fontWeight: '600' }}>{receiptBooking.bookingReference}</span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setReceiptBooking(null)}
+                                style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '1.4rem', cursor: 'pointer' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* QR / Digital Pass Badge */}
+                        <div style={{
+                            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.1))',
+                            border: '1px solid rgba(99, 102, 241, 0.3)',
+                            borderRadius: '12px',
+                            padding: '1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '1.25rem'
+                        }}>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#a78bfa', textTransform: 'uppercase' }}>Gate Pass ID</div>
+                                <div style={{ fontFamily: 'monospace', fontSize: '0.9rem', color: '#f8fafc', fontWeight: '600' }}>
+                                    {receiptBooking.id ? receiptBooking.id.substring(0, 18).toUpperCase() : 'PE-ENTRY'}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#34d399', marginTop: '2px' }}>✓ Verified Paid & Active</div>
+                            </div>
+                            <div style={{ fontSize: '2rem' }}>📱</div>
+                        </div>
+
+                        {/* Location & Slot details */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+                            <div>
+                                <span style={{ color: '#94a3b8', fontSize: '0.78rem', textTransform: 'uppercase' }}>Parking Facility</span>
+                                <div style={{ fontWeight: '600', color: '#f8fafc', fontSize: '1rem' }}>{receiptBooking.parkingSpaceTitle}</div>
+                                <div style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>{receiptBooking.parkingSpaceAddress}</div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '4px' }}>
+                                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.8rem', borderRadius: '8px' }}>
+                                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Allocated Slot</span>
+                                    <div style={{ fontWeight: '700', color: '#818cf8', fontSize: '0.95rem' }}>
+                                        {receiptBooking.slotNumber ? `Slot P${receiptBooking.slotNumber}` : 'General Bay'}
+                                    </div>
+                                </div>
+
+                                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.8rem', borderRadius: '8px' }}>
+                                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Vehicle Plate</span>
+                                    <div style={{ fontWeight: '700', color: '#f8fafc', fontSize: '0.95rem' }}>
+                                        {receiptBooking.vehicleNumber || 'Unassigned'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div>
+                                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Start Time</span>
+                                    <div style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>
+                                        {new Date(receiptBooking.startDateTime).toLocaleString()}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>End Time</span>
+                                    <div style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>
+                                        {new Date(receiptBooking.endDateTime).toLocaleString()}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Charges breakdown */}
+                        <div style={{
+                            borderTop: '1px solid rgba(255,255,255,0.1)',
+                            borderBottom: '1px solid rgba(255,255,255,0.1)',
+                            padding: '0.8rem 0',
+                            marginBottom: '1.25rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.4rem',
+                            fontSize: '0.85rem'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1' }}>
+                                <span>Parking Fare</span>
+                                <span>₹{(Number(receiptBooking.totalAmount) * 0.82).toFixed(2)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1' }}>
+                                <span>GST (18% inclusive)</span>
+                                <span>₹{(Number(receiptBooking.totalAmount) * 0.18).toFixed(2)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34d399', fontWeight: '700', fontSize: '1.05rem', marginTop: '4px' }}>
+                                <span>Total Paid</span>
+                                <span>₹{Number(receiptBooking.totalAmount).toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        {/* Modal Action buttons */}
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button
+                                type="button"
+                                onClick={() => setReceiptBooking(null)}
+                                style={{
+                                    flex: 1,
+                                    padding: '0.7rem',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '10px',
+                                    color: '#cbd5e1',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Close
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => window.print()}
+                                style={{
+                                    flex: 1,
+                                    padding: '0.7rem',
+                                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    color: 'white',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <span>🖨️</span> Print / PDF
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

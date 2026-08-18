@@ -7,6 +7,7 @@ import showToast from '../utils/toast.jsx';
 import INDIAN_STATES_CITIES, { STATES } from '../utils/indianStatesCities';
 // Leaflet map picker — load only with VendorListings form (page is already route-lazy)
 const LocationPicker = lazy(() => import('../components/LocationPicker'));
+import AvailabilityForecastWidget from '../components/AvailabilityForecastWidget';
 
 import { API_BASE_URL } from '../config';
 
@@ -32,6 +33,7 @@ export default function VendorListings() {
     const [uploadingId, setUploadingId] = useState(null);
     const [uploadProgress, setUploadProgress] = useState('');
     const [bookings, setBookings] = useState([]);
+    const [selectedForecastId, setSelectedForecastId] = useState(null);
     const titleInputRef = useRef(null);
 
     const { subscribeToRefresh } = useNotificationContext();
@@ -773,11 +775,25 @@ export default function VendorListings() {
                                     </small>
                                 </div>
 
-                                <div className="flex gap-1 mt-2">
+                                <div className="flex gap-1 mt-2" style={{ flexWrap: 'wrap' }}>
                                     <button className="btn btn-secondary" onClick={() => handleEdit(listing)}>Edit</button>
                                     <button className="btn btn-danger" onClick={() => handleDelete(listing.id)}>Delete</button>
-                                    <Link to={`/parking/${listing.id}`} className="btn btn-outline">View</Link>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline"
+                                        style={{ background: selectedForecastId === listing.id ? 'rgba(99, 102, 241, 0.2)' : 'transparent' }}
+                                        onClick={() => setSelectedForecastId(selectedForecastId === listing.id ? null : listing.id)}
+                                    >
+                                        🔮 {selectedForecastId === listing.id ? 'Hide Forecast' : 'Forecast'}
+                                    </button>
+                                    <Link to={`/parking/${listing.id}`} className="btn btn-outline">View Details</Link>
                                 </div>
+
+                                {selectedForecastId === listing.id && (
+                                    <div style={{ marginTop: '1rem' }}>
+                                        <AvailabilityForecastWidget parkingSpaceId={listing.id} totalSpots={listing.totalSpots} compact />
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

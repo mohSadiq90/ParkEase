@@ -23,6 +23,7 @@ const VendorBookings = React.lazy(() => import('./pages/VendorBookings'));
 const Chat = React.lazy(() => import('./pages/Chat'));
 const MyFavorites = React.lazy(() => import('./pages/MyFavorites'));
 const MyGarage = React.lazy(() => import('./pages/MyGarage'));
+const MyPasses = React.lazy(() => import('./pages/MyPasses'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 
 const CorporateDashboard = React.lazy(() => import('./pages/Corporate/CorporateDashboard'));
@@ -276,11 +277,13 @@ function Header() {
                       { to: '/corporate/bookings', icon: '📅', label: 'Corp Bookings' },
                       { to: '/corporate/invoices', icon: '🧾', label: 'Invoices' },
                       { to: '/corporate/settings', icon: '⚙️', label: 'Company Settings' },
+                      { to: '/passes', icon: '🎫', label: 'Parking Passes' },
                       { to: '/profile', icon: '👤', label: 'My Profile' },
                       ...(isAdmin ? [{ to: '/admin/outbox', icon: '📬', label: 'Outbox Admin' }] : []),
                     ] : [
                       { to: '/dashboard', icon: '🏠', label: 'Dashboard' },
                       { to: '/bookings', icon: '📅', label: 'My Bookings' },
+                      { to: '/passes', icon: '🎫', label: 'Parking Passes' },
                       { to: '/garage', icon: '🚗', label: 'My Garage' },
                       { to: '/favorites', icon: '❤️', label: 'Favorites' },
                       { to: '/profile', icon: '👤', label: 'My Profile' },
@@ -427,6 +430,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <MyBookings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/passes"
+          element={
+            <ProtectedRoute>
+              <MyPasses />
             </ProtectedRoute>
           }
         />

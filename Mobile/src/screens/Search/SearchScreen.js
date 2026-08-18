@@ -13,13 +13,13 @@ import Card from '../../components/Common/Card';
 import StarRating from '../../components/Common/StarRating';
 import EmptyState from '../../components/Common/EmptyState';
 import LoadingScreen from '../../components/Common/LoadingScreen';
+import MapViewComponent from './MapViewComponent';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency } from '../../utils/formatters';
 import { VehicleTypeLabels } from '../../utils/constants';
 
 const ParkingCard = ({ parking, onPress }) => (
     <Card onPress={onPress} style={cardStyles.card}>
-        {/* Image placeholder */}
         <View style={cardStyles.imageContainer}>
             <View style={cardStyles.imagePlaceholder}>
                 <Ionicons name="car" size={40} color={colors.lightGray} />
@@ -58,7 +58,7 @@ const ParkingCard = ({ parking, onPress }) => (
 );
 
 const cardStyles = StyleSheet.create({
-    card: { marginHorizontal: spacing.screenHorizontal, overflow: 'hidden', padding: 0 },
+    card: { marginHorizontal: spacing.screenHorizontal, overflow: 'hidden', padding: 0, marginBottom: spacing.md },
     imageContainer: { height: 140, backgroundColor: colors.borderLight, borderTopLeftRadius: spacing.cardRadius, borderTopRightRadius: spacing.cardRadius, position: 'relative' },
     imagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     priceTag: { position: 'absolute', bottom: 8, right: 8, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: spacing.radius.full },
@@ -83,6 +83,7 @@ const SearchScreen = ({ navigation }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedVehicle, setSelectedVehicle] = useState(null);
     const [hasSearched, setHasSearched] = useState(false);
+    const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
 
     // Load all available parkings on mount
     useEffect(() => {
@@ -121,7 +122,23 @@ const SearchScreen = ({ navigation }) => {
         <ScreenLayout>
             {/* Search Header */}
             <View style={styles.searchHeader}>
-                <Text style={styles.screenTitle}>Find Parking</Text>
+                <View style={styles.titleRow}>
+                    <Text style={styles.screenTitle}>Find Parking</Text>
+                    <TouchableOpacity 
+                        style={styles.viewToggle}
+                        onPress={() => setViewMode(v => v === 'list' ? 'map' : 'list')}
+                    >
+                        <Ionicons 
+                            name={viewMode === 'list' ? 'map-outline' : 'list-outline'} 
+                            size={20} 
+                            color={colors.primary} 
+                        />
+                        <Text style={styles.viewToggleText}>
+                            {viewMode === 'list' ? 'Map' : 'List'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                
                 <View style={styles.searchBar}>
                     <Ionicons name="search" size={20} color={colors.textTertiary} />
                     <TextInput
@@ -159,6 +176,10 @@ const SearchScreen = ({ navigation }) => {
             {/* Results */}
             {searchLoading ? (
                 <LoadingScreen message="Loading parking spaces..." />
+            ) : viewMode === 'map' ? (
+                <View style={{flex: 1}}>
+                    <MapViewComponent parkings={searchResults} />
+                </View>
             ) : searchResults.length > 0 ? (
                 <FlatList
                     data={searchResults}
@@ -196,8 +217,29 @@ const styles = StyleSheet.create({
         paddingBottom: spacing.base,
         backgroundColor: colors.surface,
         ...shadows.sm,
+        zIndex: 2, // Ensure it sits above map
     },
-    screenTitle: { ...typography.h2, color: colors.textPrimary, marginBottom: spacing.base },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.base,
+    },
+    screenTitle: { ...typography.h2, color: colors.textPrimary },
+    viewToggle: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.primarySoft,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: spacing.radius.full,
+        gap: 4
+    },
+    viewToggleText: {
+        color: colors.primary,
+        fontWeight: '600',
+        fontSize: 14
+    },
     searchBar: {
         flexDirection: 'row',
         alignItems: 'center',

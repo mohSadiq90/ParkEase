@@ -459,3 +459,4 @@ CheckDB.cs
 deploy-mobile.sh
 Mobile/parkease-*.json
 Mobile/google-services.json
+gh_login.*

@@ -18,6 +18,9 @@ import MyBookingsScreen from '../screens/Booking/MyBookingsScreen';
 import BookingDetailScreen from '../screens/Booking/BookingDetailScreen';
 import CreateReviewScreen from '../screens/Review/CreateReviewScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
+import MyVehiclesScreen from '../screens/Profile/MyVehiclesScreen';
+import FavoritesScreen from '../screens/Profile/FavoritesScreen';
+import MyPassesScreen from '../screens/Profile/MyPassesScreen';
 import ConversationListScreen from '../screens/Chat/ConversationListScreen';
 import ChatScreen from '../screens/Chat/ChatScreen';
 
@@ -59,6 +62,9 @@ const BookingsStack = () => (
 const ProfileStack = () => (
     <Stack.Navigator screenOptions={stackOptions}>
         <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="MyVehicles" component={MyVehiclesScreen} />
+        <Stack.Screen name="Favorites" component={FavoritesScreen} />
+        <Stack.Screen name="MyPasses" component={MyPassesScreen} />
     </Stack.Navigator>
 );
 

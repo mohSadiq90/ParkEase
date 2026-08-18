@@ -7,6 +7,7 @@ const LocationMap = lazy(() => import('../components/LocationMap'));
 import BookedSlots from '../components/BookedSlots';
 import ImageGallery from '../components/ImageGallery';
 import ParkingSlotModal from '../components/ParkingSlotModal';
+import AvailabilityForecastWidget from '../components/AvailabilityForecastWidget';
 import { getErrorMessage, handleApiError } from '../utils/errorHandler';
 import showToast from '../utils/toast.jsx';
 import { useCompany } from '../contexts/CompanyContext';
@@ -58,6 +59,35 @@ export default function ParkingDetails() {
     const [visitorPlate, setVisitorPlate] = useState('');
     const [showAllocationRequest, setShowAllocationRequest] = useState(false);
     const [allocationRequesting, setAllocationRequesting] = useState(false);
+
+    // Host review response state
+    const [replyingReviewId, setReplyingReviewId] = useState(null);
+    const [replyText, setReplyText] = useState('');
+    const [submittingReply, setSubmittingReply] = useState(false);
+
+    const handleReplySubmit = async (reviewId) => {
+        if (!replyText.trim()) return;
+        try {
+            setSubmittingReply(true);
+            const res = await api.addOwnerResponse(reviewId, replyText.trim());
+            if (res?.success) {
+                showToast.success('Owner response posted successfully!');
+                setReplyingReviewId(null);
+                setReplyText('');
+                // Refresh reviews
+                const reviewsRes = await api.getReviewsByParkingSpace(id);
+                if (reviewsRes?.success && reviewsRes.data) {
+                    setReviews(reviewsRes.data);
+                }
+            } else {
+                showToast.error(res?.message || 'Failed to post owner response');
+            }
+        } catch (err) {
+            handleApiError(err, 'Failed to post response');
+        } finally {
+            setSubmittingReply(false);
+        }
+    };
     const [allocationRequest, setAllocationRequest] = useState({
         totalSlots: 1,
         fixedSlots: 0,
@@ -628,6 +658,9 @@ export default function ParkingDetails() {
                             </div>
                         </div>
 
+                        {/* Spot Availability Prediction & Forecast */}
+                        <AvailabilityForecastWidget parkingSpaceId={id} totalSpots={parking.totalSpots} />
+
                         {/* Reviews */}
                         <div className="card mt-2">
                             <h3 className="card-title">
@@ -640,22 +673,77 @@ export default function ParkingDetails() {
                             {reviews.length === 0 ? (
                                 <p className="card-subtitle mt-1">No reviews yet</p>
                             ) : (
-                                reviews.map(review => (
-                                    <div key={review.id} style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem', marginTop: '1rem' }}>
-                                        <div className="flex-between">
-                                            <strong>{review.userName}</strong>
-                                            <span className="rating">⭐ {review.rating}</span>
-                                        </div>
-                                        {review.title && <p style={{ fontWeight: 500, marginTop: '0.5rem' }}>{review.title}</p>}
-                                        {review.comment && <p className="card-subtitle">{review.comment}</p>}
-                                        {review.ownerResponse && (
-                                            <div style={{ background: 'var(--color-bg-glass)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>
-                                                <small>Owner Response:</small>
-                                                <p>{review.ownerResponse}</p>
+                                reviews.map(review => {
+                                    const isOwner = user && parking?.ownerId === user?.id;
+                                    return (
+                                        <div key={review.id} style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem', marginTop: '1rem' }}>
+                                            <div className="flex-between">
+                                                <strong>{review.userName}</strong>
+                                                <span className="rating">⭐ {review.rating}</span>
                                             </div>
-                                        )}
-                                    </div>
-                                ))
+                                            {review.title && <p style={{ fontWeight: 500, marginTop: '0.5rem', marginBottom: '0.25rem' }}>{review.title}</p>}
+                                            {review.comment && <p className="card-subtitle" style={{ margin: '0.25rem 0' }}>{review.comment}</p>}
+                                            
+                                            {review.ownerResponse ? (
+                                                <div style={{
+                                                    background: 'rgba(99, 102, 241, 0.1)',
+                                                    borderLeft: '3px solid #6366f1',
+                                                    padding: '0.75rem 1rem',
+                                                    borderRadius: '0 8px 8px 0',
+                                                    marginTop: '0.75rem'
+                                                }}>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
+                                                        <span>👑</span> Response from Host
+                                                    </div>
+                                                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#e2e8f0' }}>{review.ownerResponse}</p>
+                                                </div>
+                                            ) : isOwner ? (
+                                                <div style={{ marginTop: '0.75rem' }}>
+                                                    {replyingReviewId === review.id ? (
+                                                        <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                            <textarea
+                                                                className="form-input"
+                                                                rows="2"
+                                                                placeholder="Write your response to this review..."
+                                                                value={replyText}
+                                                                onChange={(e) => setReplyText(e.target.value)}
+                                                                style={{ width: '100%', marginBottom: '0.5rem' }}
+                                                            />
+                                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-secondary"
+                                                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                                                                    onClick={() => { setReplyingReviewId(null); setReplyText(''); }}
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-primary"
+                                                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                                                                    disabled={submittingReply || !replyText.trim()}
+                                                                    onClick={() => handleReplySubmit(review.id)}
+                                                                >
+                                                                    {submittingReply ? 'Posting...' : 'Post Reply'}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-secondary"
+                                                            style={{ padding: '0.3rem 0.65rem', fontSize: '0.78rem' }}
+                                                            onClick={() => { setReplyingReviewId(review.id); setReplyText(''); }}
+                                                        >
+                                                            💬 Reply as Host
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     </div>

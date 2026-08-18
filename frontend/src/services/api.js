@@ -576,6 +576,25 @@ class ApiService {
     return this.request(`/vehicles/${id}`, { method: 'DELETE' });
   }
 
+  // Parking Passes endpoints
+  async createPass(data) {
+    return this.request('/passes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMyActivePasses() {
+    return this.request('/passes/my');
+  }
+
+  async assignCorporatePass(data) {
+    return this.request('/passes/corporate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Admin — transactional outbox
   async getOutboxMessages({ status, type, page = 1, pageSize = 50 } = {}) {
     const params = new URLSearchParams();

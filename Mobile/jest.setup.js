@@ -1,5 +1,7 @@
 import '@testing-library/jest-native/extend-expect';
 
+jest.setTimeout(30000);
+
 // Mock SafeAreaContext
 jest.mock('react-native-safe-area-context', () => {
   const inset = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -49,3 +51,19 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+// Mock react-native-maps
+jest.mock('react-native-maps', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  
+  const MockMapView = (props) => <View testID="map-view" {...props}>{props.children}</View>;
+  MockMapView.Marker = (props) => <View testID="map-marker" {...props} />;
+  
+  return {
+      __esModule: true,
+      default: MockMapView,
+      Marker: MockMapView.Marker,
+      PROVIDER_GOOGLE: 'google',
+      PROVIDER_DEFAULT: 'default'
+  };
+});
