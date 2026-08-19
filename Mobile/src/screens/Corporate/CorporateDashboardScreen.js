@@ -153,6 +153,11 @@ const CorporateDashboardScreen = () => {
                         onPress={() => navigation.navigate('CorporateBookings')} 
                     />
                     <QuickAction 
+                        icon="receipt-outline" 
+                        label="Invoices" 
+                        onPress={() => navigation.navigate('CorporateInvoices')} 
+                    />
+                    <QuickAction 
                         icon="settings-outline" 
                         label="Settings" 
                         onPress={() => navigation.navigate('CompanyManagement')} 
