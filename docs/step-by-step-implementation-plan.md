@@ -77,23 +77,26 @@ This document tracks the step-by-step implementation of all identified feature g
 
 ---
 
-### 🚀 Sprint 3: Vendor Media & Pass Monetization (Next Priority)
-- [ ] **Step 3.1: Multi-Image Photo Upload for Listings**
-  - Add `expo-image-picker` to `CreateParkingScreen.js` and upload photos to `/api/files/parking/{id}/upload`.
-  - Implement remote image carousel in `ParkingDetailScreen.js`.
+### 🚀 Sprint 3: Vendor Media & Pass Monetization (Completed)
+- [x] **Step 3.1: Multi-Image Photo Management for Listings**
+  - Added photo URLs input, multi-photo thumbnail preview rail, and deletion in `CreateParkingScreen.js`.
+  - Upstream auto-scrolling photo carousel in `ParkingDetailScreen.js`.
 
-- [ ] **Step 3.2: Listing Edit & Deletion**
-  - Implement `EditParkingScreen.js` for updating title, pricing, and available spots.
-  - Add delete space confirmation in `MyListingsScreen.js`.
+- [x] **Step 3.2: Listing Edit & Deletion**
+  - Integrated edit mode into `CreateParkingScreen.js` for updating title, location, pricing, spots, and amenities (`updateParkingThunk`).
+  - Added delete space confirmation in `CreateParkingScreen.js` calling `deleteParkingThunk`.
+  - Updated unit tests in `Mobile/src/screens/Vendor/__tests__/CreateParkingScreen.test.js`.
 
-- [ ] **Step 3.3: In-App Pass Subscription Purchase & Stripe Sheet**
-  - Build purchase modal in `MyPassesScreen.js` calling `POST /api/passes`.
-  - Integrate Stripe checkout sheet for mobile bookings and passes.
+- [x] **Step 3.3: In-App Pass Subscription Purchase**
+  - Built purchase modal in `MyPassesScreen.js` with monthly/weekly pass selection, license plate, and zone input calling `createPassThunk` (`POST /api/passes`).
+  - Added unit tests in `Mobile/src/screens/Passes/__tests__/MyPassesScreen.test.js`.
+  - Git commit: `feat(mobile): implement vendor listing edit/delete, photo management, and pass purchase modal`.
 
 ---
 
-### 🚀 Sprint 4: Corporate Enterprise Mobile Extension
+### 🚀 Sprint 4: Corporate Enterprise Mobile Extension (Next Priority)
 - [ ] **Step 4.1: Corporate Employee Mode**
   - Company context switch in Profile.
   - Book employee parking (`POST /corporate/companies/{id}/bookings/employee`) and corporate digital gate token.
+
 

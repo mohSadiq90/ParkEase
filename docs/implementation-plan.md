@@ -25,7 +25,7 @@ This document outlines all core features, architectural status, implementation r
 | **Payments & Receipts** | Stripe Payment Gateway Integration | ✅ Completed | ✅ Completed | ❌ Stubbed | **High Priority Gap** |
 | **Payments & Receipts** | Digital Receipt Breakdown with Itemized GST | ✅ Completed | ✅ Completed | ⚠️ In Booking Detail| **Pending Receipt Modal**|
 | **Parking Passes** | Active Pass Display & QR Gate Access Tokens | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
-| **Parking Passes** | Weekly & Monthly Pass Subscription Purchase Flow | ✅ Completed | ✅ Completed | ❌ Web Only | **Pending Mobile Checkout**|
+| **Parking Passes** | Weekly & Monthly Pass Subscription Purchase Flow | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Event Packages** | Event Parking Packages: Create, Browse, Purchase | ✅ Completed | ✅ Completed | ❌ Web First | **Web Complete** |
 | **Reviews & Feedback** | Multi-media User Ratings & Reviews Creation | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Reviews & Feedback** | Owner/Host Review Responses ("👑 Response from Host")| ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
@@ -33,8 +33,8 @@ This document outlines all core features, architectural status, implementation r
 | **Notifications & Push** | In-app Notification Center (List, Mark Read, Clear) | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Notifications & Push** | FCM/APNs Device Token Registration (`/device-tokens`)| ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Vendor Management** | Create Parking Space & Toggle Active Status | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
-| **Vendor Management** | Multi-photo/video Media Upload (Local & R2 Storage) | ✅ Completed | ✅ Completed | ❌ Not Implemented | **Pending Media Picker** |
-| **Vendor Management** | Edit & Delete Parking Space Listings | ✅ Completed | ✅ Completed | ❌ Not Implemented | **Pending Edit Screen** |
+| **Vendor Management** | Multi-photo Media Management (URLs & R2 Storage) | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
+| **Vendor Management** | Edit & Delete Parking Space Listings | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **IoT & LPR Simulation** | LPR License Plate Recognition & Event Simulator | ✅ Completed | ✅ Completed | ❌ Web Admin | **Web Complete** |
 | **Corporate Parking (B2B)**| Organizations, Team Members, Invitations | ✅ Completed | ✅ Completed | ⚠️ Scaffolding Done | **Web Complete (Mobile Phase 2)** |
 | **Corporate Parking (B2B)**| Employee & Visitor Parking Reservations | ✅ Completed | ✅ Completed | ⚠️ Scaffolding Done | **Web Complete (Mobile Phase 2)** |
