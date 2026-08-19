@@ -207,6 +207,68 @@ export const verifyAccessPassThunk = createAsyncThunk(
     }
 );
 
+// Check-in & Check-out Lifecycle
+export const checkInThunk = createAsyncThunk(
+    'booking/checkIn',
+    async (id, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.post(ENDPOINTS.BOOKINGS.CHECK_IN(id));
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+export const checkOutThunk = createAsyncThunk(
+    'booking/checkOut',
+    async (id, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.post(ENDPOINTS.BOOKINGS.CHECK_OUT(id));
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+// Booking Extensions
+export const extendBookingThunk = createAsyncThunk(
+    'booking/extend',
+    async ({ id, data }, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.post(ENDPOINTS.BOOKINGS.EXTEND(id), data);
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+export const approveExtensionThunk = createAsyncThunk(
+    'booking/approveExtension',
+    async (id, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.post(ENDPOINTS.BOOKINGS.APPROVE_EXTENSION(id));
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+export const rejectExtensionThunk = createAsyncThunk(
+    'booking/rejectExtension',
+    async ({ id, reason }, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.post(ENDPOINTS.BOOKINGS.REJECT_EXTENSION(id), { reason });
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
 // EV Session
 export const getEvSessionThunk = createAsyncThunk(
     'booking/getEvSession',
@@ -336,9 +398,14 @@ const bookingSlice = createSlice({
                     if (idx !== -1) state.vendorBookings[idx] = action.payload;
                 }
             })
-            // Valet & Bay Assignment updates (common helper to update state)
+            // Lifecycle, Extension, Valet & Bay Assignment updates (common helper to update state)
             .addMatcher(
                 (action) => [
+                    checkInThunk.fulfilled.type,
+                    checkOutThunk.fulfilled.type,
+                    extendBookingThunk.fulfilled.type,
+                    approveExtensionThunk.fulfilled.type,
+                    rejectExtensionThunk.fulfilled.type,
                     requestValetThunk.fulfilled.type,
                     cancelValetThunk.fulfilled.type,
                     acknowledgeValetThunk.fulfilled.type,

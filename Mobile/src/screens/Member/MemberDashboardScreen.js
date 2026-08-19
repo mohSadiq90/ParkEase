@@ -121,7 +121,12 @@ const MemberDashboardScreen = ({ navigation }) => {
             case 'sectionTitle':
                 return <Text style={styles.sectionTitle}>{item.title}</Text>;
             case 'booking':
-                return <BookingItem booking={item.data} onPress={() => { }} />;
+                return (
+                    <BookingItem
+                        booking={item.data}
+                        onPress={() => navigation.navigate('BookingDetail', { bookingId: item.data.id })}
+                    />
+                );
             case 'empty':
                 return <EmptyState icon="car-outline" title="No bookings yet" message="Search for parking spaces and book your first spot!" />;
             default:

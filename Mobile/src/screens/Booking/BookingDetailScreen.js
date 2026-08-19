@@ -1,14 +1,14 @@
 /**
  * BookingDetailScreen
- * Full booking details with actions: cancel, check-in/out
+ * Full booking details with actions: cancel, check-in/out, extend, valet
  */
 
-import React, { useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Alert, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useCallback, useState } from 'react';
+import { View, Text, ScrollView, Alert, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { 
-    getBookingDetailThunk, cancelBookingThunk, 
+    getBookingDetailThunk, cancelBookingThunk, checkInThunk, checkOutThunk, extendBookingThunk,
     requestValetThunk, cancelValetThunk, acknowledgeValetThunk, readyValetThunk, completeValetThunk, assignBayThunk 
 } from '../../store/slices/bookingSlice';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
@@ -30,10 +30,16 @@ const InfoRow = ({ icon, label, value }) => (
     </View>
 );
 
+const EXTENSION_HOUR_OPTIONS = [1, 2, 3, 4, 6, 12];
+
 const BookingDetailScreen = ({ navigation, route }) => {
     const { bookingId } = route.params;
     const dispatch = useDispatch();
     const { selectedBooking: booking, detailLoading, actionLoading } = useSelector((s) => s.booking);
+
+    const [extendModalVisible, setExtendModalVisible] = useState(false);
+    const [extendHours, setExtendHours] = useState(1);
+    const [extending, setExtending] = useState(false);
 
     useEffect(() => {
         dispatch(getBookingDetailThunk(bookingId));
@@ -54,6 +60,55 @@ const BookingDetailScreen = ({ navigation, route }) => {
         );
     }, [dispatch, bookingId]);
 
+    const handleCheckIn = useCallback(() => {
+        Alert.alert(
+            'Confirm Check-In',
+            'Are you at the parking facility ready to park?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Check In Now',
+                    onPress: () => dispatch(checkInThunk(bookingId)),
+                },
+            ]
+        );
+    }, [dispatch, bookingId]);
+
+    const handleCheckOut = useCallback(() => {
+        Alert.alert(
+            'Confirm Check-Out',
+            'Are you leaving the parking space?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Check Out Now',
+                    onPress: () => dispatch(checkOutThunk(bookingId)),
+                },
+            ]
+        );
+    }, [dispatch, bookingId]);
+
+    const handleConfirmExtend = async () => {
+        if (!booking) return;
+        setExtending(true);
+        const currentEnd = new Date(booking.endDateTime);
+        const newEnd = new Date(currentEnd.getTime() + extendHours * 3600000);
+        const res = await dispatch(extendBookingThunk({
+            id: bookingId,
+            data: {
+                newEndDateTime: newEnd.toISOString(),
+                pricingType: booking.pricingType || 0,
+            },
+        }));
+        setExtending(false);
+        if (!res.error) {
+            setExtendModalVisible(false);
+            Alert.alert('Extension Requested', `Requested +${extendHours} hour(s). Waiting for host confirmation.`);
+        } else {
+            Alert.alert('Extension Failed', res.payload || 'Could not process extension request.');
+        }
+    };
+
     const handleValetAction = (actionType) => {
         switch(actionType) {
             case 'request': dispatch(requestValetThunk({ id: bookingId, data: {} })); break;
@@ -65,12 +120,19 @@ const BookingDetailScreen = ({ navigation, route }) => {
     };
 
     const handleAssignBay = () => {
-        dispatch(assignBayThunk({ id: bookingId, data: { bayNumber: 'A1-001' } })); // Mock bay for now
+        dispatch(assignBayThunk({ id: bookingId, data: { bayNumber: 'A1-001' } }));
     };
 
     if (detailLoading || !booking) return <LoadingScreen />;
 
     const canCancel = [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.AwaitingPayment].includes(booking.status);
+    const isConfirmed = booking.status === BookingStatus.Confirmed;
+    const isInProgress = booking.status === BookingStatus.InProgress;
+    const canExtend = isConfirmed || isInProgress;
+    const hasPendingExtension = booking.hasPendingExtension || booking.extensionStatus === 'Pending' || booking.pendingExtension;
+
+    const currentEnd = new Date(booking.endDateTime);
+    const extendedEndDate = new Date(currentEnd.getTime() + extendHours * 3600000);
 
     return (
         <ScreenLayout>
@@ -90,6 +152,23 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         <Badge status={booking.status} />
                         <Text style={styles.refCode}>Ref: {booking.bookingReference}</Text>
                     </Card>
+
+                    {/* Pending Extension Notice */}
+                    {hasPendingExtension && (
+                        <Card style={{ backgroundColor: colors.warningSoft, borderLeftWidth: 4, borderLeftColor: colors.warning }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Ionicons name="hourglass-outline" size={20} color={colors.warningDark} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ ...typography.bodySmall, color: colors.warningDark, fontWeight: '700' }}>
+                                        Extension Pending Host Approval
+                                    </Text>
+                                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
+                                        Requested new end: {booking.pendingEndDateTime ? formatDateTime(booking.pendingEndDateTime) : 'Extension in review'}
+                                    </Text>
+                                </View>
+                            </View>
+                        </Card>
+                    )}
 
                     {/* Refund Notice if Cancelled or Rejected */}
                     {[BookingStatus.Cancelled, BookingStatus.Rejected].includes(booking.status) && (
@@ -158,21 +237,61 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         </View>
                     </Card>
 
-                    {/* Actions */}
+                    {/* Primary Lifecycle Actions */}
                     <View style={styles.actions}>
+                        {/* 1. Check-In Action */}
+                        {isConfirmed && (
+                            <Button
+                                title="Check In"
+                                onPress={handleCheckIn}
+                                variant="primary"
+                                loading={actionLoading}
+                                icon={<Ionicons name="log-in-outline" size={20} color={colors.white} />}
+                            />
+                        )}
+
+                        {/* 2. Check-Out Action */}
+                        {isInProgress && (
+                            <Button
+                                title="Check Out"
+                                onPress={handleCheckOut}
+                                variant="primary"
+                                loading={actionLoading}
+                                icon={<Ionicons name="log-out-outline" size={20} color={colors.white} />}
+                            />
+                        )}
+
+                        {/* 3. Extend Booking Action */}
+                        {canExtend && (
+                            <Button
+                                title="Extend Booking"
+                                onPress={() => setExtendModalVisible(true)}
+                                variant="outline"
+                                loading={actionLoading}
+                                icon={<Ionicons name="time-outline" size={20} color={colors.primary} />}
+                            />
+                        )}
+
+                        {/* 4. Cancel Action */}
                         {canCancel && (
-                            <Button title="Cancel Booking" onPress={handleCancel} variant="danger" loading={actionLoading} icon={<Ionicons name="close-circle" size={20} color={colors.white} />} />
+                            <Button
+                                title="Cancel Booking"
+                                onPress={handleCancel}
+                                variant="danger"
+                                loading={actionLoading}
+                                icon={<Ionicons name="close-circle" size={20} color={colors.white} />}
+                            />
                         )}
                         
                         {/* Member Valet Actions */}
                         {!booking.valetStatus && (
-                            <Button title="Request Valet" onPress={() => handleValetAction('request')} variant="primary" loading={actionLoading} />
+                            <Button title="Request Valet" onPress={() => handleValetAction('request')} variant="secondary" loading={actionLoading} />
                         )}
                         {booking.valetStatus === 'Requested' && (
                             <Button title="Cancel Valet Request" onPress={() => handleValetAction('cancel')} variant="secondary" loading={actionLoading} />
                         )}
                         
-                        {/* Vendor Valet & Bay Actions (Normally checking role) */}
+                        {/* Vendor Valet & Bay Actions */}
                         {booking.valetStatus === 'Requested' && (
                             <Button title="Acknowledge Valet (Vendor)" onPress={() => handleValetAction('acknowledge')} variant="outline" loading={actionLoading} />
                         )}
@@ -198,6 +317,77 @@ const BookingDetailScreen = ({ navigation, route }) => {
                     </View>
                 </View>
             </ScrollView>
+
+            {/* Extension Request Modal */}
+            <Modal
+                visible={extendModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setExtendModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Extend Booking</Text>
+                            <TouchableOpacity onPress={() => setExtendModalVisible(false)} style={styles.modalCloseBtn}>
+                                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.modalSubtitle}>
+                            Select additional parking time to extend your current session:
+                        </Text>
+
+                        {/* Quick hour selection chips */}
+                        <View style={styles.chipRow}>
+                            {EXTENSION_HOUR_OPTIONS.map((hrs) => (
+                                <TouchableOpacity
+                                    key={hrs}
+                                    onPress={() => setExtendHours(hrs)}
+                                    style={[
+                                        styles.hourChip,
+                                        extendHours === hrs && styles.hourChipSelected,
+                                    ]}
+                                >
+                                    <Text style={[styles.hourChipText, extendHours === hrs && styles.hourChipTextSelected]}>
+                                        +{hrs} hr{hrs > 1 ? 's' : ''}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Summary Box */}
+                        <View style={styles.extendSummaryBox}>
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>Current End Time:</Text>
+                                <Text style={styles.summaryVal}>{formatDateTime(booking.endDateTime)}</Text>
+                            </View>
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>New End Time:</Text>
+                                <Text style={[styles.summaryVal, { color: colors.primary, fontWeight: '700' }]}>
+                                    {formatDateTime(extendedEndDate.toISOString())}
+                                </Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.modalActions}>
+                            <Button
+                                title="Cancel"
+                                onPress={() => setExtendModalVisible(false)}
+                                variant="outline"
+                                style={{ flex: 1 }}
+                            />
+                            <Button
+                                title="Request Extension"
+                                onPress={handleConfirmExtend}
+                                variant="primary"
+                                loading={extending}
+                                style={{ flex: 1 }}
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </ScreenLayout>
     );
 };
@@ -221,6 +411,23 @@ const styles = StyleSheet.create({
     totalLabel: { ...typography.body, color: colors.primary },
     totalValue: { ...typography.h3, color: colors.primary },
     actions: { gap: spacing.md, marginTop: spacing.lg },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContainer: { backgroundColor: colors.surface, borderTopLeftRadius: spacing.radius.xl, borderTopRightRadius: spacing.radius.xl, padding: spacing.screenHorizontal, paddingBottom: spacing['2xl'] },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+    modalTitle: { ...typography.h3, color: colors.textPrimary },
+    modalCloseBtn: { padding: spacing.xs },
+    modalSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginBottom: spacing.md },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+    hourChip: { paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: spacing.radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+    hourChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    hourChipText: { ...typography.label, color: colors.textPrimary },
+    hourChipTextSelected: { color: colors.white, fontWeight: '700' },
+    extendSummaryBox: { backgroundColor: colors.background, padding: spacing.base, borderRadius: spacing.radius.md, borderWidth: 1, borderColor: colors.borderLight, marginBottom: spacing.xl, gap: spacing.sm },
+    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    summaryLabel: { ...typography.caption, color: colors.textSecondary },
+    summaryVal: { ...typography.caption, color: colors.textPrimary, fontWeight: '500' },
+    modalActions: { flexDirection: 'row', gap: spacing.md },
 });
 
 export default BookingDetailScreen;
+

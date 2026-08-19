@@ -9,6 +9,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { calculatePriceThunk, createBookingThunk, clearPriceBreakdown } from '../../store/slices/bookingSlice';
+import apiClient from '../../services/api/apiClient';
+import ENDPOINTS from '../../services/api/endpoints';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import Button from '../../components/Common/Button';
@@ -43,8 +45,36 @@ const BookingScreen = ({ navigation, route }) => {
     const [vehicleType, setVehicleType] = useState(VehicleType.Car);
     const [discountCode, setDiscountCode] = useState('');
 
+    // Garage vehicles
+    const [garageVehicles, setGarageVehicles] = useState([]);
+    const [selectedVehicleId, setSelectedVehicleId] = useState(null);
+    const [vehicleNumber, setVehicleNumber] = useState('');
+    const [vehicleModel, setVehicleModel] = useState('');
+    const [vehicleColor, setVehicleColor] = useState('');
+    const [slotNumber, setSlotNumber] = useState('');
+
     // Picker visibility (iOS uses modal, Android uses inline)
     const [showPicker, setShowPicker] = useState(null); // 'startDate' | 'startTime' | 'endDate' | 'endTime' | null
+
+    useEffect(() => {
+        const loadVehicles = async () => {
+            try {
+                const res = await apiClient.get(ENDPOINTS.VEHICLES.BASE);
+                const items = res.data?.data || res.data || [];
+                if (Array.isArray(items) && items.length > 0) {
+                    setGarageVehicles(items);
+                    const defaultV = items[0];
+                    setSelectedVehicleId(defaultV.id);
+                    setVehicleNumber(defaultV.licensePlate || defaultV.plateNumber || '');
+                    setVehicleModel(`${defaultV.make || ''} ${defaultV.model || ''}`.trim());
+                    setVehicleColor(defaultV.color || '');
+                }
+            } catch (e) {
+                // Ignore fallback
+            }
+        };
+        loadVehicles();
+    }, []);
 
     // Calculate price whenever dates or pricing type change
     useEffect(() => {
@@ -62,6 +92,20 @@ const BookingScreen = ({ navigation, route }) => {
     useEffect(() => {
         return () => { dispatch(clearPriceBreakdown()); };
     }, []);
+
+    const handleSelectVehicle = (v) => {
+        if (v === 'custom') {
+            setSelectedVehicleId('custom');
+            setVehicleNumber('');
+            setVehicleModel('');
+            setVehicleColor('');
+        } else {
+            setSelectedVehicleId(v.id);
+            setVehicleNumber(v.licensePlate || v.plateNumber || '');
+            setVehicleModel(`${v.make || ''} ${v.model || ''}`.trim());
+            setVehicleColor(v.color || '');
+        }
+    };
 
     const handlePickerChange = (pickerType) => (event, selectedDate) => {
         if (Platform.OS === 'android') {
@@ -108,6 +152,10 @@ const BookingScreen = ({ navigation, route }) => {
             endDateTime: endDate.toISOString(),
             pricingType,
             vehicleType,
+            vehicleNumber: vehicleNumber || undefined,
+            vehicleModel: vehicleModel || undefined,
+            vehicleColor: vehicleColor || undefined,
+            slotNumber: slotNumber ? parseInt(slotNumber, 10) : undefined,
             discountCode: discountCode || undefined,
         }));
         if (!result.error) {
@@ -148,18 +196,18 @@ const BookingScreen = ({ navigation, route }) => {
 
     const renderPicker = () => {
         if (!showPicker) return null;
-        const isStart = showPicker.startsWith('start');
-        const isDate = showPicker.endsWith('Date');
+        const isDate = showPicker === 'startDate' || showPicker === 'endDate';
+        const isStart = showPicker === 'startDate' || showPicker === 'startTime';
         const currentValue = isStart ? startDate : endDate;
 
         if (Platform.OS === 'ios') {
             return (
-                <Modal transparent animationType="slide" visible={!!showPicker}>
+                <Modal visible={true} transparent animationType="fade">
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalContent}>
                             <View style={styles.modalHeader}>
                                 <Text style={styles.modalTitle}>
-                                    Select {isStart ? 'Start' : 'End'} {isDate ? 'Date' : 'Time'}
+                                    {isStart ? 'Start' : 'End'} {isDate ? 'Date' : 'Time'}
                                 </Text>
                                 <TouchableOpacity onPress={() => setShowPicker(null)}>
                                     <Text style={styles.modalDone}>Done</Text>
@@ -172,7 +220,7 @@ const BookingScreen = ({ navigation, route }) => {
                                 onChange={handlePickerChange(showPicker)}
                                 minimumDate={isStart ? new Date() : startDate}
                                 minuteInterval={15}
-                                style={{ height: 200 }}
+                                textColor={colors.textPrimary}
                             />
                         </View>
                     </View>
@@ -252,6 +300,85 @@ const BookingScreen = ({ navigation, route }) => {
                         )}
                     </Card>
 
+                    {/* Vehicle Selection from Garage */}
+                    <Card>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                            <Text style={styles.sectionTitle}>Select Vehicle</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('Vehicles')}>
+                                <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '600' }}>Manage Garage</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {garageVehicles.length > 0 ? (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: 4 }}>
+                                {garageVehicles.map((v) => (
+                                    <TouchableOpacity
+                                        key={v.id}
+                                        onPress={() => handleSelectVehicle(v)}
+                                        style={[
+                                            styles.vehicleChip,
+                                            selectedVehicleId === v.id && styles.vehicleChipActive,
+                                        ]}
+                                    >
+                                        <Ionicons
+                                            name="car"
+                                            size={16}
+                                            color={selectedVehicleId === v.id ? colors.primary : colors.textSecondary}
+                                        />
+                                        <View>
+                                            <Text style={[styles.vehicleChipPlate, selectedVehicleId === v.id && styles.vehicleChipPlateActive]}>
+                                                {v.licensePlate || v.plateNumber || 'No Plate'}
+                                            </Text>
+                                            <Text style={styles.vehicleChipModel}>
+                                                {v.make} {v.model}
+                                            </Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                                <TouchableOpacity
+                                    onPress={() => handleSelectVehicle('custom')}
+                                    style={[
+                                        styles.vehicleChip,
+                                        selectedVehicleId === 'custom' && styles.vehicleChipActive,
+                                    ]}
+                                >
+                                    <Ionicons name="create-outline" size={16} color={selectedVehicleId === 'custom' ? colors.primary : colors.textSecondary} />
+                                    <Text style={[styles.vehicleChipPlate, selectedVehicleId === 'custom' && styles.vehicleChipPlateActive]}>
+                                        Custom / Other
+                                    </Text>
+                                </TouchableOpacity>
+                            </ScrollView>
+                        ) : null}
+
+                        {/* Vehicle text inputs */}
+                        <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+                            <Input
+                                label="License Plate Number"
+                                value={vehicleNumber}
+                                onChangeText={setVehicleNumber}
+                                placeholder="e.g. ABC-1234"
+                                leftIcon="car-outline"
+                            />
+                            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                                <Input
+                                    label="Make & Model"
+                                    value={vehicleModel}
+                                    onChangeText={setVehicleModel}
+                                    placeholder="e.g. Tesla Model 3"
+                                    style={{ flex: 1 }}
+                                />
+                                <Input
+                                    label="Slot (Optional)"
+                                    value={slotNumber}
+                                    onChangeText={setSlotNumber}
+                                    placeholder="e.g. 12"
+                                    keyboardType="numeric"
+                                    style={{ width: 100 }}
+                                />
+                            </View>
+                        </View>
+                    </Card>
+
                     {/* Pricing Type */}
                     <Card>
                         <Text style={styles.sectionTitle}>Pricing Type</Text>
@@ -270,7 +397,7 @@ const BookingScreen = ({ navigation, route }) => {
 
                     {/* Vehicle Type */}
                     <Card>
-                        <Text style={styles.sectionTitle}>Vehicle Type</Text>
+                        <Text style={styles.sectionTitle}>Vehicle Category</Text>
                         <View style={styles.chipRow}>
                             {Object.entries(VehicleTypeLabels).map(([value, label]) => (
                                 <TouchableOpacity
@@ -390,6 +517,18 @@ const styles = StyleSheet.create({
     chipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
     chipText: { ...typography.caption, color: colors.textSecondary, fontWeight: '500' },
     chipTextActive: { color: colors.primary, fontWeight: '600' },
+
+    // Vehicle Chips
+    vehicleChip: {
+        flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+        paddingHorizontal: spacing.base, paddingVertical: spacing.sm,
+        borderRadius: spacing.radius.lg, backgroundColor: colors.background,
+        borderWidth: 1, borderColor: colors.border,
+    },
+    vehicleChipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+    vehicleChipPlate: { ...typography.label, color: colors.textPrimary, fontSize: 13 },
+    vehicleChipPlateActive: { color: colors.primary, fontWeight: '700' },
+    vehicleChipModel: { ...typography.caption, color: colors.textSecondary, fontSize: 11 },
 
     // Price
     priceCard: { backgroundColor: colors.primarySoft },

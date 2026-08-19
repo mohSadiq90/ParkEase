@@ -51,6 +51,72 @@ describe('BookingDetailScreen', () => {
     expect(getByText('Digital Gate Token')).toBeTruthy();
     expect(getByText('✓ Verified Paid & Active')).toBeTruthy();
     expect(getByText('₹120')).toBeTruthy();
+    expect(getByText('Check In')).toBeTruthy();
+    expect(getByText('Extend Booking')).toBeTruthy();
+  });
+
+  it('renders Check Out and Extend Booking for in-progress bookings', async () => {
+    const mockInProgress = {
+      data: {
+        data: {
+          id: 'booking-inprogress-uuid',
+          bookingReference: 'PE-BK-INPROGRESS',
+          parkingSpaceTitle: 'Grand Central Hub',
+          parkingSpaceAddress: '100 Main St',
+          status: 2, // InProgress
+          totalAmount: 180,
+          startDateTime: '2026-08-18T10:00:00Z',
+          endDateTime: '2026-08-18T14:00:00Z',
+          pricingType: 0,
+          vehicleType: 0,
+        },
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockInProgress);
+
+    const { findByText, getByText } = renderWithProviders(
+      <BookingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { bookingId: 'booking-inprogress-uuid' } }}
+      />
+    );
+
+    const checkOutBtn = await findByText('Check Out');
+    expect(checkOutBtn).toBeTruthy();
+    expect(getByText('Extend Booking')).toBeTruthy();
+  });
+
+  it('renders pending extension notice when booking has pending extension', async () => {
+    const mockExtending = {
+      data: {
+        data: {
+          id: 'booking-ext-uuid',
+          bookingReference: 'PE-BK-EXT',
+          parkingSpaceTitle: 'Sky Deck',
+          status: 2, // InProgress
+          hasPendingExtension: true,
+          pendingEndDateTime: '2026-08-18T16:00:00Z',
+          totalAmount: 220,
+          startDateTime: '2026-08-18T10:00:00Z',
+          endDateTime: '2026-08-18T14:00:00Z',
+          pricingType: 0,
+          vehicleType: 0,
+        },
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockExtending);
+
+    const { findByText, getByText } = renderWithProviders(
+      <BookingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { bookingId: 'booking-ext-uuid' } }}
+      />
+    );
+
+    const extNotice = await findByText('Extension Pending Host Approval');
+    expect(extNotice).toBeTruthy();
   });
 
   it('renders refund notice for cancelled booking', async () => {
@@ -72,7 +138,7 @@ describe('BookingDetailScreen', () => {
 
     apiClient.get.mockResolvedValueOnce(mockCancelledBooking);
 
-    const { findByText, getByText } = renderWithProviders(
+    const { findByText } = renderWithProviders(
       <BookingDetailScreen
         navigation={mockNavigation}
         route={{ params: { bookingId: 'booking-cancelled-uuid' } }}
