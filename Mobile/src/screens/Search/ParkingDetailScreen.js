@@ -8,13 +8,13 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { EventBus } from '../../utils/EventBus';
 import {
     View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions, Share,
-    ActivityIndicator,
+    ActivityIndicator, Modal, TextInput, Alert,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getParkingDetailThunk, getParkingForecastThunk } from '../../store/slices/parkingSlice';
-import { getReviewsThunk } from '../../store/slices/reviewSlice';
+import { getReviewsThunk, respondToReviewThunk } from '../../store/slices/reviewSlice';
 import { toggleFavoriteThunk } from '../../store/slices/favoriteSlice';
 import { useAuth } from '../../hooks/useAuth';
 import StarRating from '../../components/Common/StarRating';
@@ -55,6 +55,26 @@ const ParkingDetailScreen = ({ navigation, route }) => {
     const [favLoading, setFavLoading] = useState(false);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const heroScrollRef = useRef(null);
+
+    // Host reply state
+    const [replyModalVisible, setReplyModalVisible] = useState(false);
+    const [selectedReview, setSelectedReview] = useState(null);
+    const [replyText, setReplyText] = useState('');
+    const [submittingReply, setSubmittingReply] = useState(false);
+
+    const handleSendReply = async () => {
+        if (!selectedReview || !replyText.trim()) return;
+        setSubmittingReply(true);
+        const res = await dispatch(respondToReviewThunk({ reviewId: selectedReview.id, responseText: replyText.trim() }));
+        setSubmittingReply(false);
+        if (!res.error) {
+            setReplyModalVisible(false);
+            setReplyText('');
+            setSelectedReview(null);
+        } else {
+            Alert.alert('Error', res.payload || 'Failed to submit host response.');
+        }
+    };
 
     useEffect(() => {
         dispatch(getParkingDetailThunk(parkingId));
@@ -451,6 +471,20 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                                             <Text style={styles.ownerReplyText}>{review.ownerResponse}</Text>
                                         </View>
                                     )}
+                                    {isOwnListing && !review.ownerResponse && (
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                setSelectedReview(review);
+                                                setReplyText('');
+                                                setReplyModalVisible(true);
+                                            }}
+                                            style={{ marginTop: 6, alignSelf: 'flex-start' }}
+                                        >
+                                            <Text style={{ fontSize: 13, color: colors.primary, fontWeight: '600' }}>
+                                                💬 Reply as Host
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             ))
                         ) : (
@@ -493,6 +527,57 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                     </>
                 )}
             </View>
+
+            {/* Host Review Response Modal */}
+            <Modal
+                visible={replyModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setReplyModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Reply as Host</Text>
+                            <TouchableOpacity onPress={() => setReplyModalVisible(false)}>
+                                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm }}>
+                            Responding to {selectedReview?.userName || 'customer'}:
+                        </Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            placeholder="Write your official response..."
+                            placeholderTextColor={colors.textTertiary}
+                            multiline
+                            numberOfLines={4}
+                            value={replyText}
+                            onChangeText={setReplyText}
+                            textAlignVertical="top"
+                        />
+                        <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.md }}>
+                            <TouchableOpacity
+                                style={[styles.modalBtn, { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }]}
+                                onPress={() => setReplyModalVisible(false)}
+                            >
+                                <Text style={{ ...typography.label, color: colors.textPrimary }}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                                onPress={handleSendReply}
+                                disabled={submittingReply || !replyText.trim()}
+                            >
+                                {submittingReply ? (
+                                    <ActivityIndicator size="small" color={colors.white} />
+                                ) : (
+                                    <Text style={{ ...typography.label, color: colors.white, fontWeight: '700' }}>Send Reply</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -875,6 +960,45 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: colors.white,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        padding: spacing.screenHorizontal,
+    },
+    modalContent: {
+        backgroundColor: colors.surface,
+        borderRadius: spacing.radius.lg,
+        padding: spacing.lg,
+        ...shadows.lg,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.sm,
+    },
+    modalTitle: {
+        ...typography.h3,
+        color: colors.textPrimary,
+    },
+    modalInput: {
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: spacing.radius.md,
+        padding: spacing.md,
+        fontSize: 14,
+        color: colors.textPrimary,
+        height: 100,
+    },
+    modalBtn: {
+        flex: 1,
+        paddingVertical: spacing.md,
+        borderRadius: spacing.radius.md,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });
 

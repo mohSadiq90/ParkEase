@@ -1,13 +1,17 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../styles/globalStyles';
+import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
+import ScreenLayout from '../../components/Layouts/ScreenLayout';
+import EmptyState from '../../components/Common/EmptyState';
+import LoadingScreen from '../../components/Common/LoadingScreen';
 import { 
     getNotificationsThunk, 
     markAsReadThunk, 
     markAllAsReadThunk, 
-    deleteNotificationThunk 
+    deleteNotificationThunk,
+    clearAllNotificationsThunk
 } from '../../store/slices/notificationSlice';
 
 const NotificationsScreen = ({ navigation }) => {
@@ -28,16 +32,25 @@ const NotificationsScreen = ({ navigation }) => {
         }
     };
 
+    const handleClearAll = () => {
+        Alert.alert(
+            'Clear All Notifications',
+            'Are you sure you want to remove all notifications?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Clear All', style: 'destructive', onPress: () => dispatch(clearAllNotificationsThunk()) }
+            ]
+        );
+    };
+
     const handleNotificationPress = (notification) => {
         if (!notification.isRead) {
             dispatch(markAsReadThunk(notification.id));
         }
         
-        // Handle routing based on notification type here
-        // For example:
-        // if (notification.type === 'BOOKING') {
-        //     navigation.navigate('BookingDetail', { bookingId: notification.referenceId });
-        // }
+        if (notification.referenceId || notification.bookingId) {
+            navigation.navigate('BookingDetail', { bookingId: notification.referenceId || notification.bookingId });
+        }
     };
 
     const handleDelete = (id) => {
@@ -49,6 +62,7 @@ const NotificationsScreen = ({ navigation }) => {
             <TouchableOpacity 
                 style={[styles.notificationCard, !item.isRead && styles.unreadCard]}
                 onPress={() => handleNotificationPress(item)}
+                activeOpacity={0.8}
             >
                 <View style={styles.cardHeader}>
                     <View style={styles.titleContainer}>
@@ -58,7 +72,7 @@ const NotificationsScreen = ({ navigation }) => {
                         </Text>
                     </View>
                     <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-                        <Ionicons name="close" size={20} color={colors.textSecondary} />
+                        <Ionicons name="close-circle-outline" size={20} color={colors.textTertiary} />
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.message} numberOfLines={3}>
@@ -72,24 +86,29 @@ const NotificationsScreen = ({ navigation }) => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenLayout>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={colors.text} />
+                    <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notifications</Text>
-                {items.length > 0 && unreadCount > 0 ? (
-                    <TouchableOpacity onPress={handleMarkAllRead} style={styles.headerRight}>
-                        <Text style={styles.markReadText}>Mark all read</Text>
-                    </TouchableOpacity>
-                ) : (
-                    <View style={styles.headerRight} />
-                )}
+                <View style={styles.headerRight}>
+                    {items.length > 0 && unreadCount > 0 ? (
+                        <TouchableOpacity onPress={handleMarkAllRead} style={{ marginRight: spacing.sm }}>
+                            <Text style={styles.markReadText}>Mark read</Text>
+                        </TouchableOpacity>
+                    ) : null}
+                    {items.length > 0 ? (
+                        <TouchableOpacity onPress={handleClearAll}>
+                            <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                        </TouchableOpacity>
+                    ) : null}
+                </View>
             </View>
 
             <FlatList
                 data={items}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => (item.id || Math.random()).toString()}
                 renderItem={renderItem}
                 refreshControl={
                     <RefreshControl 
@@ -99,120 +118,115 @@ const NotificationsScreen = ({ navigation }) => {
                     />
                 }
                 contentContainerStyle={styles.listContainer}
+                showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="notifications-off-outline" size={64} color={colors.borderLight} />
-                        <Text style={styles.emptyText}>You have no notifications</Text>
-                    </View>
+                    loading ? (
+                        <LoadingScreen />
+                    ) : (
+                        <EmptyState
+                            icon="notifications-off-outline"
+                            title="No notifications"
+                            message="You're all caught up! Important updates will appear here."
+                        />
+                    )
                 }
             />
-        </SafeAreaView>
+        </ScreenLayout>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.background,
-    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: colors.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderLight,
+        paddingHorizontal: spacing.screenHorizontal,
+        paddingTop: 60,
+        paddingBottom: spacing.md,
     },
     backButton: {
-        padding: 5,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.sm,
     },
     headerTitle: {
         ...typography.h3,
-        color: colors.text,
+        color: colors.textPrimary,
     },
     headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
         minWidth: 50,
-        alignItems: 'flex-end',
+        justifyContent: 'flex-end',
     },
     markReadText: {
-        ...typography.body3,
+        ...typography.caption,
         color: colors.primary,
-        fontWeight: '600',
+        fontWeight: '700',
     },
     listContainer: {
-        padding: 15,
+        paddingHorizontal: spacing.screenHorizontal,
+        paddingBottom: spacing['2xl'],
         flexGrow: 1,
     },
     notificationCard: {
         backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 15,
-        marginBottom: 10,
+        borderRadius: spacing.radius.lg,
+        padding: spacing.base,
+        marginBottom: spacing.sm,
         borderWidth: 1,
         borderColor: colors.borderLight,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        ...shadows.sm,
     },
     unreadCard: {
-        borderColor: colors.primary + '40',
-        backgroundColor: colors.primary + '05',
+        borderColor: colors.primary,
+        backgroundColor: colors.primarySoft,
     },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 8,
+        marginBottom: spacing.xs,
     },
     titleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
-        paddingRight: 10,
+        paddingRight: spacing.sm,
     },
     unreadDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
         backgroundColor: colors.primary,
-        marginRight: 8,
+        marginRight: spacing.xs,
     },
     title: {
-        ...typography.subtitle1,
-        color: colors.text,
+        ...typography.label,
+        color: colors.textPrimary,
     },
     unreadText: {
         fontWeight: '700',
-        color: colors.text,
+        color: colors.textPrimary,
     },
     deleteButton: {
         padding: 2,
     },
     message: {
-        ...typography.body2,
+        ...typography.bodySmall,
         color: colors.textSecondary,
-        lineHeight: 20,
-        marginBottom: 10,
+        lineHeight: 18,
+        marginBottom: spacing.xs,
     },
     timestamp: {
-        ...typography.body3,
+        ...typography.caption,
         color: colors.textTertiary,
         textAlign: 'right',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 100,
-    },
-    emptyText: {
-        ...typography.body1,
-        color: colors.textTertiary,
-        marginTop: 15,
+        fontSize: 11,
     },
 });
 

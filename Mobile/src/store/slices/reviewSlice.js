@@ -33,10 +33,23 @@ export const createReviewThunk = createAsyncThunk(
     }
 );
 
+export const respondToReviewThunk = createAsyncThunk(
+    'review/respond',
+    async ({ reviewId, responseText }, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.post(ENDPOINTS.REVIEWS.OWNER_RESPONSE(reviewId), { response: responseText });
+            return response.data?.data || { id: reviewId, ownerResponse: responseText };
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
 const initialState = {
     reviews: [],
     loading: false,
     createLoading: false,
+    respondLoading: false,
     error: null,
 };
 
@@ -70,6 +83,21 @@ const reviewSlice = createSlice({
             })
             .addCase(createReviewThunk.rejected, (state) => {
                 state.createLoading = false;
+            })
+            .addCase(respondToReviewThunk.pending, (state) => {
+                state.respondLoading = true;
+            })
+            .addCase(respondToReviewThunk.fulfilled, (state, action) => {
+                state.respondLoading = false;
+                if (action.payload) {
+                    const idx = state.reviews.findIndex(r => r.id === action.payload.id || r.id === action.meta.arg.reviewId);
+                    if (idx !== -1) {
+                        state.reviews[idx].ownerResponse = action.payload.ownerResponse || action.meta.arg.responseText;
+                    }
+                }
+            })
+            .addCase(respondToReviewThunk.rejected, (state) => {
+                state.respondLoading = false;
             });
     },
 });

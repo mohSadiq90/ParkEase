@@ -9,10 +9,10 @@ export const getNotificationsThunk = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             const response = await notificationApiService.getNotifications();
-            if (response.success) {
-                return response.data; // Expected: array of notifications
+            if (response?.success !== false) {
+                return response?.data !== undefined ? response.data : response;
             }
-            return rejectWithValue(response.message || 'Failed to fetch notifications');
+            return rejectWithValue(response?.message || 'Failed to fetch notifications');
         } catch (error) {
             return rejectWithValue(error.message);
         }
@@ -24,10 +24,10 @@ export const markAsReadThunk = createAsyncThunk(
     async (id, { rejectWithValue }) => {
         try {
             const response = await notificationApiService.markAsRead(id);
-            if (response.success) {
+            if (response?.success !== false) {
                 return id;
             }
-            return rejectWithValue(response.message || 'Failed to mark as read');
+            return rejectWithValue(response?.message || 'Failed to mark as read');
         } catch (error) {
             return rejectWithValue(error.message);
         }
