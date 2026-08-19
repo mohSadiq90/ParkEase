@@ -3,20 +3,21 @@
  * Displays all available parkings by default, with optional search & filter
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { searchParkingThunk, clearSearch } from '../../store/slices/parkingSlice';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
+import Button from '../../components/Common/Button';
 import StarRating from '../../components/Common/StarRating';
 import EmptyState from '../../components/Common/EmptyState';
 import LoadingScreen from '../../components/Common/LoadingScreen';
 import MapViewComponent from './MapViewComponent';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency } from '../../utils/formatters';
-import { VehicleTypeLabels } from '../../utils/constants';
+import { VehicleTypeLabels, AMENITIES } from '../../utils/constants';
 
 const ParkingCard = ({ parking, onPress }) => (
     <Card onPress={onPress} style={cardStyles.card}>
@@ -85,36 +86,89 @@ const SearchScreen = ({ navigation }) => {
     const [hasSearched, setHasSearched] = useState(false);
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
 
+    // Advanced Filters
+    const [filterModalVisible, setFilterModalVisible] = useState(false);
+    const [maxPrice, setMaxPrice] = useState('');
+    const [minRating, setMinRating] = useState(null);
+    const [selectedAmenities, setSelectedAmenities] = useState([]);
+    const [sortBy, setSortBy] = useState('recommended'); // 'recommended', 'priceAsc', 'priceDesc', 'rating'
+
     // Load all available parkings on mount
     useEffect(() => {
         loadParkings();
     }, []);
 
-    const loadParkings = useCallback((city, vehicleType) => {
+    const loadParkings = useCallback((city, vehicleType, maxRate) => {
         setHasSearched(true);
         dispatch(searchParkingThunk({
             city: city || undefined,
             vehicleType: vehicleType ?? undefined,
+            maxHourlyRate: maxRate ? parseFloat(maxRate) : undefined,
             page: 1,
-            pageSize: 20,
+            pageSize: 30,
         }));
     }, [dispatch]);
 
     const handleSearch = useCallback(() => {
-        loadParkings(searchQuery.trim() || undefined, selectedVehicle);
-    }, [loadParkings, searchQuery, selectedVehicle]);
+        loadParkings(searchQuery.trim() || undefined, selectedVehicle, maxPrice);
+    }, [loadParkings, searchQuery, selectedVehicle, maxPrice]);
 
     const handleClearSearch = useCallback(() => {
         setSearchQuery('');
         setSelectedVehicle(null);
+        setMaxPrice('');
+        setMinRating(null);
+        setSelectedAmenities([]);
+        setSortBy('recommended');
         loadParkings();
     }, [loadParkings]);
 
     const toggleVehicleFilter = useCallback((value) => {
         const newValue = selectedVehicle === value ? null : value;
         setSelectedVehicle(newValue);
-        loadParkings(searchQuery.trim() || undefined, newValue);
-    }, [selectedVehicle, searchQuery, loadParkings]);
+        loadParkings(searchQuery.trim() || undefined, newValue, maxPrice);
+    }, [selectedVehicle, searchQuery, maxPrice, loadParkings]);
+
+    const toggleAmenity = (amenity) => {
+        setSelectedAmenities(prev =>
+            prev.includes(amenity) ? prev.filter(a => a !== amenity) : [...prev, amenity]
+        );
+    };
+
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (maxPrice) count += 1;
+        if (minRating) count += 1;
+        if (selectedAmenities.length > 0) count += selectedAmenities.length;
+        if (sortBy !== 'recommended') count += 1;
+        return count;
+    }, [maxPrice, minRating, selectedAmenities, sortBy]);
+
+    // Client-side filtering & sorting for amenities, rating, and sort order
+    const filteredResults = useMemo(() => {
+        let list = [...(searchResults || [])];
+
+        if (minRating) {
+            list = list.filter(p => (p.averageRating || 0) >= minRating);
+        }
+
+        if (selectedAmenities.length > 0) {
+            list = list.filter(p => {
+                const pAmenities = p.amenities || [];
+                return selectedAmenities.every(a => pAmenities.includes(a));
+            });
+        }
+
+        if (sortBy === 'priceAsc') {
+            list.sort((a, b) => (a.hourlyRate || 0) - (b.hourlyRate || 0));
+        } else if (sortBy === 'priceDesc') {
+            list.sort((a, b) => (b.hourlyRate || 0) - (a.hourlyRate || 0));
+        } else if (sortBy === 'rating') {
+            list.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+        }
+
+        return list;
+    }, [searchResults, minRating, selectedAmenities, sortBy]);
 
     const vehicleTypes = Object.entries(VehicleTypeLabels);
 
@@ -139,22 +193,37 @@ const SearchScreen = ({ navigation }) => {
                     </TouchableOpacity>
                 </View>
                 
-                <View style={styles.searchBar}>
-                    <Ionicons name="search" size={20} color={colors.textTertiary} />
-                    <TextInput
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        placeholder="Search by city or location..."
-                        placeholderTextColor={colors.textTertiary}
-                        style={styles.searchInput}
-                        onSubmitEditing={handleSearch}
-                        returnKeyType="search"
-                    />
-                    {searchQuery ? (
-                        <TouchableOpacity onPress={handleClearSearch}>
-                            <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
-                        </TouchableOpacity>
-                    ) : null}
+                <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+                    <View style={styles.searchBar}>
+                        <Ionicons name="search" size={20} color={colors.textTertiary} />
+                        <TextInput
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            placeholder="Search by city or location..."
+                            placeholderTextColor={colors.textTertiary}
+                            style={styles.searchInput}
+                            onSubmitEditing={handleSearch}
+                            returnKeyType="search"
+                        />
+                        {searchQuery ? (
+                            <TouchableOpacity onPress={handleClearSearch}>
+                                <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
+                            </TouchableOpacity>
+                        ) : null}
+                    </View>
+
+                    {/* Filter Button */}
+                    <TouchableOpacity
+                        style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
+                        onPress={() => setFilterModalVisible(true)}
+                    >
+                        <Ionicons name="options-outline" size={22} color={activeFilterCount > 0 ? colors.white : colors.textPrimary} />
+                        {activeFilterCount > 0 && (
+                            <View style={styles.filterBadge}>
+                                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
                 </View>
 
                 {/* Vehicle Type Filters */}
@@ -178,18 +247,18 @@ const SearchScreen = ({ navigation }) => {
                 <LoadingScreen message="Loading parking spaces..." />
             ) : viewMode === 'map' ? (
                 <View style={{flex: 1}}>
-                    <MapViewComponent parkings={searchResults} />
+                    <MapViewComponent parkings={filteredResults} />
                 </View>
-            ) : searchResults.length > 0 ? (
+            ) : filteredResults.length > 0 ? (
                 <FlatList
-                    data={searchResults}
+                    data={filteredResults}
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }) => (
                         <ParkingCard parking={item} onPress={() => navigation.navigate('ParkingDetail', { parkingId: item.id })} />
                     )}
                     ListHeaderComponent={
                         <Text style={styles.resultCount}>
-                            {searchTotalCount} parking space{searchTotalCount !== 1 ? 's' : ''} available
+                            {filteredResults.length} parking space{filteredResults.length !== 1 ? 's' : ''} available
                         </Text>
                     }
                     showsVerticalScrollIndicator={false}
@@ -206,6 +275,124 @@ const SearchScreen = ({ navigation }) => {
             ) : (
                 <EmptyState icon="search-outline" title="Find Parking" message="Loading available parking spaces..." />
             )}
+
+            {/* Advanced Filters Modal */}
+            <Modal
+                visible={filterModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setFilterModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Filters & Sort</Text>
+                            <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                                <Ionicons name="close" size={24} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+                            {/* Sort By */}
+                            <Text style={styles.sectionHeading}>Sort By</Text>
+                            <View style={styles.sortOptionsRow}>
+                                {[
+                                    { id: 'recommended', label: 'Recommended' },
+                                    { id: 'priceAsc', label: 'Price: Low to High' },
+                                    { id: 'priceDesc', label: 'Price: High to Low' },
+                                    { id: 'rating', label: 'Highest Rated' },
+                                ].map((item) => (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        onPress={() => setSortBy(item.id)}
+                                        style={[styles.sortChip, sortBy === item.id && styles.sortChipActive]}
+                                    >
+                                        <Text style={[styles.sortChipText, sortBy === item.id && styles.sortChipTextActive]}>
+                                            {item.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Max Hourly Rate */}
+                            <Text style={styles.sectionHeading}>Max Hourly Rate (₹)</Text>
+                            <TextInput
+                                style={styles.priceInput}
+                                value={maxPrice}
+                                onChangeText={setMaxPrice}
+                                placeholder="e.g. 50"
+                                keyboardType="numeric"
+                                placeholderTextColor={colors.textTertiary}
+                            />
+
+                            {/* Minimum Rating */}
+                            <Text style={styles.sectionHeading}>Minimum Rating</Text>
+                            <View style={styles.ratingFilterRow}>
+                                {[3, 4, 4.5].map((rating) => (
+                                    <TouchableOpacity
+                                        key={rating}
+                                        onPress={() => setMinRating(minRating === rating ? null : rating)}
+                                        style={[styles.ratingChip, minRating === rating && styles.ratingChipActive]}
+                                    >
+                                        <Ionicons name="star" size={16} color={minRating === rating ? colors.white : colors.warning} />
+                                        <Text style={[styles.ratingChipText, minRating === rating && styles.ratingChipTextActive]}>
+                                            {rating}+ Stars
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Amenities */}
+                            <Text style={styles.sectionHeading}>Amenities</Text>
+                            <View style={styles.amenitiesGrid}>
+                                {AMENITIES.map((amenity) => {
+                                    const active = selectedAmenities.includes(amenity);
+                                    return (
+                                        <TouchableOpacity
+                                            key={amenity}
+                                            onPress={() => toggleAmenity(amenity)}
+                                            style={[styles.amenityChip, active && styles.amenityChipActive]}
+                                        >
+                                            <Ionicons
+                                                name={active ? 'checkmark-circle' : 'ellipse-outline'}
+                                                size={16}
+                                                color={active ? colors.primary : colors.textTertiary}
+                                            />
+                                            <Text style={[styles.amenityText, active && styles.amenityTextActive]}>
+                                                {amenity}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </ScrollView>
+
+                        {/* Modal Action Buttons */}
+                        <View style={styles.modalActions}>
+                            <Button
+                                title="Reset All"
+                                onPress={() => {
+                                    setMaxPrice('');
+                                    setMinRating(null);
+                                    setSelectedAmenities([]);
+                                    setSortBy('recommended');
+                                }}
+                                variant="outline"
+                                style={{ flex: 1 }}
+                            />
+                            <Button
+                                title="Apply Filters"
+                                onPress={() => {
+                                    setFilterModalVisible(false);
+                                    handleSearch();
+                                }}
+                                variant="primary"
+                                style={{ flex: 1 }}
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </ScreenLayout>
     );
 };
@@ -217,7 +404,7 @@ const styles = StyleSheet.create({
         paddingBottom: spacing.base,
         backgroundColor: colors.surface,
         ...shadows.sm,
-        zIndex: 2, // Ensure it sits above map
+        zIndex: 2,
     },
     titleRow: {
         flexDirection: 'row',
@@ -233,14 +420,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: spacing.radius.full,
-        gap: 4
+        gap: 4,
     },
     viewToggleText: {
         color: colors.primary,
         fontWeight: '600',
-        fontSize: 14
+        fontSize: 14,
     },
     searchBar: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: colors.background,
@@ -251,6 +439,37 @@ const styles = StyleSheet.create({
         borderColor: colors.border,
     },
     searchInput: { flex: 1, ...typography.body, color: colors.textPrimary, paddingVertical: spacing.inputPaddingV },
+    filterBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: spacing.radius.md,
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    filterBtnActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    filterBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: colors.danger,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    filterBadgeText: {
+        color: colors.white,
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
     filterScroll: { marginTop: spacing.md },
     filterChip: {
         paddingHorizontal: spacing.base,
@@ -265,6 +484,43 @@ const styles = StyleSheet.create({
     filterChipText: { ...typography.caption, color: colors.textSecondary, fontWeight: '500' },
     filterChipTextActive: { color: colors.primary, fontWeight: '600' },
     resultCount: { ...typography.bodySmall, color: colors.textSecondary, paddingHorizontal: spacing.screenHorizontal, paddingVertical: spacing.md },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: colors.surface,
+        borderTopLeftRadius: spacing.radius.xl,
+        borderTopRightRadius: spacing.radius.xl,
+        padding: spacing.lg,
+        ...shadows.lg,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.md,
+    },
+    modalTitle: { ...typography.h3, color: colors.textPrimary },
+    sectionHeading: { ...typography.label, color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs },
+    sortOptionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+    sortChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: spacing.radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+    sortChipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+    sortChipText: { ...typography.caption, color: colors.textSecondary },
+    sortChipTextActive: { color: colors.primary, fontWeight: '700' },
+    priceInput: { borderWidth: 1, borderColor: colors.border, borderRadius: spacing.radius.md, padding: spacing.sm, fontSize: 14, color: colors.textPrimary },
+    ratingFilterRow: { flexDirection: 'row', gap: spacing.sm },
+    ratingChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: spacing.radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+    ratingChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    ratingChipText: { ...typography.caption, color: colors.textSecondary },
+    ratingChipTextActive: { color: colors.white, fontWeight: '700' },
+    amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+    amenityChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: spacing.radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+    amenityChipActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+    amenityText: { ...typography.caption, color: colors.textSecondary },
+    amenityTextActive: { color: colors.primary, fontWeight: '600' },
+    modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderLight },
 });
 
 export default SearchScreen;

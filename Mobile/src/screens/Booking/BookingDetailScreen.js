@@ -40,6 +40,7 @@ const BookingDetailScreen = ({ navigation, route }) => {
     const [extendModalVisible, setExtendModalVisible] = useState(false);
     const [extendHours, setExtendHours] = useState(1);
     const [extending, setExtending] = useState(false);
+    const [receiptModalVisible, setReceiptModalVisible] = useState(false);
 
     useEffect(() => {
         dispatch(getBookingDetailThunk(bookingId));
@@ -235,6 +236,13 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             <Text style={styles.totalLabel}>Total Amount</Text>
                             <Text style={styles.totalValue}>{formatCurrency(booking.totalAmount)}</Text>
                         </View>
+                        <TouchableOpacity
+                            style={styles.receiptBtn}
+                            onPress={() => setReceiptModalVisible(true)}
+                        >
+                            <Ionicons name="receipt-outline" size={16} color={colors.primary} />
+                            <Text style={styles.receiptBtnText}>View Itemized Tax Receipt</Text>
+                        </TouchableOpacity>
                     </Card>
 
                     {/* Primary Lifecycle Actions */}
@@ -299,12 +307,10 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             <Button title="Mark Valet Ready (Vendor)" onPress={() => handleValetAction('ready')} variant="outline" loading={actionLoading} />
                         )}
                         {booking.valetStatus === 'Ready' && (
-                            <Button title="Complete Valet (Vendor)" onPress={() => handleValetAction('complete')} variant="outline" loading={actionLoading} />
+                            <Button title="Complete Valet (Vendor)" onPress={() => handleValetAction('complete')} variant="primary" loading={actionLoading} />
                         )}
                         
-                        {!booking.assignedBay && (
-                            <Button title="Assign Bay (Vendor)" onPress={handleAssignBay} variant="outline" loading={actionLoading} />
-                        )}
+                        <Button title="Assign Bay (Vendor)" onPress={() => handleAssignBay()} variant="outline" loading={actionLoading} />
 
                         {booking.status === BookingStatus.Completed && (
                             <Button
@@ -388,6 +394,71 @@ const BookingDetailScreen = ({ navigation, route }) => {
                     </View>
                 </View>
             </Modal>
+
+            {/* Digital Tax Invoice & Receipt Modal */}
+            <Modal
+                visible={receiptModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setReceiptModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Tax Invoice & Receipt</Text>
+                            <TouchableOpacity onPress={() => setReceiptModalVisible(false)} style={styles.modalCloseBtn}>
+                                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={{ ...typography.caption, color: colors.textTertiary, marginBottom: spacing.md }}>
+                            Receipt Ref: RCP-{booking.id?.substring(0, 8).toUpperCase() || 'REF001'}
+                        </Text>
+
+                        {/* Receipt itemized table */}
+                        <View style={styles.receiptBox}>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>Parking Location</Text>
+                                <Text style={styles.receiptVal} numberOfLines={1}>{booking.parkingSpaceTitle}</Text>
+                            </View>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>Base Parking Fee</Text>
+                                <Text style={styles.receiptVal}>{formatCurrency(Math.max(0, (booking.totalAmount || 0) * 0.82))}</Text>
+                            </View>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>CGST (9%)</Text>
+                                <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09)}</Text>
+                            </View>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>SGST (9%)</Text>
+                                <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09)}</Text>
+                            </View>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>Convenience / Platform Fee</Text>
+                                <Text style={styles.receiptVal}>{formatCurrency(0)}</Text>
+                            </View>
+                            <View style={styles.receiptDivider} />
+                            <View style={styles.receiptRow}>
+                                <Text style={[styles.receiptLabel, { fontWeight: '700', color: colors.textPrimary }]}>Total Paid (Incl. GST)</Text>
+                                <Text style={[styles.receiptVal, { fontWeight: '700', color: colors.primary, fontSize: 16 }]}>
+                                    {formatCurrency(booking.totalAmount)}
+                                </Text>
+                            </View>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>Payment Status</Text>
+                                <Text style={[styles.receiptVal, { color: colors.success, fontWeight: '700' }]}>Paid ✅</Text>
+                            </View>
+                        </View>
+
+                        <Button
+                            title="Done"
+                            onPress={() => setReceiptModalVisible(false)}
+                            variant="primary"
+                            style={{ marginTop: spacing.lg }}
+                        />
+                    </View>
+                </View>
+            </Modal>
         </ScreenLayout>
     );
 };
@@ -410,6 +481,8 @@ const styles = StyleSheet.create({
     totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     totalLabel: { ...typography.body, color: colors.primary },
     totalValue: { ...typography.h3, color: colors.primary },
+    receiptBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm, alignSelf: 'flex-start' },
+    receiptBtnText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
     actions: { gap: spacing.md, marginTop: spacing.lg },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     modalContainer: { backgroundColor: colors.surface, borderTopLeftRadius: spacing.radius.xl, borderTopRightRadius: spacing.radius.xl, padding: spacing.screenHorizontal, paddingBottom: spacing['2xl'] },
@@ -427,7 +500,11 @@ const styles = StyleSheet.create({
     summaryLabel: { ...typography.caption, color: colors.textSecondary },
     summaryVal: { ...typography.caption, color: colors.textPrimary, fontWeight: '500' },
     modalActions: { flexDirection: 'row', gap: spacing.md },
+    receiptBox: { backgroundColor: colors.background, padding: spacing.base, borderRadius: spacing.radius.md, borderWidth: 1, borderColor: colors.borderLight, gap: spacing.sm },
+    receiptRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    receiptLabel: { ...typography.caption, color: colors.textSecondary },
+    receiptVal: { ...typography.caption, color: colors.textPrimary, fontWeight: '600' },
+    receiptDivider: { height: 1, backgroundColor: colors.borderLight, marginVertical: spacing.xs },
 });
 
 export default BookingDetailScreen;
-

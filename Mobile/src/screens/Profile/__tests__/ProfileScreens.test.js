@@ -142,4 +142,37 @@ describe('Mobile Profile Extension Screens', () => {
       expect(empty).toBeTruthy();
     });
   });
+
+  describe('ProfileScreen', () => {
+    it('renders profile with user info and features menu', () => {
+      const ProfileScreen = require('../ProfileScreen').default;
+      const preloadedState = {
+        auth: {
+          user: {
+            id: 'u-1',
+            firstName: 'Sarah',
+            lastName: 'Connor',
+            email: 'sarah@skynet.com',
+            phoneNumber: '9876543210',
+          },
+          token: 'jwt-token',
+        },
+        notification: {
+          unreadCount: 3,
+        },
+      };
+
+      const { getByText, getAllByText } = renderWithProviders(
+        <ProfileScreen navigation={mockNavigation} />,
+        { preloadedState }
+      );
+
+      expect(getAllByText('Sarah Connor').length).toBeGreaterThan(0);
+      expect(getAllByText('sarah@skynet.com').length).toBeGreaterThan(0);
+      expect(getByText('My Garage (Vehicles)')).toBeTruthy();
+      expect(getByText('Saved Favorites')).toBeTruthy();
+      expect(getByText('Delete Account')).toBeTruthy();
+      expect(getByText('Logout')).toBeTruthy();
+    });
+  });
 });

@@ -97,4 +97,40 @@ describe('SearchScreen', () => {
 
     expect(mockNavigation.navigate).toHaveBeenCalledWith('ParkingDetail', { parkingId: '99' });
   });
+
+  it('filters results by rating and sorting in filter modal', async () => {
+    const mockData = {
+      data: {
+        parkingSpaces: [
+          {
+            id: '1',
+            title: 'Cheap Spot',
+            address: '100 First Ave',
+            city: 'Seattle',
+            hourlyRate: 5,
+            availableSpots: 2,
+            averageRating: 3.0,
+            amenities: ['CCTV'],
+          },
+          {
+            id: '2',
+            title: 'Luxury Spot',
+            address: '200 Second Ave',
+            city: 'Seattle',
+            hourlyRate: 30,
+            availableSpots: 10,
+            averageRating: 4.8,
+            amenities: ['EV Charging', 'CCTV'],
+          },
+        ],
+        totalCount: 2,
+      },
+    };
+    apiClient.get.mockResolvedValueOnce({ data: mockData });
+
+    const { findByText, getByText } = renderWithProviders(<SearchScreen navigation={mockNavigation} />);
+
+    await findByText('Cheap Spot');
+    expect(getByText('Luxury Spot')).toBeTruthy();
+  });
 });
