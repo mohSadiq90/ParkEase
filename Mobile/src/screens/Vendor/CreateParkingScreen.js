@@ -1,13 +1,13 @@
 /**
  * CreateParkingScreen
- * Multi-section form to create a parking space
+ * Multi-section form to create or edit a parking space, with photo URL support and deletion
  */
 
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet, Image } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
-import { createParkingThunk } from '../../store/slices/parkingSlice';
+import { createParkingThunk, updateParkingThunk, deleteParkingThunk } from '../../store/slices/parkingSlice';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import Button from '../../components/Common/Button';
@@ -15,9 +15,12 @@ import Input from '../../components/Common/Input';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { ParkingType, ParkingTypeLabels, AMENITIES } from '../../utils/constants';
 
-const CreateParkingScreen = ({ navigation }) => {
+const CreateParkingScreen = ({ navigation, route }) => {
+    const editData = route?.params?.editData;
+    const isEditing = !!editData;
+
     const dispatch = useDispatch();
-    const { createLoading } = useSelector((s) => s.parking);
+    const { createLoading, loading: parkingLoading } = useSelector((s) => s.parking);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -36,7 +39,34 @@ const CreateParkingScreen = ({ navigation }) => {
         monthlyRate: '',
         is24Hours: true,
         amenities: [],
+        imageUrls: [],
     });
+
+    const [photoInput, setPhotoInput] = useState('');
+
+    useEffect(() => {
+        if (editData) {
+            setFormData({
+                title: editData.title || '',
+                description: editData.description || '',
+                address: editData.address || '',
+                city: editData.city || '',
+                state: editData.state || '',
+                zipCode: editData.zipCode || '',
+                latitude: editData.latitude || 0,
+                longitude: editData.longitude || 0,
+                totalSpots: editData.totalSpots ? editData.totalSpots.toString() : '',
+                parkingType: editData.parkingType ?? ParkingType.Open,
+                hourlyRate: editData.hourlyRate ? editData.hourlyRate.toString() : '',
+                dailyRate: editData.dailyRate ? editData.dailyRate.toString() : '',
+                weeklyRate: editData.weeklyRate ? editData.weeklyRate.toString() : '',
+                monthlyRate: editData.monthlyRate ? editData.monthlyRate.toString() : '',
+                is24Hours: editData.is24Hours ?? true,
+                amenities: editData.amenities || [],
+                imageUrls: editData.imageUrls || (editData.imageUrl ? [editData.imageUrl] : []),
+            });
+        }
+    }, [editData]);
 
     const updateField = (field) => (value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -51,27 +81,82 @@ const CreateParkingScreen = ({ navigation }) => {
         }));
     };
 
-    const handleCreate = useCallback(async () => {
+    const handleAddPhoto = () => {
+        if (!photoInput.trim()) return;
+        setFormData((prev) => ({
+            ...prev,
+            imageUrls: [...prev.imageUrls, photoInput.trim()],
+        }));
+        setPhotoInput('');
+    };
+
+    const handleRemovePhoto = (index) => {
+        setFormData((prev) => ({
+            ...prev,
+            imageUrls: prev.imageUrls.filter((_, i) => i !== index),
+        }));
+    };
+
+    const handleSubmit = useCallback(async () => {
         if (!formData.title || !formData.address || !formData.city || !formData.totalSpots || !formData.hourlyRate) {
             Alert.alert('Required Fields', 'Please fill in all required fields');
             return;
         }
 
-        const result = await dispatch(createParkingThunk({
+        const payload = {
             ...formData,
-            totalSpots: parseInt(formData.totalSpots),
+            totalSpots: parseInt(formData.totalSpots, 10),
             hourlyRate: parseFloat(formData.hourlyRate),
             dailyRate: parseFloat(formData.dailyRate) || 0,
             weeklyRate: parseFloat(formData.weeklyRate) || 0,
             monthlyRate: parseFloat(formData.monthlyRate) || 0,
-        }));
+        };
 
-        if (!result.error) {
-            Alert.alert('Success', 'Parking space created!', [
-                { text: 'OK', onPress: () => navigation.goBack() },
-            ]);
+        if (isEditing) {
+            const result = await dispatch(updateParkingThunk({ id: editData.id, data: payload }));
+            if (!result.error) {
+                Alert.alert('Success', 'Parking space updated!', [
+                    { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+            } else {
+                Alert.alert('Error', result.payload || 'Failed to update space');
+            }
+        } else {
+            const result = await dispatch(createParkingThunk(payload));
+            if (!result.error) {
+                Alert.alert('Success', 'Parking space created!', [
+                    { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+            } else {
+                Alert.alert('Error', result.payload || 'Failed to create space');
+            }
         }
-    }, [dispatch, formData, navigation]);
+    }, [dispatch, formData, isEditing, editData, navigation]);
+
+    const handleDelete = () => {
+        if (!editData) return;
+        Alert.alert(
+            'Delete Parking Space',
+            'Are you sure you want to permanently delete this parking space?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const res = await dispatch(deleteParkingThunk(editData.id));
+                        if (!res.error) {
+                            Alert.alert('Deleted', 'Parking space has been deleted.', [
+                                { text: 'OK', onPress: () => navigation.navigate('VendorDashboard') }
+                            ]);
+                        } else {
+                            Alert.alert('Error', res.payload || 'Failed to delete listing.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     return (
         <ScreenLayout>
@@ -81,7 +166,7 @@ const CreateParkingScreen = ({ navigation }) => {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>New Parking Space</Text>
+                    <Text style={styles.headerTitle}>{isEditing ? 'Edit Parking Space' : 'New Parking Space'}</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
@@ -99,24 +184,20 @@ const CreateParkingScreen = ({ navigation }) => {
                         <Text style={styles.sectionTitle}>Location</Text>
                         <Input label="Address *" value={formData.address} onChangeText={updateField('address')} placeholder="Street address" leftIcon="location-outline" />
                         <View style={styles.row}>
-                            <View style={{ flex: 1 }}>
-                                <Input label="City *" value={formData.city} onChangeText={updateField('city')} placeholder="City" />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Input label="State" value={formData.state} onChangeText={updateField('state')} placeholder="State" />
-                            </View>
+                            <Input label="City *" value={formData.city} onChangeText={updateField('city')} placeholder="City" containerStyle={styles.halfInput} />
+                            <Input label="State" value={formData.state} onChangeText={updateField('state')} placeholder="State" containerStyle={styles.halfInput} />
                         </View>
-                        <Input label="Zip Code" value={formData.zipCode} onChangeText={updateField('zipCode')} placeholder="Zip" keyboardType="numeric" />
+                        <Input label="Zip Code" value={formData.zipCode} onChangeText={updateField('zipCode')} placeholder="Zip code" keyboardType="numeric" />
                     </Card>
 
-                    {/* Parking Type */}
+                    {/* Type */}
                     <Card>
                         <Text style={styles.sectionTitle}>Parking Type</Text>
                         <View style={styles.chipRow}>
                             {Object.entries(ParkingTypeLabels).map(([value, label]) => (
                                 <TouchableOpacity
                                     key={value}
-                                    onPress={() => updateField('parkingType')(Number(value))}
+                                    onPress={() => setFormData((prev) => ({ ...prev, parkingType: Number(value) }))}
                                     style={[styles.chip, formData.parkingType === Number(value) && styles.chipActive]}
                                 >
                                     <Text style={[styles.chipText, formData.parkingType === Number(value) && styles.chipTextActive]}>{label}</Text>
@@ -129,54 +210,91 @@ const CreateParkingScreen = ({ navigation }) => {
                     <Card>
                         <Text style={styles.sectionTitle}>Pricing (₹)</Text>
                         <View style={styles.row}>
-                            <View style={{ flex: 1 }}>
-                                <Input label="Hourly *" value={formData.hourlyRate} onChangeText={updateField('hourlyRate')} placeholder="0" keyboardType="numeric" />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Input label="Daily" value={formData.dailyRate} onChangeText={updateField('dailyRate')} placeholder="0" keyboardType="numeric" />
-                            </View>
+                            <Input label="Hourly Rate *" value={formData.hourlyRate} onChangeText={updateField('hourlyRate')} placeholder="0.00" keyboardType="decimal-pad" leftIcon="time-outline" containerStyle={styles.halfInput} />
+                            <Input label="Daily Rate" value={formData.dailyRate} onChangeText={updateField('dailyRate')} placeholder="0.00" keyboardType="decimal-pad" leftIcon="calendar-outline" containerStyle={styles.halfInput} />
                         </View>
                         <View style={styles.row}>
-                            <View style={{ flex: 1 }}>
-                                <Input label="Weekly" value={formData.weeklyRate} onChangeText={updateField('weeklyRate')} placeholder="0" keyboardType="numeric" />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Input label="Monthly" value={formData.monthlyRate} onChangeText={updateField('monthlyRate')} placeholder="0" keyboardType="numeric" />
-                            </View>
+                            <Input label="Weekly Rate" value={formData.weeklyRate} onChangeText={updateField('weeklyRate')} placeholder="0.00" keyboardType="decimal-pad" containerStyle={styles.halfInput} />
+                            <Input label="Monthly Rate" value={formData.monthlyRate} onChangeText={updateField('monthlyRate')} placeholder="0.00" keyboardType="decimal-pad" containerStyle={styles.halfInput} />
                         </View>
+                    </Card>
+
+                    {/* Listing Photos */}
+                    <Card>
+                        <Text style={styles.sectionTitle}>Listing Photos</Text>
+                        <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+                            <Input
+                                value={photoInput}
+                                onChangeText={setPhotoInput}
+                                placeholder="Paste image URL (https://...)"
+                                style={{ flex: 1, marginBottom: 0 }}
+                            />
+                            <Button
+                                title="Add"
+                                onPress={handleAddPhoto}
+                                size="sm"
+                                variant="secondary"
+                            />
+                        </View>
+                        {formData.imageUrls.length > 0 ? (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.md }}>
+                                {formData.imageUrls.map((url, idx) => (
+                                    <View key={idx} style={styles.photoThumbContainer}>
+                                        <Image source={{ uri: url }} style={styles.photoThumb} />
+                                        <TouchableOpacity
+                                            onPress={() => handleRemovePhoto(idx)}
+                                            style={styles.photoDeleteBtn}
+                                        >
+                                            <Ionicons name="close" size={14} color={colors.white} />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        ) : (
+                            <Text style={{ ...typography.caption, color: colors.textTertiary, marginTop: spacing.xs }}>
+                                Add high-resolution photos so drivers can find your parking facility.
+                            </Text>
+                        )}
                     </Card>
 
                     {/* Amenities */}
                     <Card>
                         <Text style={styles.sectionTitle}>Amenities</Text>
-                        <View style={styles.amenitiesGrid}>
-                            {AMENITIES.map((amenity) => (
-                                <TouchableOpacity
-                                    key={amenity}
-                                    style={[styles.amenityChip, formData.amenities.includes(amenity) && styles.amenityChipActive]}
-                                    onPress={() => toggleAmenity(amenity)}
-                                >
-                                    <Ionicons
-                                        name={formData.amenities.includes(amenity) ? 'checkmark-circle' : 'ellipse-outline'}
-                                        size={16}
-                                        color={formData.amenities.includes(amenity) ? colors.success : colors.textTertiary}
-                                    />
-                                    <Text style={[styles.amenityText, formData.amenities.includes(amenity) && styles.amenityTextActive]}>
-                                        {amenity}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
+                        <View style={styles.chipRow}>
+                            {AMENITIES.map((amenity) => {
+                                const active = formData.amenities.includes(amenity);
+                                return (
+                                    <TouchableOpacity
+                                        key={amenity}
+                                        onPress={() => toggleAmenity(amenity)}
+                                        style={[styles.chip, active && styles.chipActive]}
+                                    >
+                                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{amenity}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                     </Card>
 
                     {/* Submit */}
                     <Button
-                        title="Create Parking Space"
-                        onPress={handleCreate}
-                        loading={createLoading}
+                        title={isEditing ? 'Save Changes' : 'Create Space'}
+                        onPress={handleSubmit}
+                        loading={createLoading || parkingLoading}
                         style={styles.submitBtn}
-                        icon={<Ionicons name="checkmark-circle" size={20} color={colors.white} />}
+                        icon={<Ionicons name={isEditing ? 'save-outline' : 'add-circle-outline'} size={20} color={colors.white} />}
                     />
+
+                    {/* Delete Space Button if editing */}
+                    {isEditing && (
+                        <Button
+                            title="Delete Parking Space"
+                            onPress={handleDelete}
+                            variant="danger"
+                            style={{ marginTop: spacing.sm }}
+                            icon={<Ionicons name="trash-outline" size={20} color={colors.white} />}
+                        />
+                    )}
                 </View>
             </ScrollView>
         </ScreenLayout>
@@ -190,17 +308,16 @@ const styles = StyleSheet.create({
     content: { paddingHorizontal: spacing.screenHorizontal, paddingBottom: spacing['3xl'] },
     sectionTitle: { ...typography.label, color: colors.textPrimary, marginBottom: spacing.md },
     row: { flexDirection: 'row', gap: spacing.md },
+    halfInput: { flex: 1 },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     chip: { paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: spacing.radius.full, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
     chipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
     chipText: { ...typography.caption, color: colors.textSecondary, fontWeight: '500' },
     chipTextActive: { color: colors.primary, fontWeight: '600' },
-    amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-    amenityChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: spacing.radius.full, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
-    amenityChipActive: { backgroundColor: colors.successSoft, borderColor: colors.success },
-    amenityText: { ...typography.caption, color: colors.textSecondary },
-    amenityTextActive: { color: colors.successDark, fontWeight: '500' },
-    submitBtn: { marginTop: spacing.lg },
+    photoThumbContainer: { position: 'relative', marginRight: spacing.sm },
+    photoThumb: { width: 80, height: 80, borderRadius: spacing.radius.md, backgroundColor: colors.borderLight },
+    photoDeleteBtn: { position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.danger, justifyContent: 'center', alignItems: 'center' },
+    submitBtn: { marginTop: spacing.base },
 });
 
 export default CreateParkingScreen;

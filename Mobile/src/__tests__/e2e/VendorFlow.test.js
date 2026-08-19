@@ -156,10 +156,10 @@ describe('Vendor E2E Flow (Hosting and Approving)', () => {
     fireEvent.changeText(getByPlaceholderText('Street address'), '123 Vendor St');
     fireEvent.changeText(getByPlaceholderText('City'), 'Vendor City');
     
-    const zeroInputs = getAllByPlaceholderText('0');
+    const zeroInputs = getAllByPlaceholderText('0.00');
     fireEvent.changeText(zeroInputs[0], '15'); // Hourly Rate
 
-    fireEvent.press(getByText('Create Parking Space'));
+    fireEvent.press(getByText('Create Space'));
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
