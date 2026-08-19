@@ -39,25 +39,28 @@ This document tracks the step-by-step implementation of all identified feature g
 
 ---
 
-### 🚀 Sprint 1: Operational Parity & Booking Lifecycle (Next Priority)
-- [ ] **Step 1.1: Driver Check-in & Check-out in Booking Detail**
+### 🚀 Sprint 1: Operational Parity & Booking Lifecycle (Completed)
+- [x] **Step 1.1: Driver Check-in & Check-out in Booking Detail**
   - Connect `POST /api/bookings/{id}/check-in` & `POST /api/bookings/{id}/check-out` in `BookingDetailScreen.js`.
   - Display dynamic "Check In" button for confirmed bookings and "Check Out" for in-progress sessions.
-  - Write unit tests in `Mobile/src/screens/Booking/__tests__/BookingDetailScreen.test.js`.
+  - Added `checkInThunk` and `checkOutThunk` in `bookingSlice.js`.
+  - Written unit tests in `Mobile/src/screens/Booking/__tests__/BookingDetailScreen.test.js`.
 
-- [ ] **Step 1.2: Booking Extension Workflow (Driver & Vendor)**
-  - Driver side: Add "Extend Booking" action modal in `BookingDetailScreen.js` calling `POST /api/bookings/{id}/extend`.
-  - Vendor side: Add pending extension request cards with Approve/Reject actions in `VendorBookingsScreen.js`.
-  - Write unit tests covering extension lifecycle.
+- [x] **Step 1.2: Booking Extension Workflow (Driver & Vendor)**
+  - Driver side: Added "Extend Booking" action modal in `BookingDetailScreen.js` calling `POST /api/bookings/{id}/extend` via `extendBookingThunk`.
+  - Vendor side: Added pending extension request banner with Approve/Decline actions in `VendorBookingsScreen.js` calling `approveExtensionThunk` and `rejectExtensionThunk`.
+  - Added unit tests covering extension lifecycle and pending extension notices.
 
-- [ ] **Step 1.3: Garage Vehicle Selection in Booking Flow**
+- [x] **Step 1.3: Garage Vehicle Selection & Slot in Booking Flow**
   - Fetch user's registered vehicles (`GET /api/vehicles`) in `BookingScreen.js`.
-  - Render 1-tap horizontal selector with plate, make, model and auto-fill `vehicleNumber`, `vehicleModel`, `vehicleColor`.
-  - Fix `MemberDashboardScreen.js` booking item `onPress` to navigate to `BookingDetail`.
+  - Render 1-tap horizontal selector chips with plate, make, model, and color pre-fill.
+  - Added slot number input support.
+  - Fixed `MemberDashboardScreen.js` booking item `onPress` to navigate to `BookingDetail`.
+  - Git commit: `feat(mobile): implement check-in/out, booking extension workflow, and garage vehicle picker`.
 
 ---
 
-### 🚀 Sprint 2: Communications & Notifications
+### 🚀 Sprint 2: Communications & Notifications (Next Priority)
 - [ ] **Step 2.1: Mobile Notification Center**
   - Create `NotificationsScreen.js` with list, mark-as-read, and clear-all actions.
   - Add notification bell icon with live unread badge in navigation header.

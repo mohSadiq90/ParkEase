@@ -10,14 +10,14 @@ This document evaluates the complete state of implementation across the **ParkEa
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | **Auth & Identity** | ✅ 100% | ✅ 100% | ⚠️ 90% | **Near Parity** | External OAuth (Google GIS / Apple) & Account deletion (`DELETE /api/users/me`) not in mobile UI. |
 | **Channel Authorization** | ✅ 100% | ✅ 100% | ⚠️ 85% | **Near Parity** | JWT channel claims & session binding implemented; mobile context switching in progress. |
-| **Vehicle Garage** | ✅ 100% | ✅ 100% | ⚠️ 80% | **Partial** | Garage CRUD exists ([`MyVehiclesScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Profile/MyVehiclesScreen.js)); not hooked to `BookingScreen` 1-tap checkout. |
+| **Vehicle Garage** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Garage CRUD exists and is connected to [`BookingScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Booking/BookingScreen.js) for 1-tap checkout. |
 | **Saved Favorites** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Pinned favorites list & instant heart toggle fully functional. |
 | **Search & Discovery** | ✅ 100% | ✅ 100% | ⚠️ 80% | **Partial** | Search, radius filter, and interactive map work; missing advanced filter modal (pricing, amenities). |
 | **Spot Availability Forecast** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Forecast summary card and 24-hr hourly occupancy timeline bars rendered in [`ParkingDetailScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Search/ParkingDetailScreen.js). |
-| **Booking Creation** | ✅ 100% | ✅ 100% | ⚠️ 75% | **Partial** | Price breakdown & coupon codes work; needs garage vehicle selector and slot picker. |
-| **Booking Lifecycle (Check-in/out)**| ✅ 100% | ✅ 100% | ❌ 0% | **Missing** | Backend `check-in` and `check-out` endpoints not connected to action buttons in [`BookingDetailScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Booking/BookingDetailScreen.js). |
-| **Booking Extensions** | ✅ 100% | ✅ 100% | ❌ 0% | **Missing** | Driver extension modal (`/extend`) and vendor extension approval (`/approve-extension`) missing in mobile UI. |
-| **Valet & Bay Assignment** | ✅ 100% | ✅ 100% | ⚠️ 60% | **Partial** | Redux thunks implemented (`requestValetThunk`, `acknowledgeValetThunk`, `assignBayThunk`); needs UI controls. |
+| **Booking Creation** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Price breakdown, dynamic pricing, coupon codes, 1-tap garage vehicle chips, and slot assignment. |
+| **Booking Lifecycle (Check-in/out)**| ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Check-in (for Confirmed status) and Check-out (for InProgress status) fully connected in [`BookingDetailScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Booking/BookingDetailScreen.js). |
+| **Booking Extensions** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Driver extension modal in [`BookingDetailScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Booking/BookingDetailScreen.js) & Vendor approval banner in [`VendorBookingsScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Vendor/VendorBookingsScreen.js). |
+| **Valet & Bay Assignment** | ✅ 100% | ✅ 100% | ⚠️ 80% | **Near Parity** | Redux thunks implemented; Valet request/cancel/ack/ready/complete and Bay actions in [`BookingDetailScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Booking/BookingDetailScreen.js). |
 | **Payments & Stripe** | ✅ 100% | ✅ 100% | ❌ 10% | **Missing** | Native Stripe PaymentSheet SDK not integrated for mobile checkout. |
 | **Parking Passes (Subscriptions)** | ✅ 100% | ✅ 100% | ⚠️ 60% | **Partial** | Active pass viewing and QR gate tokens work; in-app weekly/monthly pass purchase is web-only. |
 | **Event Packages** | ✅ 100% | ✅ 100% | ❌ 0% | **Web First** | Event parking packages created by vendors; browse & purchase available on web. |

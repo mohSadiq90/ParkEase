@@ -18,10 +18,10 @@ This document outlines all core features, architectural status, implementation r
 | **Spot Availability Forecast**| ML & Deterministic 24-hr Occupancy Forecast API | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Spot Availability Forecast**| Hourly Occupancy Projection & Peak Prediction Bar | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Booking Creation** | Price calculation, dynamic pricing, discount codes | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
-| **Booking Creation** | 1-Tap Garage Vehicle Picker & Slot Selection | ✅ Completed | ✅ Completed | ⚠️ Generic Inputs | **Pending Garage Link** |
-| **Booking Operations** | Check-in / Check-out Occupancy State Tracking | ✅ Completed | ✅ Completed | ❌ Not Implemented | **High Priority Gap** |
-| **Booking Operations** | Booking Extensions (Driver Request & Vendor Actions)| ✅ Completed | ✅ Completed | ❌ Not Implemented | **High Priority Gap** |
-| **Valet & Bay Assignment**| Valet lifecycle (Request, Ack, Ready, Complete) & Bay | ✅ Completed | ✅ Completed | ⚠️ Redux Thunks Ready | **Pending UI Controls** |
+| **Booking Creation** | 1-Tap Garage Vehicle Picker & Slot Selection | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
+| **Booking Operations** | Check-in / Check-out Occupancy State Tracking | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
+| **Booking Operations** | Booking Extensions (Driver Request & Vendor Actions)| ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
+| **Valet & Bay Assignment**| Valet lifecycle (Request, Ack, Ready, Complete) & Bay | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Payments & Receipts** | Stripe Payment Gateway Integration | ✅ Completed | ✅ Completed | ❌ Stubbed | **High Priority Gap** |
 | **Payments & Receipts** | Digital Receipt Breakdown with Itemized GST | ✅ Completed | ✅ Completed | ⚠️ In Booking Detail| **Pending Receipt Modal**|
 | **Parking Passes** | Active Pass Display & QR Gate Access Tokens | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
