@@ -40,7 +40,8 @@ const MyBookingsScreen = ({ navigation }) => {
         setRefreshing(false);
     }, [dispatch]);
 
-    const filteredBookings = myBookings.filter((b) => {
+    const bookingsList = Array.isArray(myBookings) ? myBookings : [];
+    const filteredBookings = bookingsList.filter((b) => {
         const filter = FILTERS[activeFilter].value;
         if (!filter) return true;
         return filter.includes(b.status);

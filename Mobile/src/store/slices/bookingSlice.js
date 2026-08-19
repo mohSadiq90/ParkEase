@@ -254,7 +254,10 @@ const bookingSlice = createSlice({
             })
             .addCase(getMyBookingsThunk.fulfilled, (state, action) => {
                 state.myBookingsLoading = false;
-                state.myBookings = action.payload?.bookings || action.payload || [];
+                const bookings = Array.isArray(action.payload)
+                    ? action.payload
+                    : (Array.isArray(action.payload?.bookings) ? action.payload.bookings : (Array.isArray(action.payload?.items) ? action.payload.items : []));
+                state.myBookings = bookings;
             })
             .addCase(getMyBookingsThunk.rejected, (state, action) => {
                 state.myBookingsLoading = false;
@@ -311,7 +314,10 @@ const bookingSlice = createSlice({
             })
             .addCase(getVendorBookingsThunk.fulfilled, (state, action) => {
                 state.vendorBookingsLoading = false;
-                state.vendorBookings = action.payload?.bookings || action.payload || [];
+                const bookings = Array.isArray(action.payload)
+                    ? action.payload
+                    : (Array.isArray(action.payload?.bookings) ? action.payload.bookings : (Array.isArray(action.payload?.items) ? action.payload.items : []));
+                state.vendorBookings = bookings;
             })
             .addCase(getVendorBookingsThunk.rejected, (state) => {
                 state.vendorBookingsLoading = false;

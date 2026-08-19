@@ -107,7 +107,10 @@ const notificationSlice = createSlice({
             })
             .addCase(getNotificationsThunk.fulfilled, (state, action) => {
                 state.loading = false;
-                state.items = action.payload || [];
+                const items = Array.isArray(action.payload)
+                    ? action.payload
+                    : (action.payload?.items || action.payload?.notifications || []);
+                state.items = Array.isArray(items) ? items : [];
                 state.unreadCount = state.items.filter(n => !n.isRead).length;
             })
             .addCase(getNotificationsThunk.rejected, (state, action) => {

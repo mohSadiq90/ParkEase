@@ -70,6 +70,12 @@ const DynamicDashboardScreen = (props) => {
     return <MemberDashboardScreen {...props} />;
 };
 
+const DynamicBookingsScreen = (props) => {
+    const { isVendor } = useAuth();
+    if (isVendor) return <VendorBookingsScreen {...props} />;
+    return <MyBookingsScreen {...props} />;
+};
+
 // ── Home Stack ──
 const HomeStack = () => (
     <Stack.Navigator screenOptions={stackOptions}>
@@ -118,12 +124,13 @@ const ListingsStack = () => (
 // ── Bookings Stack ──
 const BookingsStack = () => (
     <Stack.Navigator screenOptions={stackOptions}>
+        <Stack.Screen name="BookingsHome" component={DynamicBookingsScreen} options={{ animation: 'none' }} />
         <Stack.Screen name="MyBookings" component={MyBookingsScreen} options={{ animation: 'none' }} />
+        <Stack.Screen name="IncomingBookings" component={VendorBookingsScreen} options={{ animation: 'none' }} />
         <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
         <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
         <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
-        <Stack.Screen name="IncomingBookings" component={VendorBookingsScreen} options={{ animation: 'none' }} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
     </Stack.Navigator>
 );

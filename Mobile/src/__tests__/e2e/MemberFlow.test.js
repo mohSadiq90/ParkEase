@@ -9,6 +9,15 @@ import bookingReducer from '../../store/slices/bookingSlice';
 import dashboardReducer from '../../store/slices/dashboardSlice';
 import reviewReducer from '../../store/slices/reviewSlice';
 import uiReducer from '../../store/slices/uiSlice';
+import favoriteReducer from '../../store/slices/favoriteSlice';
+import notificationReducer from '../../store/slices/notificationSlice';
+import chatReducer from '../../store/slices/chatSlice';
+import paymentReducer from '../../store/slices/paymentSlice';
+import passReducer from '../../store/slices/passSlice';
+import corporateReducer from '../../store/slices/corporateSlice';
+import ancillaryReducer from '../../store/slices/ancillarySlice';
+import eventPackageReducer from '../../store/slices/eventPackageSlice';
+import iotReducer from '../../store/slices/iotSlice';
 import apiClient from '../../services/api/apiClient';
 
 jest.mock('../../services/api/apiClient');
@@ -24,7 +33,16 @@ function renderE2E() {
       booking: bookingReducer,
       dashboard: dashboardReducer,
       review: reviewReducer,
+      favorite: favoriteReducer,
+      notification: notificationReducer,
+      chat: chatReducer,
+      payment: paymentReducer,
+      pass: passReducer,
       ui: uiReducer,
+      corporate: corporateReducer,
+      ancillary: ancillaryReducer,
+      eventPackage: eventPackageReducer,
+      iot: iotReducer,
     },
   });
 

@@ -371,6 +371,26 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                         </View>
                     </View>
 
+                    {/* Spot Availability Prediction & Forecast */}
+                    {forecast && (forecast.currentAvailabilityBand || forecast.CurrentAvailabilityBand) && (
+                        <View style={[styles.section, { backgroundColor: colors.surface, padding: 14, borderRadius: 12, borderLeftWidth: 4, borderLeftColor: colors.primary, marginBottom: 16 }]}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Ionicons name="sparkles" size={18} color={colors.primary} />
+                                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Availability Forecast</Text>
+                                </View>
+                                <View style={{ backgroundColor: colors.successSoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                                    <Text style={{ fontSize: 12, color: colors.successDark, fontWeight: '700' }}>
+                                        {forecast.currentAvailabilityBand || forecast.CurrentAvailabilityBand || 'High'} Demand
+                                    </Text>
+                                </View>
+                            </View>
+                            <Text style={styles.description}>
+                                Predicted free spots: <Text style={{ fontWeight: '700', color: colors.primary }}>{forecast.currentPredictedAvailableSpots ?? forecast.CurrentPredictedAvailableSpots ?? parking.availableSpots}</Text> / {parking.totalSpots} spots · Confidence: {Math.round((forecast.currentConfidenceScore ?? forecast.CurrentConfidenceScore ?? 0.85) * 100)}%
+                            </Text>
+                        </View>
+                    )}
+
                     {/* Availability forecast */}
                     {(forecastLoading || forecastBuckets.length > 0) && (
                         <View style={styles.section}>
