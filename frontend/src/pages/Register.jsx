@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import AuthChannelSelector, {
+    authPath,
+    channelFromSearchParams,
+} from '../components/AuthChannelSelector';
+import SocialAuthSection from '../components/SocialAuthSection';
 import showToast from '../utils/toast.jsx';
-
-function safeReturnUrl(raw) {
-    if (!raw || typeof raw !== 'string') return null;
-    if (!raw.startsWith('/') || raw.startsWith('//')) return null;
-    return raw;
-}
+import { externalAuthErrorMessage } from '../utils/externalAuthErrors';
+import { postAuthDestination, safeReturnUrl } from '../utils/safeReturnUrl';
 
 export default function Register() {
     const [formData, setFormData] = useState({
@@ -19,10 +20,22 @@ export default function Register() {
         phoneNumber: '',
     });
     const [loading, setLoading] = useState(false);
-    const { register } = useAuth();
+    const { register, loginExternal, switchChannel } = useAuth();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const returnUrl = safeReturnUrl(searchParams.get('returnUrl'));
+    const channel = channelFromSearchParams(searchParams);
+    const isCorporate = channel === 'corporate';
+
+    const setChannel = (next) => {
+        const nextParams = new URLSearchParams(searchParams);
+        if (next === 'corporate') {
+            nextParams.set('channel', 'corporate');
+        } else {
+            nextParams.delete('channel');
+        }
+        setSearchParams(nextParams, { replace: true });
+    };
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -44,31 +57,104 @@ export default function Register() {
         setLoading(true);
 
         const { confirmPassword, ...registerData } = formData;
-
         const result = await register(registerData);
 
-        if (result.success) {
-            navigate(returnUrl || '/dashboard');
-        } else {
+        if (!result.success) {
             showToast.error(result.message || 'Registration failed');
+            setLoading(false);
+            return;
         }
 
+        if (isCorporate) {
+            // Shared identity from register, then enter Corporate bootstrap (or invite returnUrl).
+            const switched = await switchChannel({ channel: 'Corporate', bootstrap: true });
+            if (!switched.success) {
+                showToast.error(
+                    switched.message ||
+                        'Account created, but could not open Corporate. Sign in with Corporate selected.',
+                );
+                navigate(authPath('/login', { channel: 'corporate', returnUrl }));
+                setLoading(false);
+                return;
+            }
+            showToast.success('Account created — set up your company');
+            navigate(
+                postAuthDestination('corporate', {
+                    returnUrl,
+                    isBootstrap: true,
+                }),
+            );
+            setLoading(false);
+            return;
+        }
+
+        // Marketplace register → marketplace dashboard
+        navigate(postAuthDestination('marketplace', { returnUrl }));
         setLoading(false);
     };
 
-    const loginLink = returnUrl
-        ? `/login?returnUrl=${encodeURIComponent(returnUrl)}`
-        : '/login';
+    /** Marketplace Google credential → same external path as login (find-or-create). */
+    const handleGoogleCredential = async (idToken) => {
+        if (isCorporate || loading) return;
+        setLoading(true);
+        const result = await loginExternal({ provider: 'Google', idToken });
+        if (result.success) {
+            showToast.success(
+                result.isNewUser
+                    ? 'Account created. Set a password in Profile for recovery.'
+                    : 'Signed in'
+            );
+            navigate(postAuthDestination('marketplace', { returnUrl }));
+        } else {
+            showToast.error(externalAuthErrorMessage(result));
+        }
+        setLoading(false);
+    };
+
+    /** Marketplace Apple id_token + raw nonce + optional first-auth names. */
+    const handleAppleCredential = async ({ idToken, nonce, firstName, lastName }) => {
+        if (isCorporate || loading) return;
+        setLoading(true);
+        const result = await loginExternal({
+            provider: 'Apple',
+            idToken,
+            nonce,
+            firstName,
+            lastName,
+        });
+        if (result.success) {
+            showToast.success(
+                result.isNewUser
+                    ? 'Account created. Set a password in Profile for recovery.'
+                    : 'Signed in'
+            );
+            navigate(postAuthDestination('marketplace', { returnUrl }));
+        } else {
+            showToast.error(externalAuthErrorMessage(result));
+        }
+        setLoading(false);
+    };
+
+
+    const loginLink = authPath('/login', { channel, returnUrl });
+
+    const subtitle = (() => {
+        if (returnUrl?.includes('/invite/accept/')) {
+            return 'Create an account to accept your company invitation';
+        }
+        if (isCorporate) {
+            return 'Create an account for company parking management';
+        }
+        return 'Join our parking community';
+    })();
 
     return (
         <div className="auth-page">
             <div className="card auth-card">
                 <h1 className="auth-title">Create Account</h1>
-                <p className="auth-subtitle">
-                    {returnUrl?.includes('/invite/accept/')
-                        ? 'Create an account to accept your company invitation'
-                        : 'Join our parking community'}
-                </p>
+                <p className="auth-subtitle">{subtitle}</p>
+
+                <AuthChannelSelector value={channel} onChange={setChannel} />
 
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-2">
@@ -107,7 +193,7 @@ export default function Register() {
                             className="form-input"
                             value={formData.email}
                             onChange={handleChange}
-                            placeholder="john@example.com"
+                            placeholder={isCorporate ? 'work@company.com' : 'john@example.com'}
                             required
                         />
                     </div>
@@ -152,9 +238,23 @@ export default function Register() {
                     </div>
 
                     <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                        {loading ? 'Creating Account...' : 'Create Account'}
+                        {loading
+                            ? 'Creating Account...'
+                            : isCorporate
+                              ? 'Create Corporate Account'
+                              : 'Create Account'}
                     </button>
                 </form>
+
+                {/* Social only on Marketplace tab — never corporate channel (PR4 AC) */}
+                {!isCorporate && (
+                    <SocialAuthSection
+                        onGoogleCredential={handleGoogleCredential}
+                        onAppleCredential={handleAppleCredential}
+                        disabled={loading}
+                    />
+                )}
+
 
                 <p className="auth-footer">
                     Already have an account? <Link to={loginLink}>Sign in</Link>

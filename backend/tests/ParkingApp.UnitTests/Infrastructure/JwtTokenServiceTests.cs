@@ -1,5 +1,4 @@
-using ParkingApp.Infrastructure.Services;
-using System;
+﻿using System;
 using System.IdentityModel.Tokens.Jwt;
 using ParkingApp.Identity.Infrastructure.Services;
 using System.Linq;
@@ -7,12 +6,8 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Moq;
-using ParkingApp.BuildingBlocks.Domain;
-using ParkingApp.Marketplace.Domain.Entities;
+using ParkingApp.BuildingBlocks.Security;
 using ParkingApp.Identity.Domain.Entities;
-using ParkingApp.Messaging.Domain.Entities;
-using ParkingApp.Corporate.Domain;
-using ParkingApp.Domain.Enums;
 using ParkingApp.Identity.Domain.Enums;
 using Xunit;
 
@@ -31,20 +26,52 @@ public class JwtTokenServiceTests
         _mockConfig.Setup(c => c["Jwt:Issuer"]).Returns("TestIssuer");
         _mockConfig.Setup(c => c["Jwt:Audience"]).Returns("TestAudience");
         _mockConfig.Setup(c => c["Jwt:AccessTokenExpirationMinutes"]).Returns("60");
+        _mockConfig.Setup(c => c["Jwt:RefreshTokenExpirationDays"]).Returns("15");
 
         _service = new JwtTokenService(_mockConfig.Object);
     }
 
     [Fact]
-    public void GenerateAccessToken_ShouldReturnValidToken()
+    public void Constructor_ShouldReadTokenLifetimes_FromConfig()
     {
-        // Arrange
+        _service.AccessTokenExpirationMinutes.Should().Be(60);
+        _service.RefreshTokenExpirationDays.Should().Be(15);
+    }
+
+    [Fact]
+    public void CreateRefreshTokenExpiryUtc_ShouldBeAboutConfiguredDaysFromNow()
+    {
+        var before = DateTime.UtcNow.AddDays(15).AddSeconds(-2);
+        var expiry = _service.CreateRefreshTokenExpiryUtc();
+        var after = DateTime.UtcNow.AddDays(15).AddSeconds(2);
+
+        expiry.Should().BeOnOrAfter(before);
+        expiry.Should().BeOnOrBefore(after);
+    }
+
+    [Fact]
+    public void Constructor_ShouldDefaultRefreshTo15Days_WhenConfigMissing()
+    {
+        var config = new Mock<IConfiguration>();
+        config.Setup(c => c["Jwt:SecretKey"]).Returns(SecretKey);
+        config.Setup(c => c["Jwt:Issuer"]).Returns("TestIssuer");
+        config.Setup(c => c["Jwt:Audience"]).Returns("TestAudience");
+        // Access/refresh keys omitted → defaults
+
+        var service = new JwtTokenService(config.Object);
+
+        service.AccessTokenExpirationMinutes.Should().Be(JwtTokenService.DefaultAccessTokenExpirationMinutes);
+        service.RefreshTokenExpirationDays.Should().Be(JwtTokenService.DefaultRefreshTokenExpirationDays);
+        service.RefreshTokenExpirationDays.Should().Be(15);
+    }
+
+    [Fact]
+    public void GenerateAccessToken_ShouldReturnValidToken_WithChannelClaim()
+    {
         var user = new User { Id = Guid.NewGuid(), Email = "test@example.com", PasswordHash = "hash", FirstName = "Test", LastName = "User", PhoneNumber = "1", IsActive = true };
 
-        // Act
-        var token = _service.GenerateAccessToken(user);
+        var token = _service.GenerateAccessToken(user, ProductChannel.Marketplace);
 
-        // Assert
         token.Should().NotBeNullOrEmpty();
         var handler = new JwtSecurityTokenHandler();
         var jwtToken = handler.ReadJwtToken(token);
@@ -54,15 +81,65 @@ public class JwtTokenServiceTests
         jwtToken.Claims.First(c => c.Type == JwtRegisteredClaimNames.Sub).Value.Should().Be(user.Id.ToString());
         jwtToken.Claims.First(c => c.Type == JwtRegisteredClaimNames.Email).Value.Should().Be(user.Email.Value);
         jwtToken.Claims.First(c => c.Type == ClaimTypes.Role).Value.Should().Be(user.Role.ToString());
+        jwtToken.Claims.First(c => c.Type == ParkEaseClaimTypes.Channel).Value.Should().Be(nameof(ProductChannel.Marketplace));
+        jwtToken.Claims.Any(c => c.Type == ParkEaseClaimTypes.CompanyId).Should().BeFalse();
+        jwtToken.Claims.Any(c => c.Type == ParkEaseClaimTypes.CompanyRole).Should().BeFalse();
+    }
+
+    [Fact]
+    public void GenerateAccessToken_Corporate_ShouldIncludeCompanyClaims()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "corp@example.com", PasswordHash = "hash", FirstName = "Corp", LastName = "User", PhoneNumber = "1", IsActive = true };
+        var companyId = Guid.NewGuid();
+
+        var token = _service.GenerateAccessToken(user, ProductChannel.Corporate, companyId, "Admin");
+        var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        jwtToken.Claims.First(c => c.Type == ParkEaseClaimTypes.Channel).Value.Should().Be(nameof(ProductChannel.Corporate));
+        jwtToken.Claims.First(c => c.Type == ParkEaseClaimTypes.CompanyId).Value.Should().Be(companyId.ToString());
+        jwtToken.Claims.First(c => c.Type == ParkEaseClaimTypes.CompanyRole).Value.Should().Be("Admin");
+    }
+
+    [Fact]
+    public void GenerateAccessToken_AdminChannel_ShouldEmitAdminClaim()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "admin@example.com",
+            PasswordHash = "hash",
+            FirstName = "A",
+            LastName = "D",
+            PhoneNumber = "1",
+            IsActive = true,
+            Role = UserRole.Admin
+        };
+
+        var token = _service.GenerateAccessToken(user, ProductChannel.Admin);
+        var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        jwtToken.Claims.First(c => c.Type == ParkEaseClaimTypes.Channel).Value.Should().Be(nameof(ProductChannel.Admin));
+        jwtToken.Claims.First(c => c.Type == ClaimTypes.Role).Value.Should().Be(nameof(UserRole.Admin));
+    }
+
+    [Fact]
+    public void GenerateAccessToken_Marketplace_IgnoresCompanyArgs()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "m@example.com", PasswordHash = "hash", FirstName = "M", LastName = "U", PhoneNumber = "1", IsActive = true };
+        var companyId = Guid.NewGuid();
+
+        var token = _service.GenerateAccessToken(user, ProductChannel.Marketplace, companyId, "Admin");
+        var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        jwtToken.Claims.First(c => c.Type == ParkEaseClaimTypes.Channel).Value.Should().Be(nameof(ProductChannel.Marketplace));
+        jwtToken.Claims.Any(c => c.Type == ParkEaseClaimTypes.CompanyId).Should().BeFalse();
+        jwtToken.Claims.Any(c => c.Type == ParkEaseClaimTypes.CompanyRole).Should().BeFalse();
     }
 
     [Fact]
     public void GenerateRefreshToken_ShouldReturnString()
     {
-        // Act
         var token = _service.GenerateRefreshToken();
-
-        // Assert
         token.Should().NotBeNullOrEmpty();
         token.Length.Should().BeGreaterThan(20);
     }
@@ -70,7 +147,6 @@ public class JwtTokenServiceTests
     [Fact]
     public void ValidateRefreshToken_ShouldReturnTrue_WhenValid()
     {
-        // Arrange
         var token = "valid-token";
         var user = new User
         {
@@ -84,18 +160,12 @@ public class JwtTokenServiceTests
             RefreshToken = token,
             RefreshTokenExpiryTime = DateTime.UtcNow.AddHours(1)
         };
-
-        // Act
-        var isValid = _service.ValidateRefreshToken(user, token);
-
-        // Assert
-        isValid.Should().BeTrue();
+        _service.ValidateRefreshToken(user, token).Should().BeTrue();
     }
 
     [Fact]
     public void ValidateRefreshToken_ShouldReturnFalse_WhenExpired()
     {
-        // Arrange
         var token = "valid-token";
         var user = new User
         {
@@ -109,18 +179,12 @@ public class JwtTokenServiceTests
             RefreshToken = token,
             RefreshTokenExpiryTime = DateTime.UtcNow.AddHours(-1)
         };
-
-        // Act
-        var isValid = _service.ValidateRefreshToken(user, token);
-
-        // Assert
-        isValid.Should().BeFalse();
+        _service.ValidateRefreshToken(user, token).Should().BeFalse();
     }
 
     [Fact]
     public void ValidateRefreshToken_ShouldReturnFalse_WhenTokenMismatch()
     {
-        // Arrange
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -133,16 +197,6 @@ public class JwtTokenServiceTests
             RefreshToken = "valid-token",
             RefreshTokenExpiryTime = DateTime.UtcNow.AddHours(1)
         };
-
-        // Act
-        var isValid = _service.ValidateRefreshToken(user, "wrong-token");
-
-        // Assert
-        isValid.Should().BeFalse();
+        _service.ValidateRefreshToken(user, "wrong-token").Should().BeFalse();
     }
 }
-
-
-
-
-

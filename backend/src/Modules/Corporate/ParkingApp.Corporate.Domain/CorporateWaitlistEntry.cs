@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ParkingApp.BuildingBlocks.Enums;
 // Removed Marketplace reference for isolation
 using ParkingApp.BuildingBlocks.Domain;
@@ -29,6 +30,8 @@ public class CorporateWaitlistEntry : BaseEntity
     public virtual UserCompanyMembership Membership { get; private set; } = null!;
     public virtual ParkingAllocation Allocation { get; private set; } = null!;
 
+    // Required for EF Core materialization — no business logic.
+    [ExcludeFromCodeCoverage]
     private CorporateWaitlistEntry()
     {
     }
@@ -70,7 +73,8 @@ public class CorporateWaitlistEntry : BaseEntity
         string visitorName,
         string visitorLicensePlate,
         DateTime accessExpiryUtc,
-        int priorityAtRequest)
+        int priorityAtRequest,
+        VehicleType vehicleType = VehicleType.Car)
     {
         ValidateRequiredIds(companyId, membershipId, allocationId);
         ValidateRequestedWindow(requestedStartDateTime, requestedEndDateTime);
@@ -101,7 +105,7 @@ public class CorporateWaitlistEntry : BaseEntity
             AllocationId = allocationId,
             RequestedStartDateTime = normalizedStart,
             RequestedEndDateTime = normalizedEnd,
-            VehicleType = VehicleType.Car,
+            VehicleType = vehicleType,
             VehicleNumber = NormalizeVehicleNumber(visitorLicensePlate),
             VisitorName = visitorName.Trim(),
             VisitorLicensePlate = NormalizeVehicleNumber(visitorLicensePlate),

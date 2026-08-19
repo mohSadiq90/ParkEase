@@ -15,10 +15,11 @@ public record GetBookingByIdQuery(
 ) : IQuery<ApiResponse<BookingDto>>;
 
 /// <summary>
-/// Query to get a booking by reference number
+/// Query to get a booking by reference number (caller must be guest or parking owner).
 /// </summary>
 public record GetBookingByReferenceQuery(
-    string Reference
+    string Reference,
+    Guid UserId
 ) : IQuery<ApiResponse<BookingDto>>;
 
 /// <summary>
@@ -46,7 +47,9 @@ public record CalculatePriceQuery(
     DateTime EndDateTime,
     int PricingType,
     string? DiscountCode,
-    Guid? UserId = null
+    Guid? UserId = null,
+    bool IncludeEvCharging = false,
+    IReadOnlyList<Guid>? AncillaryServiceIds = null
 ) : IQuery<ApiResponse<PriceBreakdownDto>>;
 
 /// <summary>
@@ -64,4 +67,28 @@ public record GetBookingsByParkingSpaceQuery(
     Guid VendorId,
     BookingFilterDto? Filter
 ) : IQuery<ApiResponse<BookingListResultDto>>;
+
+/// <summary>Guest (or facility owner) digital access pass for QR display.</summary>
+public record GetBookingAccessPassQuery(
+    Guid BookingId,
+    Guid UserId
+) : IQuery<ApiResponse<BookingAccessPassDto>>;
+
+/// <summary>Download Apple Wallet .pkpass for a booking access pass.</summary>
+public record GetAppleWalletPassQuery(
+    Guid BookingId,
+    Guid UserId
+) : IQuery<ApiResponse<AppleWalletPassFileDto>>;
+
+/// <summary>Google Wallet save URL (JWT) for a booking access pass.</summary>
+public record GetGoogleWalletSaveLinkQuery(
+    Guid BookingId,
+    Guid UserId
+) : IQuery<ApiResponse<GoogleWalletSaveLinkDto>>;
+
+/// <summary>Verify a scanned access-pass token (guest self-check or vendor gate).</summary>
+public record VerifyAccessPassQuery(
+    string Token,
+    Guid? RequesterUserId = null
+) : IQuery<ApiResponse<AccessPassVerifyResultDto>>;
 

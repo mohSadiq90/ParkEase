@@ -44,7 +44,34 @@ public class ParkingSpaceFactoryTests
         parking.OwnershipType.Should().Be(ParkingSpaceOwnershipType.CompanyOwned);
         parking.IsCorporateOnly.Should().BeTrue();
         parking.IsVerified.Should().BeTrue();
+        parking.HasTypedPhysicalCapacity.Should().BeFalse();
         parking.DomainEvents.Should().ContainSingle(e => e is ParkingSpaceCreatedEvent);
+    }
+
+    [Fact]
+    public void SetPhysicalVehicleClassCapacity_WithinTotal_Succeeds()
+    {
+        var parking = ParkingSpace.CreateForCompany(
+            OwnerId, CompanyId, "HQ Lot", "Desc", "Addr", "City", "ST", "IN", "560001",
+            12.9, 77.6, ParkingType.Covered, 70, 0, 0, 0, 0);
+
+        parking.SetPhysicalVehicleClassCapacity(20, 50);
+
+        parking.TwoWheelerPhysicalSpots.Should().Be(20);
+        parking.FourWheelerPhysicalSpots.Should().Be(50);
+        parking.HasTypedPhysicalCapacity.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SetPhysicalVehicleClassCapacity_ExceedsTotal_Throws()
+    {
+        var parking = ParkingSpace.CreateForCompany(
+            OwnerId, CompanyId, "HQ Lot", "Desc", "Addr", "City", "ST", "IN", "560001",
+            12.9, 77.6, ParkingType.Covered, 70, 0, 0, 0, 0);
+
+        var act = () => parking.SetPhysicalVehicleClassCapacity(40, 40);
+
+        act.Should().Throw<ValidationException>().WithMessage("*cannot exceed total spots*");
     }
 
     [Fact]
@@ -70,6 +97,36 @@ public class ParkingSpaceFactoryTests
         parking.IsActive.Should().BeFalse();
         var toggled = parking.DomainEvents.OfType<ParkingSpaceToggledEvent>().Should().ContainSingle().Subject;
         toggled.IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SetDynamicPricing_EnablesAndStoresMultipliers()
+    {
+        var parking = ParkingSpace.CreateForVendor(
+            OwnerId, "Lot", "D", "A", "C", "S", "IN", "1",
+            0, 0, ParkingType.Open, 2, 10, 10, 10, 10);
+        parking.ClearDomainEvents();
+
+        parking.SetDynamicPricing(true, 0.75m, 1.5m, 1.2m, 1.1m);
+
+        parking.IsDynamicPricingEnabled.Should().BeTrue();
+        parking.DynamicMinMultiplier.Should().Be(0.75m);
+        parking.DynamicMaxMultiplier.Should().Be(1.5m);
+        parking.PeakHourMultiplier.Should().Be(1.2m);
+        parking.WeekendMultiplier.Should().Be(1.1m);
+        parking.DomainEvents.Should().ContainSingle(e => e is ParkingSpaceUpdatedEvent);
+    }
+
+    [Fact]
+    public void SetDynamicPricing_InvalidRange_Throws()
+    {
+        var parking = ParkingSpace.CreateForVendor(
+            OwnerId, "Lot", "D", "A", "C", "S", "IN", "1",
+            0, 0, ParkingType.Open, 2, 10, 10, 10, 10);
+
+        var act = () => parking.SetDynamicPricing(true, minMultiplier: 1.2m, maxMultiplier: 1.0m);
+
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]

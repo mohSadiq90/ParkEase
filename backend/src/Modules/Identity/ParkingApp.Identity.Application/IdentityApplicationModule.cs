@@ -17,6 +17,10 @@ public static class IdentityApplicationModule
     {
         services.AddScoped<IValidator<RegisterDto>, RegisterDtoValidator>();
         services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
+        services.AddScoped<IValidator<ExternalLoginDto>, ExternalLoginDtoValidator>();
+        services.AddScoped<IValidator<LinkExternalLoginDto>, LinkExternalLoginDtoValidator>();
+        services.AddScoped<IValidator<SetPasswordDto>, SetPasswordDtoValidator>();
+        services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordDtoValidator>();
         services.AddHandlersFromAssembly(Assembly.GetExecutingAssembly(), throwIfMissingHandlers: false);
         return services;
     }

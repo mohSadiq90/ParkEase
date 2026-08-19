@@ -4,6 +4,7 @@ using ParkingApp.Marketplace.Contracts.Enums;
 using ParkingApp.BuildingBlocks.Enums;
 using ParkingApp.Marketplace.Domain.Interfaces;
 using ParkingApp.Marketplace.Domain.Entities;
+using ParkingApp.Marketplace.Domain.ValueObjects;
 using ParkingApp.Marketplace.Application.Interfaces;
 
 namespace ParkingApp.Marketplace.Infrastructure.ModuleAdapters;
@@ -61,6 +62,15 @@ internal sealed class MarketplaceBookingService : IMarketplaceBookingService, IM
         StageCorporateBookingRequest request,
         CancellationToken cancellationToken = default)
     {
+        var parking = await _marketplace.ParkingSpaces.GetByIdAsync(request.ParkingSpaceId, cancellationToken);
+        if (parking is null)
+            throw new ValidationException("parkingSpaceId", "Parking space not found");
+
+        if (parking.IsLprEnabled && string.IsNullOrWhiteSpace(LicensePlate.Normalize(request.VehicleNumber)))
+            throw new ValidationException(
+                "vehicleNumber",
+                "A license plate is required for LPR-enabled parking facilities.");
+
         Booking booking;
 
         if (request.IsVisitor)
@@ -71,19 +81,25 @@ internal sealed class MarketplaceBookingService : IMarketplaceBookingService, IM
                 request.StartUtc,
                 request.EndUtc,
                 request.Amount,
-                request.VehicleNumber);
+                request.VehicleNumber,
+                vehicleType: request.VehicleType);
         }
         else
         {
-            // Default to Car if not specified; ideally passed in if known, but for backward compat we use Car.
             booking = Booking.CreateCorporateEmployee(
                 request.UserId,
                 request.ParkingSpaceId,
                 request.StartUtc,
                 request.EndUtc,
-                VehicleType.Car,
+                request.VehicleType,
                 request.Amount,
                 request.VehicleNumber);
+        }
+
+        // Align marketplace row Id with CorporateBooking.BookingId when Corporate reserves first.
+        if (request.BookingId is { } bookingId && bookingId != Guid.Empty)
+        {
+            booking.Id = bookingId;
         }
 
         await _marketplace.Bookings.AddAsync(booking, cancellationToken);

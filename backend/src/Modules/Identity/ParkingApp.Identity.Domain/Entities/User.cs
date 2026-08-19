@@ -1,5 +1,6 @@
-﻿using ParkingApp.BuildingBlocks.Domain;
+using ParkingApp.BuildingBlocks.Domain;
 using ParkingApp.BuildingBlocks.Exceptions;
+using ParkingApp.BuildingBlocks.Security;
 using ParkingApp.BuildingBlocks.ValueObjects;
 using ParkingApp.Identity.Domain.Enums;
 
@@ -14,7 +15,9 @@ public class User : BaseEntity
     /// <summary>Validated email value object (persisted as string via EF conversion).</summary>
     public Email Email { get; internal set; } = null!;
 
-    public string PasswordHash { get; internal set; } = string.Empty;
+    /// <summary>Null when the account is social-only (no password set).</summary>
+    public string? PasswordHash { get; internal set; }
+
     public string FirstName { get; internal set; } = string.Empty;
     public string LastName { get; internal set; } = string.Empty;
     public string PhoneNumber { get; internal set; } = string.Empty;
@@ -26,11 +29,24 @@ public class User : BaseEntity
     public DateTime? RefreshTokenExpiryTime { get; internal set; }
     public DateTime? LastLoginAt { get; internal set; }
 
+    /// <summary>Last successful mint product channel (session bind for refresh). Nullable for legacy users.</summary>
+    public ProductChannel? SessionChannel { get; internal set; }
+
+    /// <summary>Last Corporate company bind (null for Marketplace/Admin/bootstrap).</summary>
+    public Guid? SessionCompanyId { get; internal set; }
+
+    /// <summary>Last Corporate company_role (Admin|Employee) for re-mint; null when unbound.</summary>
+    public string? SessionCompanyRole { get; internal set; }
+
     // Identity-owned collections only (no Marketplace reverse navigations)
     public virtual ICollection<Vehicle> Vehicles { get; internal set; } = new List<Vehicle>();
     public virtual ICollection<DeviceToken> DeviceTokens { get; internal set; } = new List<DeviceToken>();
+    public virtual ICollection<UserExternalLogin> ExternalLogins { get; internal set; } = new List<UserExternalLogin>();
 
     public string FullName => $"{FirstName} {LastName}".Trim();
+
+    /// <summary>True when a password hash is present (password auth is available).</summary>
+    public bool HasPassword => !string.IsNullOrEmpty(PasswordHash);
 
     internal User()
     {
@@ -73,6 +89,65 @@ public class User : BaseEntity
         };
     }
 
+    /// <summary>
+    /// Creates a Marketplace social-only user (null password). Name policy KD-SL-16:
+    /// never fails solely for missing names; defaults first from email local-part or "User", last "Account".
+    /// </summary>
+    public static User RegisterFromExternal(
+        string email,
+        string? firstName = null,
+        string? lastName = null,
+        string? phoneNumber = null,
+        bool emailVerified = false)
+    {
+        Email emailVo;
+        try
+        {
+            emailVo = new Email(email);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new ValidationException("email", ex.Message);
+        }
+
+        var first = TrimOrNull(firstName) ?? DeriveFirstNameFromEmail(emailVo.Value) ?? "User";
+        var last = TrimOrNull(lastName) ?? "Account";
+
+        return new User
+        {
+            Email = emailVo,
+            PasswordHash = null,
+            FirstName = first,
+            LastName = last,
+            PhoneNumber = phoneNumber?.Trim() ?? string.Empty,
+            Role = UserRole.User,
+            IsEmailVerified = emailVerified,
+            IsActive = true
+        };
+    }
+
+    /// <summary>
+    /// Links an external provider subject to this user. Enforces one link per provider per user in-memory;
+    /// DB unique indexes remain the final guard.
+    /// </summary>
+    public UserExternalLogin LinkExternalLogin(
+        ExternalAuthProvider provider,
+        string providerSubject,
+        string? providerEmail = null,
+        DateTime? linkedAtUtc = null)
+    {
+        if (string.IsNullOrWhiteSpace(providerSubject))
+            throw new ValidationException("providerSubject", "Provider subject is required");
+
+        if (ExternalLogins.Any(l => l.Provider == provider && !l.IsDeleted))
+            throw new BusinessRuleException("User.LinkExternalLogin", $"Provider {provider} is already linked");
+
+        var login = UserExternalLogin.Create(Id, provider, providerSubject, providerEmail, linkedAtUtc);
+        ExternalLogins.Add(login);
+        UpdatedAt = DateTime.UtcNow;
+        return login;
+    }
+
     public void UpdateProfile(string? firstName, string? lastName, string? phoneNumber)
     {
         if (!string.IsNullOrWhiteSpace(firstName))
@@ -101,10 +176,36 @@ public class User : BaseEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Persist product-channel session bind (KD-2). Call after every successful mint.
+    /// Company fields are only stored when <paramref name="channel"/> is Corporate; otherwise forced null.
+    /// </summary>
+    public void BindSession(ProductChannel channel, Guid? companyId = null, string? companyRole = null)
+    {
+        SessionChannel = channel;
+        if (channel == ProductChannel.Corporate)
+        {
+            SessionCompanyId = companyId;
+            SessionCompanyRole = companyRole;
+        }
+        else
+        {
+            SessionCompanyId = null;
+            SessionCompanyRole = null;
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Clears refresh token and session channel bind (KD-26).
+    /// </summary>
     public void RevokeRefreshToken()
     {
         RefreshToken = null;
         RefreshTokenExpiryTime = null;
+        SessionChannel = null;
+        SessionCompanyId = null;
+        SessionCompanyRole = null;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -145,5 +246,46 @@ public class User : BaseEntity
     {
         IsPhoneVerified = true;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static string? TrimOrNull(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        return value.Trim();
+    }
+
+    /// <summary>
+    /// Prefer a readable local-part token as first name when IdP omits given name.
+    /// Returns null when local-part is empty or not useful (e.g. pure digits only still allowed).
+    /// </summary>
+    private static string? DeriveFirstNameFromEmail(string email)
+    {
+        var at = email.IndexOf('@');
+        if (at <= 0)
+            return null;
+
+        var local = email[..at].Trim();
+        if (string.IsNullOrEmpty(local))
+            return null;
+
+        // Strip common plus-tag and take first segment of dotted local-parts
+        var plus = local.IndexOf('+');
+        if (plus >= 0)
+            local = local[..plus];
+
+        var dot = local.IndexOf('.');
+        if (dot > 0)
+            local = local[..dot];
+
+        local = local.Trim();
+        if (string.IsNullOrEmpty(local))
+            return null;
+
+        // Capitalize first letter for display
+        if (local.Length == 1)
+            return local.ToUpperInvariant();
+
+        return char.ToUpperInvariant(local[0]) + local[1..].ToLowerInvariant();
     }
 }

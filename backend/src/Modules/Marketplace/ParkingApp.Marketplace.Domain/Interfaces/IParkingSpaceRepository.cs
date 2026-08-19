@@ -28,8 +28,22 @@ public interface IParkingSpaceRepository : IRepository<ParkingSpace>
         int pageSize = 20,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Marketplace owner/vendor listings for the given owner.
+    /// Excludes company-owned (<c>IsCorporateOnly</c>) inventory — those are served via corporate company APIs.
+    /// Platform admin listing uses <see cref="SearchForAdminAsync"/> (unfiltered by <c>IsCorporateOnly</c>).
+    /// </summary>
     Task<IEnumerable<ParkingSpace>> GetByOwnerIdAsync(Guid ownerId, CancellationToken cancellationToken = default);
     Task<bool> ExistsWithZoneCodeAsync(string zoneCode, CancellationToken cancellationToken = default);
+
+    /// <summary>Platform-admin listing search (includes inactive; soft-deleted still filtered by EF). Does not exclude IsCorporateOnly.</summary>
+    Task<(IReadOnlyList<ParkingSpace> Items, int TotalCount)> SearchForAdminAsync(
+        string? search,
+        bool? isActive,
+        bool? isVerified,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 
     Task<IEnumerable<ParkingMapModel>> GetMapCoordinatesAsync(
         string? state = null,
@@ -55,6 +69,7 @@ public interface IBookingRepository : IRepository<Booking>
     Task<IEnumerable<Booking>> GetByParkingSpaceIdAsync(Guid parkingSpaceId, CancellationToken cancellationToken = default);
     Task<IEnumerable<Booking>> GetByVendorIdAsync(Guid vendorId, CancellationToken cancellationToken = default);
     Task<Booking?> GetByReferenceAsync(string bookingReference, CancellationToken cancellationToken = default);
+    Task<Booking?> GetByAccessPassTokenAsync(string accessPassToken, CancellationToken cancellationToken = default);
     Task<Booking?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
     Task<bool> HasOverlappingBookingAsync(Guid parkingSpaceId, DateTime startDateTime, DateTime endDateTime, Guid? excludeBookingId = null, CancellationToken cancellationToken = default);
     Task<int> GetActiveBookingsCountAsync(Guid parkingSpaceId, DateTime startDateTime, DateTime endDateTime, CancellationToken cancellationToken = default);
@@ -63,6 +78,66 @@ public interface IBookingRepository : IRepository<Booking>
     Task<bool> HasBlockingBookingsForSpaceAsync(Guid parkingSpaceId, DateTime utcNow, CancellationToken cancellationToken = default);
     Task<IEnumerable<Booking>> GetActiveBookingsForSpacesAsync(IEnumerable<Guid> parkingSpaceIds, CancellationToken cancellationToken = default);
     Task<IEnumerable<Booking>> GetForecastRelevantBookingsForSpacesAsync(IEnumerable<Guid> parkingSpaceIds, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Bookings eligible for LPR entry/exit at a facility for a normalized plate.
+    /// </summary>
+    Task<IReadOnlyList<Booking>> FindLprCandidatesAsync(
+        Guid parkingSpaceId,
+        string normalizedLicensePlate,
+        LprDirection direction,
+        DateTime occurredAtUtc,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>In-progress bookings past EndDateTime that have not been overstay-notified.</summary>
+    Task<IReadOnlyList<Booking>> GetOverdueInProgressAsync(
+        DateTime asOfUtc,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Confirmed/InProgress bookings ending within (now, windowEndUtc] that have not been session-reminded.
+    /// </summary>
+    Task<IReadOnlyList<Booking>> GetEndingSoonForReminderAsync(
+        DateTime nowUtc,
+        DateTime windowEndUtc,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Bookings linked to the given event packages (for sell-through revenue).
+    /// </summary>
+    Task<IReadOnlyList<Booking>> GetByEventPackageIdsAsync(
+        IEnumerable<Guid> eventPackageIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Platform-admin booking search (reference, plate, user/space ids, status).</summary>
+    Task<(IReadOnlyList<Booking> Items, int TotalCount)> SearchForAdminAsync(
+        string? search,
+        BookingStatus? status,
+        Guid? userId,
+        Guid? parkingSpaceId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ILprAccessAttemptRepository : IRepository<LprAccessAttempt>
+{
+}
+
+public interface ILprCameraKeyRepository : IRepository<LprCameraKey>
+{
+    Task<LprCameraKey?> FindEnabledBySecretHashAsync(string secretHash, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<LprCameraKey>> GetByParkingSpaceIdAsync(Guid parkingSpaceId, CancellationToken cancellationToken = default);
+    Task<bool> KeyIdExistsAsync(string keyId, Guid? excludeId = null, CancellationToken cancellationToken = default);
+}
+
+public interface ILprPlateRuleRepository : IRepository<LprPlateRule>
+{
+    Task<IReadOnlyList<LprPlateRule>> GetEnabledByParkingSpaceIdAsync(Guid parkingSpaceId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<LprPlateRule>> GetByParkingSpaceIdAsync(Guid parkingSpaceId, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(Guid parkingSpaceId, string normalizedPlate, LprPlateRuleType ruleType, Guid? excludeId = null, CancellationToken cancellationToken = default);
 }
 
 public interface IParkingPassRepository : IRepository<ParkingPass>
@@ -79,6 +154,16 @@ public interface IPaymentRepository : IRepository<Payment>
     Task<Payment?> GetByBookingIdAsync(Guid bookingId, CancellationToken cancellationToken = default);
     Task<IEnumerable<Payment>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Payment?> GetByTransactionIdAsync(string transactionId, CancellationToken cancellationToken = default);
+
+    /// <summary>Platform-admin payment search (transaction id, booking/user ids, status).</summary>
+    Task<(IReadOnlyList<Payment> Items, int TotalCount)> SearchForAdminAsync(
+        string? search,
+        PaymentStatus? status,
+        Guid? userId,
+        Guid? bookingId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IReviewRepository : IRepository<Review>
@@ -94,6 +179,69 @@ public interface IFavoriteRepository : IRepository<Favorite>
     Task<Favorite?> GetByUserAndSpaceAsync(Guid userId, Guid parkingSpaceId, CancellationToken cancellationToken = default);
 }
 
+public interface IEvChargingSessionRepository : IRepository<EvChargingSession>
+{
+    Task<EvChargingSession?> GetByOcppTransactionIdAsync(
+        string ocppTransactionId,
+        CancellationToken cancellationToken = default);
+
+    Task<EvChargingSession?> GetActiveByBookingIdAsync(
+        Guid bookingId,
+        CancellationToken cancellationToken = default);
+
+    Task<EvChargingSession?> GetLatestByBookingIdAsync(
+        Guid bookingId,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IEventParkingPackageRepository : IRepository<EventParkingPackage>
+{
+    Task<IReadOnlyList<EventParkingPackage>> GetByParkingSpaceIdAsync(
+        Guid parkingSpaceId,
+        bool activeOnly,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EventParkingPackage>> GetOnSaleAsync(
+        DateTime asOfUtc,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    Task<EventParkingPackage?> GetByIdWithSpaceAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EventParkingPackage>> GetByVenueEventIdAsync(
+        Guid venueEventId,
+        bool activeOnly,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EventParkingPackage>> GetByParkingSpaceIdsAsync(
+        IEnumerable<Guid> parkingSpaceIds,
+        bool activeOnly,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IParkingAncillaryServiceRepository : IRepository<ParkingAncillaryService>
+{
+    Task<IReadOnlyList<ParkingAncillaryService>> GetByParkingSpaceIdAsync(
+        Guid parkingSpaceId,
+        bool activeOnly,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ParkingAncillaryService>> GetByParkingSpaceIdsAsync(
+        IEnumerable<Guid> parkingSpaceIds,
+        bool activeOnly,
+        CancellationToken cancellationToken = default);
+
+    Task<ParkingAncillaryService?> GetByIdWithSpaceAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ParkingAncillaryService>> GetByIdsForSpaceAsync(
+        Guid parkingSpaceId,
+        IEnumerable<Guid> serviceIds,
+        bool activeOnly,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IMarketplaceUnitOfWork : IUnitOfWorkTransaction
 {
     IParkingSpaceRepository ParkingSpaces { get; }
@@ -102,5 +250,11 @@ public interface IMarketplaceUnitOfWork : IUnitOfWorkTransaction
     IPaymentRepository Payments { get; }
     IReviewRepository Reviews { get; }
     IFavoriteRepository Favorites { get; }
+    ILprAccessAttemptRepository LprAccessAttempts { get; }
+    ILprCameraKeyRepository LprCameraKeys { get; }
+    ILprPlateRuleRepository LprPlateRules { get; }
+    IEventParkingPackageRepository EventParkingPackages { get; }
+    IEvChargingSessionRepository EvChargingSessions { get; }
+    IParkingAncillaryServiceRepository ParkingAncillaryServices { get; }
 }
 

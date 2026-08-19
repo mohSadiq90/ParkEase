@@ -31,4 +31,23 @@ public class RateLimitingMiddlewareTests
     {
         RateLimitingMiddleware.ShouldSkipRateLimit(new PathString(path)).Should().BeFalse();
     }
+
+    [Theory]
+    [InlineData("/api/auth/external")]
+    [InlineData("/api/auth/external/link")]
+    [InlineData("/api/auth/external/providers")]
+    [InlineData("/API/auth/external")]
+    public void IsExternalAuthPath_MatchesExternalRoutes(string path)
+    {
+        RateLimitingMiddleware.IsExternalAuthPath(new PathString(path)).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("/api/auth/login")]
+    [InlineData("/api/auth/register")]
+    [InlineData("/api/iot/lpr")]
+    public void IsExternalAuthPath_DoesNotMatchOtherRoutes(string path)
+    {
+        RateLimitingMiddleware.IsExternalAuthPath(new PathString(path)).Should().BeFalse();
+    }
 }

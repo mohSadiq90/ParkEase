@@ -123,23 +123,15 @@ internal sealed class WaitlistPromotionService : IWaitlistPromotionService
                 hasOverlappingVehicleBooking,
                 recentBookingCreations);
 
-            var stageResult = await _marketplaceBookingService.StageCorporateBookingAsync(new StageCorporateBookingRequest(
-                targetMembership.UserId,
-                allocation.ParkingSpaceId,
-                waitlistEntry.RequestedStartDateTime,
-                waitlistEntry.RequestedEndDateTime,
-                amount,
-                vehicleNumber,
-                waitlistEntry.IsVisitorBooking
-            ), cancellationToken);
-
+            // Reserve first; only stage marketplace booking when promotion actually assigns a slot.
+            var bookingId = Guid.NewGuid();
             var draft = new CorporateBookingDraft(
-                stageResult.BookingId,
+                bookingId,
                 allocation.ParkingSpaceId,
                 waitlistEntry.RequestedStartDateTime,
                 waitlistEntry.RequestedEndDateTime,
                 BookingStatus.Confirmed,
-                waitlistEntry.IsVisitorBooking ? VehicleType.Car : waitlistEntry.VehicleType,
+                waitlistEntry.VehicleType,
                 vehicleNumber
             );
 
@@ -184,6 +176,18 @@ internal sealed class WaitlistPromotionService : IWaitlistPromotionService
                     "This waitlist entry cannot be promoted yet. It may not be first in line or no shared slot is available.",
                     CorporateMapping.ToReservationResultDto(reservation, company, draft));
             }
+
+            await _marketplaceBookingService.StageCorporateBookingAsync(new StageCorporateBookingRequest(
+                targetMembership.UserId,
+                allocation.ParkingSpaceId,
+                waitlistEntry.RequestedStartDateTime,
+                waitlistEntry.RequestedEndDateTime,
+                amount,
+                vehicleNumber,
+                waitlistEntry.IsVisitorBooking,
+                waitlistEntry.VehicleType,
+                BookingId: bookingId
+            ), cancellationToken);
 
             await _corporate.SaveChangesAsync(cancellationToken);
 

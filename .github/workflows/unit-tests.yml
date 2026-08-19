@@ -1,0 +1,216 @@
+# Unit tests + informational coverage for ParkEase (backend + web).
+# Mobile is out of scope for the unit-coverage initiative.
+# Repo root: ParkEase/ (this workflow lives under ParkEase/.github)
+name: Unit tests
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: unit-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # Align with global.json when present; 9.x matches TargetFramework net9.0
+          dotnet-version: "9.0.x"
+
+      - name: Restore
+        run: dotnet restore ParkingApp.sln
+
+      - name: Test (with Coverlet)
+        run: >
+          dotnet test ParkingApp.sln
+          --no-restore
+          --configuration Release
+          --verbosity minimal
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
+          --results-directory ./TestResults
+          --logger "trx;LogFileName=unit-results.trx"
+
+      # Selective floors for Corporate BC (risk-based; hard Domain/App 100% still deferred).
+      # Uses the Corporate module cobertura when present; otherwise the first solution report
+      # that includes those packages (solution-wide run merges collector output per test host).
+      - name: Assert Corporate Domain/App Coverlet floors (≥90%)
+        shell: pwsh
+        run: |
+          $corpResults = "./TestResults/CorpFloor"
+          New-Item -ItemType Directory -Force -Path $corpResults | Out-Null
+          dotnet test tests/Modules/Corporate/ParkingApp.Corporate.UnitTests/ParkingApp.Corporate.UnitTests.csproj `
+            --no-restore `
+            --configuration Release `
+            --verbosity minimal `
+            --collect:"XPlat Code Coverage" `
+            --settings tests/coverlet.runsettings `
+            --results-directory $corpResults
+          $assert = Join-Path $PWD "tests/assert-corporate-coverage.ps1"
+          if (-not (Test-Path -LiteralPath $assert)) {
+            throw "Missing $assert (is *.ps1 gitignored without a negation?). Corporate floors cannot run."
+          }
+          & $assert -ResultsDirectory $corpResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: |
+            backend/TestResults/**/*.trx
+            backend/TestResults/**/coverage.cobertura.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+  frontend:
+    name: Frontend (Vitest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Unit tests with coverage thresholds
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  notify-slack:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    if: always()
+    steps:
+      - name: Post unit test results to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          EVENT: ${{ github.event_name }}
+          WORKFLOW: ${{ github.workflow }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "::error::SLACK_WEBHOOK_URL secret is not set. Add it under Repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+          if [ "$BACKEND_RESULT" = "success" ] && [ "$FRONTEND_RESULT" = "success" ]; then
+            emoji=":white_check_mark:"
+            color="#2eb886"
+            headline="Unit tests passed"
+          else
+            emoji=":x:"
+            color="#e01e5a"
+            headline="Unit tests failed"
+          fi
+
+          icon_for() {
+            case "$1" in
+              success) echo ":white_check_mark:" ;;
+              failure) echo ":x:" ;;
+              cancelled) echo ":no_entry_sign:" ;;
+              skipped) echo ":fast_forward:" ;;
+              *) echo ":grey_question:" ;;
+            esac
+          }
+
+          backend_icon=$(icon_for "$BACKEND_RESULT")
+          frontend_icon=$(icon_for "$FRONTEND_RESULT")
+          short_sha="${SHA:0:7}"
+          results_md="${backend_icon} *Backend (.NET):* \`${BACKEND_RESULT}\`"$'\n'"${frontend_icon} *Frontend (Vitest):* \`${FRONTEND_RESULT}\`"
+
+          payload=$(jq -n \
+            --arg color "$color" \
+            --arg headline "${emoji} ${headline}" \
+            --arg workflow "$WORKFLOW" \
+            --arg branch "$BRANCH" \
+            --arg sha "$short_sha" \
+            --arg actor "$ACTOR" \
+            --arg event "$EVENT" \
+            --arg results "$results_md" \
+            --arg run_url "$RUN_URL" \
+            --arg text "${headline} — ${BRANCH} (${short_sha})" \
+            '{
+              text: $text,
+              attachments: [
+                {
+                  color: $color,
+                  blocks: [
+                    {
+                      type: "header",
+                      text: { type: "plain_text", text: $headline, emoji: true }
+                    },
+                    {
+                      type: "section",
+                      fields: [
+                        { type: "mrkdwn", text: ("*Workflow:*\n" + $workflow) },
+                        { type: "mrkdwn", text: ("*Branch:*\n" + $branch) },
+                        { type: "mrkdwn", text: ("*Commit:*\n`" + $sha + "`") },
+                        { type: "mrkdwn", text: ("*Triggered by:*\n" + $actor + " (" + $event + ")") }
+                      ]
+                    },
+                    {
+                      type: "section",
+                      text: { type: "mrkdwn", text: ("*Results*\n" + $results) }
+                    },
+                    {
+                      type: "actions",
+                      elements: [
+                        {
+                          type: "button",
+                          text: { type: "plain_text", text: "View run", emoji: true },
+                          url: $run_url
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }')
+
+          curl -sS -f -X POST \
+            -H "Content-type: application/json" \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
+
+          echo "Slack notification sent."

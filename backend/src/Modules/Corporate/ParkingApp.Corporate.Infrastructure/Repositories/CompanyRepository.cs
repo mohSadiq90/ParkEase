@@ -84,12 +84,20 @@ internal sealed class CompanyRepository : Repository<Company>, ICompanyRepositor
         Guid userId,
         CancellationToken cancellationToken = default)
     {
+        // Accept runs before the invitee has a company claim / tenant context.
+        // Ignore global tenant/soft-delete filters and apply soft-delete explicitly.
+        if (string.IsNullOrWhiteSpace(invitationToken))
+            return null;
+
+        var token = invitationToken.Trim();
         return await _dbSet
+            .IgnoreQueryFilters()
             .AsSplitQuery()
-            .Include(c => c.Invitations.Where(i => !i.IsDeleted && i.InvitationToken == invitationToken))
+            .Include(c => c.Invitations.Where(i => !i.IsDeleted && i.InvitationToken == token))
             .Include(c => c.Memberships.Where(m => !m.IsDeleted && m.UserId == userId))
             .FirstOrDefaultAsync(
-                c => c.Invitations.Any(i => !i.IsDeleted && i.InvitationToken == invitationToken),
+                c => !c.IsDeleted
+                     && c.Invitations.Any(i => !i.IsDeleted && i.InvitationToken == token),
                 cancellationToken);
     }
 
@@ -109,8 +117,11 @@ internal sealed class CompanyRepository : Repository<Company>, ICompanyRepositor
         Guid? adminUserId,
         CancellationToken cancellationToken = default)
     {
-        // Resolve the entry first so includes can target one allocation/membership only.
+        // Background auto-promotion has no HTTP tenant context (CurrentTenantId is null).
+        // Ignore query filters and scope by companyId + soft-delete explicitly, same as
+        // invitation acceptance. Resolve the entry first so includes target one allocation/membership.
         var entryMeta = await _context.Set<CorporateWaitlistEntry>()
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(w => w.Id == waitlistEntryId && w.CompanyId == companyId && !w.IsDeleted)
             .Select(w => new
@@ -134,6 +145,7 @@ internal sealed class CompanyRepository : Repository<Company>, ICompanyRepositor
         var bookingEnd = entryMeta.RequestedEndDateTime;
 
         return await _dbSet
+            .IgnoreQueryFilters()
             .AsSplitQuery()
             .Include(c => c.Memberships.Where(m =>
                 !m.IsDeleted &&
@@ -149,7 +161,7 @@ internal sealed class CompanyRepository : Repository<Company>, ICompanyRepositor
                  (w.Status == WaitlistStatus.Pending &&
                   w.RequestedStartDateTime < bookingEnd &&
                   w.RequestedEndDateTime > bookingStart))))
-            .FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == companyId && !c.IsDeleted, cancellationToken);
     }
 
     public async Task<bool> IsUserMemberAsync(Guid companyId, Guid userId, CancellationToken cancellationToken = default)
@@ -220,31 +232,27 @@ internal sealed class CorporateBookingRepository : Repository<CorporateBooking>,
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<int> GetMembershipBookingCountForDateAsync(Guid companyId, Guid membershipId, DateOnly date, CancellationToken cancellationToken = default)
-    {
-        return 0;
-    }
+    // Stub counters (booking occupancy paths use GetReservationPreCheckAsync / SQL IT for real checks).
+    public Task<int> GetMembershipBookingCountForDateAsync(Guid companyId, Guid membershipId, DateOnly date, CancellationToken cancellationToken = default)
+        => Task.FromResult(0);
 
-    public async Task<int> GetMembershipBookingCountForWeekAsync(Guid companyId, Guid membershipId, DateOnly weekStart, CancellationToken cancellationToken = default)
-    {
-        return 0;
-    }
+    public Task<int> GetMembershipBookingCountForWeekAsync(Guid companyId, Guid membershipId, DateOnly weekStart, CancellationToken cancellationToken = default)
+        => Task.FromResult(0);
 
-    public async Task<int> GetActiveSharedBookingsCountAsync(Guid companyId, Guid allocationId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
-    {
-        return 0;
-    }
+    public Task<int> GetActiveSharedBookingsCountAsync(Guid companyId, Guid allocationId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+        => Task.FromResult(0);
 
-    public async Task<IReadOnlyList<int>> GetOccupiedSharedSlotNumbersAsync(Guid companyId, Guid allocationId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
-    {
-        return new System.Collections.Generic.List<int>();
-    }
+    public Task<IReadOnlyList<int>> GetOccupiedSharedSlotNumbersAsync(Guid companyId, Guid allocationId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<int>>(new System.Collections.Generic.List<int>());
 
-    public async Task<IReadOnlyDictionary<int, int>> GetSharedSlotUsageCountsAsync(Guid companyId, Guid allocationId, DateTime sinceUtc, CancellationToken cancellationToken = default) { return new System.Collections.Generic.Dictionary<int, int>(); }
+    public Task<IReadOnlyDictionary<int, int>> GetSharedSlotUsageCountsAsync(Guid companyId, Guid allocationId, DateTime sinceUtc, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyDictionary<int, int>>(new System.Collections.Generic.Dictionary<int, int>());
 
-    public async Task<bool> HasOverlappingBookingAsync(Guid companyId, Guid membershipId, DateTime start, DateTime end, CancellationToken cancellationToken = default) { return false; }
+    public Task<bool> HasOverlappingBookingAsync(Guid companyId, Guid membershipId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
 
-    public async Task<bool> HasOverlappingVehicleBookingAsync(Guid companyId, Guid allocationId, string vehicleNumber, DateTime start, DateTime end, CancellationToken cancellationToken = default) { return false; }
+    public Task<bool> HasOverlappingVehicleBookingAsync(Guid companyId, Guid allocationId, string vehicleNumber, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
 
     public async Task<int> GetRecentBookingCreateCountAsync(Guid companyId, Guid membershipId, DateTime sinceUtc, CancellationToken cancellationToken = default)
     {
@@ -270,6 +278,7 @@ internal sealed class CorporateBookingRepository : Repository<CorporateBooking>,
         DateTime recentCreatesSinceUtc,
         DateTime sharedUsageSinceUtc,
         string? vehicleNumber,
+        ParkingApp.BuildingBlocks.Enums.VehicleClass vehicleClass,
         CancellationToken cancellationToken = default)
     {
         var dayStart = usageDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
@@ -279,8 +288,11 @@ internal sealed class CorporateBookingRepository : Repository<CorporateBooking>,
         var normalizedVehicle = string.IsNullOrWhiteSpace(vehicleNumber)
             ? null
             : vehicleNumber.Trim().ToUpperInvariant();
+        // TwoWheeler = Motorcycle (VehicleType = 1); FourWheeler = all other / null
+        var isTwoWheeler = vehicleClass == ParkingApp.BuildingBlocks.Enums.VehicleClass.TwoWheeler;
 
         // Terminal marketplace statuses excluded from capacity / overlap (Cancelled=4, Expired=5, Rejected=7)
+        // Shared occupancy is scoped to the requested vehicle class pool.
         const string sql = """
             SELECT
                 CAST((
@@ -319,6 +331,10 @@ internal sealed class CorporateBookingRepository : Repository<CorporateBooking>,
                       AND b."StartDateTime" < @WindowEnd
                       AND b."EndDateTime" > @WindowStart
                       AND b."Status" NOT IN (4, 5, 7)
+                      AND (
+                            (@IsTwoWheeler = TRUE AND b."VehicleType" = 1)
+                            OR (@IsTwoWheeler = FALSE AND (b."VehicleType" IS NULL OR b."VehicleType" <> 1))
+                      )
                 ) AS INTEGER) AS ActiveSharedBookingCount,
                 CAST((
                     SELECT CASE WHEN EXISTS (
@@ -372,7 +388,11 @@ internal sealed class CorporateBookingRepository : Repository<CorporateBooking>,
               AND b."SlotNumber" IS NOT NULL
               AND b."StartDateTime" < @WindowEnd
               AND b."EndDateTime" > @WindowStart
-              AND b."Status" NOT IN (4, 5, 7);
+              AND b."Status" NOT IN (4, 5, 7)
+              AND (
+                    (@IsTwoWheeler = TRUE AND b."VehicleType" = 1)
+                    OR (@IsTwoWheeler = FALSE AND (b."VehicleType" IS NULL OR b."VehicleType" <> 1))
+              );
 
             SELECT b."SlotNumber" AS SlotNumber, CAST(COUNT(*) AS INTEGER) AS UsageCount
             FROM "CorporateBookings" cb
@@ -385,6 +405,10 @@ internal sealed class CorporateBookingRepository : Repository<CorporateBooking>,
               AND b."SlotNumber" IS NOT NULL
               AND b."StartDateTime" >= @SharedUsageSince
               AND b."Status" NOT IN (4, 7)
+              AND (
+                    (@IsTwoWheeler = TRUE AND b."VehicleType" = 1)
+                    OR (@IsTwoWheeler = FALSE AND (b."VehicleType" IS NULL OR b."VehicleType" <> 1))
+              )
             GROUP BY b."SlotNumber";
             """;
 
@@ -409,7 +433,8 @@ internal sealed class CorporateBookingRepository : Repository<CorporateBooking>,
                 WeekEnd = weekEnd,
                 RecentCreatesSince = recentCreatesSinceUtc,
                 SharedUsageSince = sharedUsageSinceUtc,
-                VehicleNumber = normalizedVehicle
+                VehicleNumber = normalizedVehicle,
+                IsTwoWheeler = isTwoWheeler
             },
             cancellationToken: cancellationToken));
 
@@ -444,24 +469,24 @@ internal sealed class CorporateBookingRepository : Repository<CorporateBooking>,
         public int RecentBookingCreateCount { get; set; }
     }
 
-    public async Task<IReadOnlyList<CorporateBooking>> GetBillableBookingsInPeriodAsync(
+    public Task<IReadOnlyList<CorporateBooking>> GetBillableBookingsInPeriodAsync(
         Guid companyId,
         DateTime periodStartUtc,
         DateTime periodEndExclusiveUtc,
         int maxRows,
         CancellationToken cancellationToken = default)
     {
-        return new System.Collections.Generic.List<CorporateBooking>();
+        return Task.FromResult<IReadOnlyList<CorporateBooking>>(new System.Collections.Generic.List<CorporateBooking>());
     }
 
-    public async Task<IReadOnlyList<CorporateBooking>> GetBillableBookingsForPeriodAsync(
+    public Task<IReadOnlyList<CorporateBooking>> GetBillableBookingsForPeriodAsync(
         Guid companyId,
         DateTime periodStartUtc,
         DateTime periodEndExclusiveUtc,
         int maxRows,
         CancellationToken cancellationToken = default)
     {
-        return new System.Collections.Generic.List<CorporateBooking>();
+        return Task.FromResult<IReadOnlyList<CorporateBooking>>(new System.Collections.Generic.List<CorporateBooking>());
     }
 }
 

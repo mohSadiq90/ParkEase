@@ -1,6 +1,5 @@
 /**
  * Environment Configuration
- * Centralized config for API URLs and app settings
  */
 
 const API_BASE = 'https://parkeaseapp.runasp.net';

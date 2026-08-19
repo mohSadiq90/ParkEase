@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using ParkingApp.API.Middleware;
 using ParkingApp.API.Options;
@@ -17,6 +18,7 @@ using ParkingApp.Corporate.Application;
 using ParkingApp.Identity.Application;
 using ParkingApp.Marketplace.Application;
 using ParkingApp.Messaging.Application;
+using ParkingApp.Admin.Application;
 using Serilog;
 using Serilog.Events;
 using ParkingApp.Marketplace.Infrastructure;
@@ -76,6 +78,12 @@ try
         builder.Configuration.GetSection(PerformanceLoggingOptions.SectionName));
     builder.Services.Configure<MediaOptions>(
         builder.Configuration.GetSection(MediaOptions.SectionName));
+    builder.Services.Configure<IotLprOptions>(
+        builder.Configuration.GetSection(IotLprOptions.SectionName));
+    builder.Services.Configure<ChannelIsolationOptions>(
+        builder.Configuration.GetSection(ChannelIsolationOptions.SectionName));
+    builder.Services.Configure<ParkingApp.Identity.Application.Options.ExternalAuthOptions>(
+        builder.Configuration.GetSection(ParkingApp.Identity.Application.Options.ExternalAuthOptions.SectionName));
 
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddNotificationServices(builder.Configuration);
@@ -85,6 +93,7 @@ try
     builder.Services.AddIdentityApplication();
     builder.Services.AddMarketplaceApplication(builder.Configuration);
     builder.Services.AddMessagingApplication();
+    builder.Services.AddAdminApplication();
 
     // Add Controllers
     builder.Services.AddControllers();
@@ -222,15 +231,34 @@ try
         };
     });
 
-    builder.Services.AddAuthorization();
+    // Channel policies are optional documentation / defense-in-depth only (KD-5).
+    // ChannelAuthorizationMiddleware is the authoritative allowlist enforcer.
+    // Do not put [Authorize(Policy = "Channel*")] on controllers until soft-mode is removed (PR10b),
+    // or soft Marketplace→corporate API access with flag off will break via UseAuthorization.
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("ChannelMarketplace", policy =>
+            policy.RequireClaim(
+                ParkingApp.BuildingBlocks.Security.ParkEaseClaimTypes.Channel,
+                "Marketplace",
+                "Admin"));
+        options.AddPolicy("ChannelCorporate", policy =>
+            policy.RequireClaim(
+                ParkingApp.BuildingBlocks.Security.ParkEaseClaimTypes.Channel,
+                "Corporate",
+                "Admin"));
+        // Admin APIs keep [Authorize(Roles = "Admin")] — do not require Admin channel (KD-13).
+    });
 
     var app = builder.Build();
 
-    // Apply migrations and seed database
-    using (var scope = app.Services.CreateScope())
+    // Apply migrations and seed database (HTTP smoke factories disable this).
+    var applyMigrations = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
+    if (applyMigrations)
     {
+        using var scope = app.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        // context.Database.Migrate(); // Temporarily disabled to bypass lock
+        context.Database.Migrate();
     }
 
     // Configure middleware pipeline
@@ -318,7 +346,9 @@ try
 
     app.UseAuthentication();
     app.UseAuthorization();
+    // Corporate tenant context first; channel matrix is authoritative allow/deny (KD-5).
     app.UseMiddleware<CorporateTenantMiddleware>();
+    app.UseMiddleware<ChannelAuthorizationMiddleware>();
 
     app.MapControllers().RequireCors("AllowFrontend");
 
@@ -332,12 +362,44 @@ try
     app.MapHub<ParkingApp.Messaging.Infrastructure.Hubs.ChatHub>("/hubs/chat")
         .RequireCors("AllowFrontend");
 
-    // SPA fallback - serve index.html for any unmatched routes (must be last!)
-    app.MapFallbackToFile("index.html");
+    // SPA fallback — last. Never serve index.html for API/hubs/health (DEF-002):
+    // otherwise missing or unmatched /api/* routes return 200 text/html and break clients
+    // (e.g. access-pass expecting JSON).
+    app.MapFallback(async context =>
+    {
+        var path = context.Request.Path;
+        if (path.StartsWithSegments("/api")
+            || path.StartsWithSegments("/hubs")
+            || path.StartsWithSegments("/health"))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            context.Response.ContentType = "application/json; charset=utf-8";
+            context.Response.Headers.CacheControl = "no-store";
+            await context.Response.WriteAsync(
+                """{"success":false,"message":"API endpoint not found","data":null,"errors":["Not Found"]}""");
+            return;
+        }
+
+        var index = new PhysicalFileProvider(webRootPath).GetFileInfo("index.html");
+        if (!index.Exists)
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+        context.Response.Headers.Pragma = "no-cache";
+        context.Response.Headers.Expires = "0";
+        await context.Response.SendFileAsync(index);
+    });
 
     app.Run();
 }
-catch (Exception ex)
+// HostAbortedException is thrown by WebApplicationFactory / HostFactoryResolver to stop the
+// entry point after the host is captured. Swallowing it causes:
+// "The entry point exited without ever building an IHost."
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
 }

@@ -7,5 +7,10 @@
 public interface IPasswordHasher
 {
     string Hash(string password);
-    bool Verify(string password, string passwordHash);
+
+    /// <summary>
+    /// Verifies a password against a stored hash. Returns false when <paramref name="passwordHash"/>
+    /// is null or empty (social-only / no password) — fail-closed, never throws.
+    /// </summary>
+    bool Verify(string password, string? passwordHash);
 }

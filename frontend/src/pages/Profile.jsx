@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import LinkedAccountsSection from '../components/LinkedAccountsSection';
 import showToast from '../utils/toast.jsx';
+import {
+  PASSWORD_POLICY_HINT,
+  validatePasswordPolicy,
+} from '../utils/passwordPolicy';
 import './Profile.css';
 
 const ROLE_LABELS = { 0: 'Admin', 1: 'User', Admin: 'Admin', User: 'User' };
 
 const Profile = () => {
-    const { user, logout, updateUser } = useAuth();
+    const { user, logout, updateUser, setPassword, linkExternal } = useAuth();
     const navigate = useNavigate();
 
     // Profile edit state
@@ -16,14 +21,43 @@ const Profile = () => {
     const [profileLoading, setProfileLoading] = useState(true);
     const [profileSaving, setProfileSaving] = useState(false);
 
-    // Password change state
-    const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    // Security: hasPassword + linked IdPs from GET /users/me
+    const [hasPassword, setHasPassword] = useState(true);
+    const [linkedProviders, setLinkedProviders] = useState([]);
+
+    // Password change / set state
+    const [passwordForm, setPasswordForm] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+    });
     const [passwordSaving, setPasswordSaving] = useState(false);
 
     // Delete account state
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [deleting, setDeleting] = useState(false);
+    const [linkBusy, setLinkBusy] = useState(false);
+
+    const applySecurityFields = useCallback((data) => {
+        if (!data) return;
+        // Prefer camelCase JSON; tolerate PascalCase from some serializers
+        const hp =
+            data.hasPassword !== undefined
+                ? !!data.hasPassword
+                : data.HasPassword !== undefined
+                  ? !!data.HasPassword
+                  : true;
+        setHasPassword(hp);
+
+        const linked =
+            data.linkedProviders ||
+            data.linkedProviderNames ||
+            data.LinkedProviders ||
+            data.LinkedProviderNames ||
+            [];
+        setLinkedProviders(Array.isArray(linked) ? linked : []);
+    }, []);
 
     // Fetch current user profile from API
     useEffect(() => {
@@ -32,7 +66,12 @@ const Profile = () => {
                 const response = await api.getCurrentUser();
                 if (response?.success && response.data) {
                     const { firstName, lastName, phoneNumber } = response.data;
-                    setProfileForm({ firstName: firstName || '', lastName: lastName || '', phoneNumber: phoneNumber || '' });
+                    setProfileForm({
+                        firstName: firstName || '',
+                        lastName: lastName || '',
+                        phoneNumber: phoneNumber || '',
+                    });
+                    applySecurityFields(response.data);
                 }
             } catch {
                 // Fall back to locally stored user data
@@ -42,6 +81,7 @@ const Profile = () => {
                         lastName: user.lastName || '',
                         phoneNumber: user.phoneNumber || '',
                     });
+                    applySecurityFields(user);
                 }
             } finally {
                 setProfileLoading(false);
@@ -86,10 +126,41 @@ const Profile = () => {
         }
     };
 
-    // --- Change Password ---
+    // --- Password helpers ---
     const handlePasswordChange = (e) => {
         const { name, value } = e.target;
         setPasswordForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSetPassword = async (e) => {
+        e.preventDefault();
+        const policyError = validatePasswordPolicy(passwordForm.newPassword);
+        if (policyError) {
+            showToast.error(policyError);
+            return;
+        }
+        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+            showToast.error('Passwords do not match');
+            return;
+        }
+        try {
+            setPasswordSaving(true);
+            const result = await setPassword(passwordForm.newPassword);
+            if (result.success) {
+                setHasPassword(true);
+                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                showToast.success('Password set — you can now sign in with email');
+            } else if (result.code === 'password_already_set') {
+                setHasPassword(true);
+                showToast.error(result.message || 'Password is already set. Use change password.');
+            } else {
+                showToast.error(result.message || 'Failed to set password');
+            }
+        } catch (error) {
+            showToast.error(error.message || 'Failed to set password');
+        } finally {
+            setPasswordSaving(false);
+        }
     };
 
     const handlePasswordSave = async (e) => {
@@ -98,8 +169,9 @@ const Profile = () => {
             showToast.error('Please fill in all password fields');
             return;
         }
-        if (passwordForm.newPassword.length < 8) {
-            showToast.error('New password must be at least 8 characters');
+        const policyError = validatePasswordPolicy(passwordForm.newPassword);
+        if (policyError) {
+            showToast.error(policyError);
             return;
         }
         if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -115,14 +187,44 @@ const Profile = () => {
             if (response?.success) {
                 showToast.success('Password changed successfully');
                 setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            } else if (response?.code === 'password_not_set') {
+                setHasPassword(false);
+                showToast.error(
+                    'No password is set yet. Use “Set a password” below instead of change password.'
+                );
             } else {
                 showToast.error(response?.message || 'Failed to change password');
             }
         } catch (error) {
-            const msg = error.response?.data?.message || error.message || 'Failed to change password';
-            showToast.error(msg);
+            const code = error.response?.data?.code || error.code;
+            if (code === 'password_not_set') {
+                setHasPassword(false);
+                showToast.error(
+                    'No password is set yet. Use “Set a password” below instead of change password.'
+                );
+            } else {
+                const msg = error.response?.data?.message || error.message || 'Failed to change password';
+                showToast.error(msg);
+            }
         } finally {
             setPasswordSaving(false);
+        }
+    };
+
+    const handleLinkProvider = async ({ provider, idToken, nonce }) => {
+        setLinkBusy(true);
+        try {
+            const result = await linkExternal({ provider, idToken, nonce });
+            if (result.success) {
+                setLinkedProviders(result.linkedProviders || []);
+                showToast.success(`${provider} linked to your account`);
+            } else {
+                showToast.error(result.message || `Failed to link ${provider}`);
+            }
+        } catch (error) {
+            showToast.error(error.message || `Failed to link ${provider}`);
+        } finally {
+            setLinkBusy(false);
         }
     };
 
@@ -173,6 +275,13 @@ const Profile = () => {
                 <h1>{user?.firstName} {user?.lastName}</h1>
                 <p className="profile-role">{roleName} · Member since {memberSince}</p>
             </div>
+
+            {!hasPassword && (
+                <div className="profile-banner" data-testid="set-password-banner" role="status">
+                    You signed in with a social provider and have no password yet. Set one below so
+                    you can recover access and sign in with email.
+                </div>
+            )}
 
             {/* Profile Information */}
             <div className="profile-section">
@@ -235,57 +344,114 @@ const Profile = () => {
                 </form>
             </div>
 
-            {/* Change Password */}
-            <div className="profile-section">
-                <h2>🔒 Change Password</h2>
-                <form onSubmit={handlePasswordSave}>
-                    <div className="profile-form-grid">
-                        <div className="form-group full-width">
-                            <label className="form-label">Current Password</label>
-                            <input
-                                type="password"
-                                className="form-input"
-                                name="currentPassword"
-                                value={passwordForm.currentPassword}
-                                onChange={handlePasswordChange}
-                                required
-                                autoComplete="current-password"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">New Password</label>
-                            <input
-                                type="password"
-                                className="form-input"
-                                name="newPassword"
-                                value={passwordForm.newPassword}
-                                onChange={handlePasswordChange}
-                                required
-                                minLength={8}
-                                autoComplete="new-password"
-                            />
-                            <div className="password-hint">Must be at least 8 characters</div>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Confirm New Password</label>
-                            <input
-                                type="password"
-                                className="form-input"
-                                name="confirmPassword"
-                                value={passwordForm.confirmPassword}
-                                onChange={handlePasswordChange}
-                                required
-                                minLength={8}
-                                autoComplete="new-password"
-                            />
-                        </div>
-                    </div>
-                    <div className="profile-actions">
-                        <button type="submit" className="btn btn-primary" disabled={passwordSaving}>
-                            {passwordSaving ? 'Changing...' : 'Change Password'}
-                        </button>
-                    </div>
-                </form>
+            {/* Linked social accounts (Marketplace) */}
+            <LinkedAccountsSection
+                linkedProviders={linkedProviders}
+                onLink={handleLinkProvider}
+                disabled={linkBusy}
+            />
+
+            {/* Set password (social-only) OR change password */}
+            <div className="profile-section" data-testid="password-section">
+                {hasPassword ? (
+                    <>
+                        <h2>🔒 Change Password</h2>
+                        <form onSubmit={handlePasswordSave}>
+                            <div className="profile-form-grid">
+                                <div className="form-group full-width">
+                                    <label className="form-label">Current Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        name="currentPassword"
+                                        value={passwordForm.currentPassword}
+                                        onChange={handlePasswordChange}
+                                        required
+                                        autoComplete="current-password"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">New Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        name="newPassword"
+                                        value={passwordForm.newPassword}
+                                        onChange={handlePasswordChange}
+                                        required
+                                        minLength={8}
+                                        autoComplete="new-password"
+                                    />
+                                    <div className="password-hint">{PASSWORD_POLICY_HINT}</div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Confirm New Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        name="confirmPassword"
+                                        value={passwordForm.confirmPassword}
+                                        onChange={handlePasswordChange}
+                                        required
+                                        minLength={8}
+                                        autoComplete="new-password"
+                                    />
+                                </div>
+                            </div>
+                            <div className="profile-actions">
+                                <button type="submit" className="btn btn-primary" disabled={passwordSaving}>
+                                    {passwordSaving ? 'Changing...' : 'Change Password'}
+                                </button>
+                            </div>
+                        </form>
+                    </>
+                ) : (
+                    <>
+                        <h2>🔑 Set a Password</h2>
+                        <p className="profile-section-hint">
+                            Add a password for email sign-in and account recovery. This does not
+                            remove your linked social providers.
+                        </p>
+                        <form onSubmit={handleSetPassword} data-testid="set-password-form">
+                            <div className="profile-form-grid">
+                                <div className="form-group">
+                                    <label className="form-label">New Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        name="newPassword"
+                                        value={passwordForm.newPassword}
+                                        onChange={handlePasswordChange}
+                                        required
+                                        minLength={8}
+                                        autoComplete="new-password"
+                                        data-testid="set-password-new"
+                                    />
+                                    <div className="password-hint">{PASSWORD_POLICY_HINT}</div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Confirm Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        name="confirmPassword"
+                                        value={passwordForm.confirmPassword}
+                                        onChange={handlePasswordChange}
+                                        required
+                                        minLength={8}
+                                        autoComplete="new-password"
+                                        data-testid="set-password-confirm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="profile-actions">
+                                <button type="submit" className="btn btn-primary" disabled={passwordSaving}>
+                                    {passwordSaving ? 'Saving...' : 'Set Password'}
+                                </button>
+                            </div>
+                        </form>
+                    </>
+                )}
             </div>
 
             {/* Danger Zone */}

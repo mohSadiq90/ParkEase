@@ -21,6 +21,8 @@ using ParkingApp.Messaging.Application.DTOs;
 using ParkingApp.Notifications.Application.DTOs;
 using ParkingApp.Corporate.Application.DTOs;
 using ParkingApp.BuildingBlocks.Common;
+using Microsoft.Extensions.Options;
+using ParkingApp.API.Options;
 using Xunit;
 
 namespace ParkingApp.UnitTests.API;
@@ -30,6 +32,10 @@ public class AuthControllerTests
     private readonly Mock<IDispatcher> _dispatcherMock;
     private readonly Mock<IValidator<RegisterDto>> _registerValidatorMock;
     private readonly Mock<IValidator<LoginDto>> _loginValidatorMock;
+    private readonly Mock<IValidator<ExternalLoginDto>> _externalLoginValidatorMock;
+    private readonly Mock<IValidator<LinkExternalLoginDto>> _linkExternalLoginValidatorMock;
+    private readonly Mock<IValidator<SetPasswordDto>> _setPasswordValidatorMock;
+    private readonly Mock<IValidator<ChangePasswordDto>> _changePasswordValidatorMock;
     private readonly AuthController _controller;
 
     public AuthControllerTests()
@@ -37,11 +43,33 @@ public class AuthControllerTests
         _dispatcherMock = new Mock<IDispatcher>();
         _registerValidatorMock = new Mock<IValidator<RegisterDto>>();
         _loginValidatorMock = new Mock<IValidator<LoginDto>>();
+        _externalLoginValidatorMock = new Mock<IValidator<ExternalLoginDto>>();
+        _externalLoginValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<ExternalLoginDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+        _linkExternalLoginValidatorMock = new Mock<IValidator<LinkExternalLoginDto>>();
+        _linkExternalLoginValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<LinkExternalLoginDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+        _setPasswordValidatorMock = new Mock<IValidator<SetPasswordDto>>();
+        _setPasswordValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<SetPasswordDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+        _changePasswordValidatorMock = new Mock<IValidator<ChangePasswordDto>>();
+        _changePasswordValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<ChangePasswordDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
 
+        var isolation = Options.Create(new ChannelIsolationOptions { Enabled = false });
         _controller = new AuthController(
             _dispatcherMock.Object, 
             _registerValidatorMock.Object, 
-            _loginValidatorMock.Object);
+            _loginValidatorMock.Object,
+            _externalLoginValidatorMock.Object,
+            _linkExternalLoginValidatorMock.Object,
+            _setPasswordValidatorMock.Object,
+            _changePasswordValidatorMock.Object,
+            isolation);
     }
 
     [Fact]
@@ -49,7 +77,14 @@ public class AuthControllerTests
     {
         // Arrange
         var dto = new RegisterDto("test@test.com", "password", "Test", "User", "12345");
-        var tokenDto = new TokenDto("token", "refresh", DateTime.UtcNow.AddHours(1), new UserDto(Guid.NewGuid(), "test@test.com", "Test", "User", "12345", ParkingApp.Identity.Domain.Enums.UserRole.User, true, true, DateTime.UtcNow));
+        var tokenDto = new TokenDto
+        {
+            AccessToken = "token",
+            RefreshToken = "refresh",
+            ExpiresAt = DateTime.UtcNow.AddHours(1),
+            User = new UserDto(Guid.NewGuid(), "test@test.com", "Test", "User", "12345", ParkingApp.Identity.Domain.Enums.UserRole.User, true, true, DateTime.UtcNow),
+            Channel = "Marketplace"
+        };
         var result = new ApiResponse<TokenDto>(true, "Success", tokenDto, null);
 
         _registerValidatorMock
@@ -93,7 +128,14 @@ public class AuthControllerTests
     {
          // Arrange
         var dto = new LoginDto("test@test.com", "password");
-        var tokenDto = new TokenDto("token", "refresh", DateTime.UtcNow.AddHours(1), new UserDto(Guid.NewGuid(), "test@test.com", "Test", "User", "12345", ParkingApp.Identity.Domain.Enums.UserRole.User, true, true, DateTime.UtcNow));
+        var tokenDto = new TokenDto
+        {
+            AccessToken = "token",
+            RefreshToken = "refresh",
+            ExpiresAt = DateTime.UtcNow.AddHours(1),
+            User = new UserDto(Guid.NewGuid(), "test@test.com", "Test", "User", "12345", ParkingApp.Identity.Domain.Enums.UserRole.User, true, true, DateTime.UtcNow),
+            Channel = "Marketplace"
+        };
         var result = new ApiResponse<TokenDto>(true, "Success", tokenDto, null);
 
         _loginValidatorMock
@@ -138,7 +180,14 @@ public class AuthControllerTests
     {
         // Arrange
         var dto = new RefreshTokenDto("refresh");
-        var tokenDto = new TokenDto("new-token", "new-refresh", DateTime.UtcNow.AddHours(1), new UserDto(Guid.NewGuid(), "test@test.com", "Test", "User", "12345", ParkingApp.Identity.Domain.Enums.UserRole.User, true, true, DateTime.UtcNow));
+        var tokenDto = new TokenDto
+        {
+            AccessToken = "new-token",
+            RefreshToken = "new-refresh",
+            ExpiresAt = DateTime.UtcNow.AddHours(1),
+            User = new UserDto(Guid.NewGuid(), "test@test.com", "Test", "User", "12345", ParkingApp.Identity.Domain.Enums.UserRole.User, true, true, DateTime.UtcNow),
+            Channel = "Marketplace"
+        };
         var result = new ApiResponse<TokenDto>(true, "Success", tokenDto, null);
 
         _dispatcherMock
@@ -150,6 +199,45 @@ public class AuthControllerTests
 
         // Assert
         var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+    }
+
+    [Fact]
+    public async Task RefreshToken_WhenInvalidChannel_ReturnsBadRequest()
+    {
+        var dto = new RefreshTokenDto("refresh", Channel: "Foo");
+        var result = new ApiResponse<TokenDto>(
+            false,
+            "Invalid channel",
+            null,
+            new List<string> { "Channel must be Marketplace, Corporate, or Admin" },
+            "invalid_channel");
+
+        _dispatcherMock
+            .Setup(d => d.SendAsync(It.IsAny<RefreshTokenCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(result));
+
+        var actionResult = await _controller.RefreshToken(dto, CancellationToken.None);
+
+        actionResult.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task RefreshToken_WhenInvalidRefresh_ReturnsUnauthorized()
+    {
+        var dto = new RefreshTokenDto("bad");
+        var result = new ApiResponse<TokenDto>(
+            false,
+            "Invalid refresh token",
+            null,
+            new List<string> { "Refresh token is invalid or expired" });
+
+        _dispatcherMock
+            .Setup(d => d.SendAsync(It.IsAny<RefreshTokenCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(result));
+
+        var actionResult = await _controller.RefreshToken(dto, CancellationToken.None);
+
+        actionResult.Should().BeOfType<UnauthorizedObjectResult>();
     }
 
     [Fact]

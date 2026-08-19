@@ -67,6 +67,29 @@ public class ApplicationDbContextTests
         // Assert
         action.Should().NotThrow();
     }
+
+    [Fact]
+    public async Task CorporateTenantFilters_WhenNoTenantContext_DoNotThrowOnQuery()
+    {
+        // Background waitlist auto-promotion and similar jobs run without ICorporateTenantContext.
+        // Query filters must not call Nullable.Value when CurrentTenantId is null.
+        using var context = new ApplicationDbContext(CreateOptions(), tenantContext: null);
+
+        var query = async () =>
+        {
+            _ = await context.Set<CorporateWaitlistEntry>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
+            _ = await context.Set<UserCompanyMembership>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
+            _ = await context.Set<ParkingAllocation>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
+        };
+
+        await query.Should().NotThrowAsync();
+    }
 }
 
 

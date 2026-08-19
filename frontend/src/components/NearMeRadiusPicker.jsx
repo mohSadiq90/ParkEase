@@ -32,7 +32,7 @@ export default function NearMeRadiusPicker({
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '1rem',
-                background: 'rgba(0, 0, 0, 0.65)',
+                background: 'var(--overlay-bg)',
                 backdropFilter: 'blur(4px)',
             }}
         >
@@ -40,20 +40,20 @@ export default function NearMeRadiusPicker({
                 style={{
                     width: '100%',
                     maxWidth: '420px',
-                    background: 'var(--color-surface, #1e293b)',
-                    border: '1px solid var(--color-border, rgba(255,255,255,0.1))',
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
                     borderRadius: 'var(--radius-lg, 16px)',
                     padding: '1.5rem',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.45)',
+                    boxShadow: 'var(--shadow-dropdown)',
                 }}
             >
                 <h2
                     id="near-me-radius-title"
-                    style={{ margin: '0 0 0.35rem', color: 'var(--color-text, #f1f5f9)', fontSize: '1.25rem' }}
+                    style={{ margin: '0 0 0.35rem', color: 'var(--color-text-primary)', fontSize: '1.25rem' }}
                 >
                     Search near you
                 </h2>
-                <p style={{ margin: '0 0 1.25rem', color: 'var(--color-text-muted, #94a3b8)', fontSize: '0.95rem' }}>
+                <p style={{ margin: '0 0 1.25rem', color: 'var(--color-text-muted)', fontSize: '0.95rem' }}>
                     Choose how far from your current location to look for parking.
                 </p>
 
@@ -87,12 +87,12 @@ export default function NearMeRadiusPicker({
                                 aria-pressed={isActive}
                                 style={{
                                     border: isActive
-                                        ? '1px solid var(--color-primary, #8b5cf6)'
-                                        : '1px solid var(--color-border, #334155)',
+                                        ? '1px solid var(--color-primary)'
+                                        : '1px solid var(--color-border)',
                                     background: isActive
-                                        ? 'rgba(139, 92, 246, 0.2)'
-                                        : 'var(--color-bg-glass, #0f172a)',
-                                    color: isActive ? 'var(--color-primary, #a78bfa)' : 'var(--color-text, #e2e8f0)',
+                                        ? 'var(--color-primary-alpha)'
+                                        : 'var(--color-bg-glass)',
+                                    color: isActive ? 'var(--color-primary)' : 'var(--color-text-primary)',
                                     borderRadius: '999px',
                                     padding: '0.4rem 0.85rem',
                                     cursor: loading ? 'not-allowed' : 'pointer',

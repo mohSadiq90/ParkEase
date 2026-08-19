@@ -17,11 +17,14 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
                 value => new Email(value))
             .HasMaxLength(255)
             .IsRequired();
-        entity.Property(e => e.PasswordHash).HasMaxLength(255).IsRequired();
+        // Nullable for social-only Marketplace users (PasswordHash null). Password register still requires a hash in domain.
+        entity.Property(e => e.PasswordHash).HasMaxLength(255).IsRequired(false);
         entity.Property(e => e.FirstName).HasMaxLength(100).IsRequired();
         entity.Property(e => e.LastName).HasMaxLength(100).IsRequired();
         entity.Property(e => e.PhoneNumber).HasMaxLength(20).IsRequired();
         entity.Property(e => e.RefreshToken).HasMaxLength(500);
+        entity.Property(e => e.SessionChannel).HasConversion<int?>();
+        entity.Property(e => e.SessionCompanyRole).HasMaxLength(32);
         entity.HasQueryFilter(e => !e.IsDeleted);
     }
 }

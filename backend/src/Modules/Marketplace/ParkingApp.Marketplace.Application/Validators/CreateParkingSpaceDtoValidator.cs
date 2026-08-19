@@ -24,6 +24,25 @@ internal class CreateParkingSpaceDtoValidator : AbstractValidator<CreateParkingS
         RuleFor(x => x.DailyRate).GreaterThanOrEqualTo(0);
         RuleFor(x => x.WeeklyRate).GreaterThanOrEqualTo(0);
         RuleFor(x => x.MonthlyRate).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.TwoWheelerPhysicalSpots)
+            .GreaterThanOrEqualTo(0)
+            .LessThanOrEqualTo(1000)
+            .When(x => x.TwoWheelerPhysicalSpots.HasValue);
+        RuleFor(x => x.FourWheelerPhysicalSpots)
+            .GreaterThanOrEqualTo(0)
+            .LessThanOrEqualTo(1000)
+            .When(x => x.FourWheelerPhysicalSpots.HasValue);
+        RuleFor(x => x)
+            .Must(x =>
+            {
+                var two = x.TwoWheelerPhysicalSpots ?? 0;
+                var four = x.FourWheelerPhysicalSpots ?? 0;
+                if (!x.TwoWheelerPhysicalSpots.HasValue && !x.FourWheelerPhysicalSpots.HasValue)
+                    return true;
+                return two + four <= x.TotalSpots;
+            })
+            .WithMessage("2-wheeler + 4-wheeler physical spots cannot exceed total spots.")
+            .WithName("PhysicalSpots");
     }
 }
 

@@ -35,6 +35,7 @@ public class UserCommandsTests
     private readonly Mock<IUserRepository> _mockUserRepo;
     private readonly Mock<IVehicleRepository> _mockVehicleRepo;
     private readonly Mock<IDeviceTokenRepository> _mockDeviceTokenRepo;
+    private readonly Mock<IUserExternalLoginRepository> _mockExternalLoginRepo;
     private readonly Mock<IMarketplaceUserDataCleanup> _mockMarketplaceCleanup;
     private readonly Mock<IMessagingUserDataCleanup> _mockMessagingCleanup;
     private readonly Mock<ICacheService> _mockCache;
@@ -47,12 +48,17 @@ public class UserCommandsTests
         _mockUserRepo = new Mock<IUserRepository>();
         _mockVehicleRepo = new Mock<IVehicleRepository>();
         _mockDeviceTokenRepo = new Mock<IDeviceTokenRepository>();
+        _mockExternalLoginRepo = new Mock<IUserExternalLoginRepository>();
         _mockMarketplaceCleanup = new Mock<IMarketplaceUserDataCleanup>();
         _mockMessagingCleanup = new Mock<IMessagingUserDataCleanup>();
 
         _mockUow.Setup(u => u.Users).Returns(_mockUserRepo.Object);
         _mockUow.Setup(u => u.Vehicles).Returns(_mockVehicleRepo.Object);
         _mockUow.Setup(u => u.DeviceTokens).Returns(_mockDeviceTokenRepo.Object);
+        _mockUow.Setup(u => u.ExternalLogins).Returns(_mockExternalLoginRepo.Object);
+        _mockExternalLoginRepo
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<UserExternalLogin>());
 
         _mockCache = new Mock<ICacheService>();
         _mockUpdateLogger = new Mock<ILogger<UpdateUserHandler>>();
@@ -88,7 +94,11 @@ public class UserCommandsTests
 
         res.Success.Should().BeTrue();
         res.Data.Id.Should().Be(userId);
+        res.Data.HasPassword.Should().BeTrue();
+        (res.Data.LinkedProviders ?? Array.Empty<string>()).Should().BeEmpty();
         _mockCache.Verify(c => c.SetAsync($"user:{userId}", It.IsAny<UserDto>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+        _mockExternalLoginRepo.Verify(
+            r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // UpdateUserHandler Tests
@@ -154,12 +164,19 @@ public class UserCommandsTests
             .ReturnsAsync(new List<Vehicle>());
         _mockDeviceTokenRepo.Setup(r => r.FindAsync(It.IsAny<Expression<Func<DeviceToken, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DeviceToken>());
+        var externalLogins = new List<UserExternalLogin>
+        {
+            UserExternalLogin.Create(user.Id, ParkingApp.Identity.Domain.Enums.ExternalAuthProvider.Google, "sub-google-1")
+        };
+        _mockExternalLoginRepo.Setup(r => r.FindAsync(It.IsAny<Expression<Func<UserExternalLogin, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(externalLogins);
 
         var res = await handler.HandleAsync(new DeleteUserCommand(userId));
 
         res.Success.Should().BeTrue();
         _mockMarketplaceCleanup.Verify(c => c.StageDeleteForUserAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
         _mockMessagingCleanup.Verify(c => c.StageDeleteForUserAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
+        _mockExternalLoginRepo.Verify(r => r.HardDeleteRange(externalLogins), Times.Once);
         _mockUserRepo.Verify(r => r.HardDelete(user), Times.Once);
         _mockUow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

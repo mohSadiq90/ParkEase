@@ -1,82 +1,255 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import AuthChannelSelector, {
+    authPath,
+    channelFromSearchParams,
+} from '../components/AuthChannelSelector';
+import SocialAuthSection from '../components/SocialAuthSection';
 import showToast from '../utils/toast.jsx';
-
-function safeReturnUrl(raw) {
-    if (!raw || typeof raw !== 'string') return null;
-    // Only allow same-app relative paths (block open redirects).
-    if (!raw.startsWith('/') || raw.startsWith('//')) return null;
-    return raw;
-}
+import { externalAuthErrorMessage } from '../utils/externalAuthErrors';
+import { postAuthDestination, safeReturnUrl } from '../utils/safeReturnUrl';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
+    const [memberships, setMemberships] = useState(null);
+    const { login, loginExternal, loginCorporate, isAdmin } = useAuth();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const returnUrl = safeReturnUrl(searchParams.get('returnUrl'));
+    const channel = channelFromSearchParams(searchParams);
+    const isCorporate = channel === 'corporate';
+    const preselectedCompanyId = searchParams.get('companyId') || null;
+
+    const setChannel = (next) => {
+        setMemberships(null);
+        const nextParams = new URLSearchParams(searchParams);
+        if (next === 'corporate') {
+            nextParams.set('channel', 'corporate');
+        } else {
+            nextParams.delete('channel');
+        }
+        setSearchParams(nextParams, { replace: true });
+    };
+
+    const finishMarketplace = () => {
+        const stored = localStorage.getItem('user');
+        let admin = false;
+        try {
+            const u = stored ? JSON.parse(stored) : null;
+            admin = u?.role === 0 || u?.role === 'Admin';
+        } catch {
+            /* ignore */
+        }
+        // Marketplace sign-in → marketplace dashboard (or safe same-channel returnUrl / admin)
+        navigate(
+            postAuthDestination('marketplace', {
+                returnUrl,
+                isAdmin: admin || isAdmin,
+            }),
+        );
+    };
+
+    const finishCorporate = (result) => {
+        // Corporate sign-in → corporate dashboard (or create-company when bootstrap)
+        navigate(
+            postAuthDestination('corporate', {
+                returnUrl,
+                isBootstrap: !!result?.isBootstrap,
+            }),
+        );
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setMemberships(null);
+
+        if (isCorporate) {
+            const result = await loginCorporate(email, password, preselectedCompanyId);
+            if (result.requiresCompanySelection && result.memberships?.length) {
+                setMemberships(result.memberships);
+                setLoading(false);
+                return;
+            }
+            if (result.success) {
+                showToast.success(
+                    result.isBootstrap ? 'Welcome — create your company' : 'Signed in to Corporate',
+                );
+                finishCorporate(result);
+            } else {
+                showToast.error(result.message || 'Corporate login failed');
+            }
+            setLoading(false);
+            return;
+        }
 
         const result = await login(email, password);
-
         if (result.success) {
-            navigate(returnUrl || '/dashboard');
+            finishMarketplace();
         } else {
             showToast.error(result.message || 'Login failed');
         }
-
         setLoading(false);
     };
 
-    const registerLink = returnUrl
-        ? `/register?returnUrl=${encodeURIComponent(returnUrl)}`
-        : '/register';
+    const handleSelectCompany = async (companyId) => {
+        setLoading(true);
+        const result = await loginCorporate(email, password, companyId);
+        if (result.success) {
+            showToast.success('Signed in to Corporate');
+            finishCorporate(result);
+        } else {
+            showToast.error(result.message || 'Could not bind company');
+        }
+        setLoading(false);
+    };
+
+    /** Marketplace Google credential → token-exchange → applySession via loginExternal. */
+    const handleGoogleCredential = async (idToken) => {
+        if (isCorporate || loading) return;
+        setLoading(true);
+        const result = await loginExternal({ provider: 'Google', idToken });
+        if (result.success) {
+            showToast.success(
+                result.isNewUser
+                    ? 'Welcome — account created. Set a password in Profile for recovery.'
+                    : 'Signed in'
+            );
+            finishMarketplace();
+        } else {
+            showToast.error(externalAuthErrorMessage(result));
+        }
+        setLoading(false);
+    };
+
+    /** Marketplace Apple id_token + raw nonce (required) + optional first-auth names. */
+    const handleAppleCredential = async ({ idToken, nonce, firstName, lastName }) => {
+        if (isCorporate || loading) return;
+        setLoading(true);
+        const result = await loginExternal({
+            provider: 'Apple',
+            idToken,
+            nonce,
+            firstName,
+            lastName,
+        });
+        if (result.success) {
+            showToast.success(
+                result.isNewUser
+                    ? 'Welcome — account created. Set a password in Profile for recovery.'
+                    : 'Signed in'
+            );
+            finishMarketplace();
+        } else {
+            showToast.error(externalAuthErrorMessage(result));
+        }
+        setLoading(false);
+    };
+
+
+    const registerLink = authPath('/register', { channel, returnUrl });
+
+    const subtitle = (() => {
+        if (returnUrl?.includes('/invite/accept/')) {
+            return 'Sign in to accept your company invitation';
+        }
+        if (isCorporate) {
+            return preselectedCompanyId
+                ? 'Sign in to join your company workspace'
+                : 'Sign in to manage company parking, members, and allocations';
+        }
+        return 'Sign in to your account';
+    })();
 
     return (
         <div className="auth-page">
             <div className="card auth-card">
                 <h1 className="auth-title">Welcome Back</h1>
-                <p className="auth-subtitle">
-                    {returnUrl?.includes('/invite/accept/')
-                        ? 'Sign in to accept your company invitation'
-                        : 'Sign in to your account'}
-                </p>
+                <p className="auth-subtitle">{subtitle}</p>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label className="form-label">Email</label>
-                        <input
-                            type="email"
-                            className="form-input"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Enter your email"
-                            required
-                        />
+                <AuthChannelSelector value={channel} onChange={setChannel} />
+
+                {memberships ? (
+                    <div>
+                        <p style={{ marginBottom: '1rem', color: 'var(--color-text-secondary)' }}>
+                            Select a company to continue:
+                        </p>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                            {memberships.map((m) => (
+                                <li key={m.companyId || m.CompanyId} style={{ marginBottom: '0.5rem' }}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary btn-full"
+                                        disabled={loading}
+                                        onClick={() =>
+                                            handleSelectCompany(m.companyId || m.CompanyId)
+                                        }
+                                    >
+                                        {m.companyName || m.CompanyName || 'Company'}
+                                        {m.role || m.Role ? ` · ${m.role || m.Role}` : ''}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                        <button
+                            type="button"
+                            className="btn btn-link"
+                            style={{ marginTop: '1rem' }}
+                            onClick={() => setMemberships(null)}
+                        >
+                            Back
+                        </button>
                     </div>
+                ) : (
+                    <form onSubmit={handleSubmit}>
+                        <div className="form-group">
+                            <label className="form-label">Email</label>
+                            <input
+                                type="email"
+                                className="form-input"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder={isCorporate ? 'Work email' : 'Enter your email'}
+                                required
+                                autoComplete="username"
+                            />
+                        </div>
 
-                    <div className="form-group">
-                        <label className="form-label">Password</label>
-                        <input
-                            type="password"
-                            className="form-input"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter your password"
-                            required
-                        />
-                    </div>
+                        <div className="form-group">
+                            <label className="form-label">Password</label>
+                            <input
+                                type="password"
+                                className="form-input"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Enter your password"
+                                required
+                                autoComplete="current-password"
+                            />
+                        </div>
 
-                    <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                        {loading ? 'Signing in...' : 'Sign In'}
-                    </button>
-                </form>
+                        <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
+                            {loading
+                                ? 'Signing in...'
+                                : isCorporate
+                                  ? 'Sign in to Corporate'
+                                  : 'Sign In'}
+                        </button>
+                    </form>
+                )}
+
+                {/* Social only on Marketplace tab — never corporate channel (PR4 AC) */}
+                {!isCorporate && !memberships && (
+                    <SocialAuthSection
+                        onGoogleCredential={handleGoogleCredential}
+                        onAppleCredential={handleAppleCredential}
+                        disabled={loading}
+                    />
+                )}
+
 
                 <p className="auth-footer">
                     Don&apos;t have an account? <Link to={registerLink}>Sign up</Link>

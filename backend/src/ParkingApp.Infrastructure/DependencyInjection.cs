@@ -18,6 +18,8 @@ using ParkingApp.Infrastructure.Modules;
 using ParkingApp.Infrastructure.Outbox;
 using ParkingApp.Infrastructure.Repositories;
 using ParkingApp.Infrastructure.Services;
+using ParkingApp.Admin.Infrastructure;
+using ParkingApp.Admin.Infrastructure.Persistence;
 using StackExchange.Redis;
 
 namespace ParkingApp.Infrastructure;
@@ -36,6 +38,7 @@ public static class DependencyInjection
         services.AddMarketplaceInfrastructure(configuration);
         services.AddCorporateInfrastructure(configuration);
         services.AddMessagingInfrastructure();
+        services.AddAdminInfrastructure();
 
         // Notification delivery contract adapter (implementation registered by AddNotificationsModule)
         services.AddScoped<INotificationSender, NotificationSender>();
@@ -43,12 +46,37 @@ public static class DependencyInjection
         return services;
     }
 
+    /// <summary>
+    /// Sentinel used when appsettings still has the secrets placeholder. Must be a valid Npgsql
+    /// connection string so host composition (including WebApplicationFactory) can finish;
+    /// real overrides come from env/user-secrets or test factories via ConfigureTestServices.
+    /// </summary>
+    internal const string UnconfiguredConnectionString =
+        "Host=127.0.0.1;Port=5432;Database=parkease_unconfigured;Username=unconfigured;Password=unconfigured";
+
+    internal const string ConnectionStringPlaceholder = "SET_VIA_USER_SECRETS_OR_ENV_VAR";
+
+    internal static bool IsMissingConnectionString(string? connectionString) =>
+        string.IsNullOrWhiteSpace(connectionString)
+        || string.Equals(connectionString.Trim(), ConnectionStringPlaceholder, StringComparison.OrdinalIgnoreCase);
+
     private static void RegisterSharedInfrastructure(IServiceCollection services, IConfiguration configuration)
     {
-        // Database - PostgreSQL with PostGIS
-        var connectionString = NormalizeNpgsqlPooling(
-            configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("DefaultConnection string is required"));
+        // Database - PostgreSQL with PostGIS.
+        // Note: WebApplicationFactory ConfigureAppConfiguration often does not win over
+        // appsettings for values read during Program service registration. A parseable
+        // sentinel avoids "entry point exited without ever building an IHost" on CI
+        // (no user secrets); factories re-bind DbContext in ConfigureTestServices.
+        var rawConnection = configuration.GetConnectionString("DefaultConnection");
+        if (IsMissingConnectionString(rawConnection))
+        {
+            Console.WriteLine(
+                ">> DefaultConnection is missing or still the secrets placeholder — " +
+                "using unconfigured sentinel (override via env/user-secrets or test host)");
+            rawConnection = UnconfiguredConnectionString;
+        }
+
+        var connectionString = NormalizeNpgsqlPooling(rawConnection!);
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -80,6 +108,7 @@ public static class DependencyInjection
             sp => sp.GetRequiredService<UnitOfWork>());
         services.AddScoped<ICorporateDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
         services.AddScoped<ICorporateUnitOfWork>(sp => sp.GetRequiredService<UnitOfWork>());
+        services.AddScoped<IAdminDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
         // Email (IEmailService / Resend) registers in Notifications.Infrastructure.AddNotificationServices
 

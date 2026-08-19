@@ -11,8 +11,15 @@ public sealed record ParkingSpaceSummary(
     bool IsActive,
     int TotalSpots,
     string OwnershipType,
-    Guid? CompanyOwnerId = null)
+    Guid? CompanyOwnerId = null,
+    bool IsLprEnabled = false,
+    int TwoWheelerPhysicalSpots = 0,
+    int FourWheelerPhysicalSpots = 0)
 {
     public bool IsCompanyOwned =>
         string.Equals(OwnershipType, "CompanyOwned", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True when the lot has a configured physical 2W/4W split (not untyped total-only).</summary>
+    public bool HasTypedPhysicalCapacity =>
+        TwoWheelerPhysicalSpots > 0 || FourWheelerPhysicalSpots > 0;
 }

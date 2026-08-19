@@ -1,36 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNotificationContext } from '../context/NotificationContext';
 import api from '../services/api';
-
-const TYPE_ICONS = {
-    BookingRequest: '📥',
-    BookingConfirmed: '✅',
-    BookingRejected: '❌',
-    PaymentReceived: '💰',
-    NewMessage: '💬',
-    SystemAlert: '🔔',
-    default: '🔔',
-};
-
-const TYPE_COLORS = {
-    BookingRequest: '#3b82f6',
-    BookingConfirmed: '#10b981',
-    BookingRejected: '#ef4444',
-    PaymentReceived: '#10b981',
-    NewMessage: '#8b5cf6',
-    SystemAlert: '#f59e0b',
-    default: '#6b7280',
-};
-
-function timeAgo(dateStr) {
-    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-}
+import {
+    parseNotificationData,
+    isOverstayNotification,
+    isSessionEndingNotification,
+    isBookingActionNotification,
+    timeAgo,
+    TYPE_ICONS,
+    TYPE_COLORS,
+} from '../utils/notificationHelpers';
 
 export default function NotificationDropdown() {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [dbNotifications, setDbNotifications] = useState([]);
     // Single source of truth for badge: always the DB unread count
@@ -134,6 +117,26 @@ export default function NotificationDropdown() {
         }
     };
 
+    const goToBookingAction = async (e, notification, action) => {
+        e.stopPropagation();
+        await handleMarkRead(notification);
+        const data = parseNotificationData(notification.data);
+        const bookingId = data.BookingId || data.bookingId;
+        if (!bookingId) {
+            navigate('/bookings');
+            setIsOpen(false);
+            return;
+        }
+        if (action === 'extend') {
+            navigate(`/bookings?action=extend&bookingId=${bookingId}`);
+        } else if (action === 'checkout') {
+            navigate(`/bookings?action=checkout&bookingId=${bookingId}`);
+        } else {
+            navigate(`/bookings?bookingId=${bookingId}`);
+        }
+        setIsOpen(false);
+    };
+
     const handleMarkAllRead = async () => {
         try {
             await api.markAllNotificationsAsRead();
@@ -201,7 +204,7 @@ export default function NotificationDropdown() {
                     transition: 'background 0.2s',
                     color: 'inherit',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--dropdown-item-hover-bg)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
                 🔔
@@ -210,8 +213,8 @@ export default function NotificationDropdown() {
                         position: 'absolute',
                         top: '-2px',
                         right: '-2px',
-                        background: '#ef4444',
-                        color: 'white',
+                        background: 'var(--color-error)',
+                        color: 'var(--color-text-on-accent)',
                         fontSize: '0.65rem',
                         fontWeight: '700',
                         borderRadius: '999px',
@@ -222,7 +225,7 @@ export default function NotificationDropdown() {
                         justifyContent: 'center',
                         padding: '0 3px',
                         lineHeight: 1,
-                        boxShadow: '0 0 0 2px var(--navbar-bg, #1e293b)',
+                        boxShadow: '0 0 0 2px var(--header-bg)',
                     }}>
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
@@ -237,9 +240,10 @@ export default function NotificationDropdown() {
                     right: 0,
                     width: '360px',
                     maxWidth: '90vw',
-                    background: '#1e293b',
+                    background: 'var(--dropdown-bg)',
                     borderRadius: '16px',
-                    boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)',
+                    boxShadow: 'var(--shadow-dropdown)',
+                    border: '1px solid var(--dropdown-border)',
                     overflow: 'hidden',
                     zIndex: 9000,
                     animation: 'notifOpen 0.2s ease-out',
@@ -250,14 +254,14 @@ export default function NotificationDropdown() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        borderBottom: '1px solid rgba(255,255,255,0.08)',
+                        borderBottom: '1px solid var(--dropdown-border)',
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '1.1rem', fontWeight: '700', color: 'white' }}>Notifications</span>
+                            <span style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--color-text-primary)' }}>Notifications</span>
                             {unreadCount > 0 && (
                                 <span style={{
-                                    background: '#ef4444',
-                                    color: 'white',
+                                    background: 'var(--color-error)',
+                                    color: 'var(--color-text-on-accent)',
                                     fontSize: '0.7rem',
                                     fontWeight: '700',
                                     borderRadius: '999px',
@@ -274,14 +278,14 @@ export default function NotificationDropdown() {
                                     style={{
                                         background: 'transparent',
                                         border: 'none',
-                                        color: '#60a5fa',
+                                        color: 'var(--color-accent-light)',
                                         fontSize: '0.75rem',
                                         cursor: 'pointer',
                                         padding: '0.25rem 0.4rem',
                                         borderRadius: '6px',
                                         textDecoration: 'none',
                                     }}
-                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(96,165,250,0.1)'}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-primary-alpha)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                 >
                                     Mark all read
@@ -293,14 +297,14 @@ export default function NotificationDropdown() {
                                     style={{
                                         background: 'transparent',
                                         border: 'none',
-                                        color: '#94a3b8',
+                                        color: 'var(--color-text-secondary)',
                                         fontSize: '0.75rem',
                                         cursor: 'pointer',
                                         padding: '0.25rem 0.4rem',
                                         borderRadius: '6px',
                                         textDecoration: 'none',
                                     }}
-                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(148,163,184,0.1)'}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--dropdown-item-hover-bg)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                 >
                                     Clear all
@@ -312,19 +316,25 @@ export default function NotificationDropdown() {
                     {/* Notification List */}
                     <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                         {loading && dbNotifications.length === 0 ? (
-                            <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                                 Loading…
                             </div>
                         ) : dbNotifications.length === 0 ? (
                             <div style={{ padding: '2.5rem', textAlign: 'center' }}>
                                 <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔕</div>
-                                <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No notifications yet</div>
+                                <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>No notifications yet</div>
                             </div>
                         ) : (
                             <>
                                 {dbNotifications.map(n => {
                                     const icon = TYPE_ICONS[n.type] || TYPE_ICONS.default;
                                     const color = TYPE_COLORS[n.type] || TYPE_COLORS.default;
+                                    const data = parseNotificationData(n.data);
+                                    const overstay = isOverstayNotification(data);
+                                    const sessionEnding = isSessionEndingNotification(data);
+                                    const bookingAction = isBookingActionNotification(data);
+                                    const canExtend = data.CanExtend === 'true' || data.ActionExtend === 'true';
+                                    const canCheckout = data.ActionCheckout === 'true' || overstay || sessionEnding;
                                     return (
                                         <div
                                             key={n.id}
@@ -335,15 +345,15 @@ export default function NotificationDropdown() {
                                                 gap: '0.75rem',
                                                 alignItems: 'flex-start',
                                                 cursor: n.isRead ? 'default' : 'pointer',
-                                                background: n.isRead ? 'transparent' : 'rgba(59,130,246,0.06)',
-                                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                background: n.isRead ? 'transparent' : 'var(--color-primary-alpha)',
+                                                borderBottom: '1px solid var(--dropdown-border)',
                                                 transition: 'background 0.15s',
                                             }}
                                             onMouseEnter={e => {
-                                                if (!n.isRead) e.currentTarget.style.background = 'rgba(59,130,246,0.12)';
+                                                if (!n.isRead) e.currentTarget.style.background = 'var(--dropdown-item-hover-bg)';
                                             }}
                                             onMouseLeave={e => {
-                                                e.currentTarget.style.background = n.isRead ? 'transparent' : 'rgba(59,130,246,0.06)';
+                                                e.currentTarget.style.background = n.isRead ? 'transparent' : 'var(--color-primary-alpha)';
                                             }}
                                         >
                                             <div style={{
@@ -357,20 +367,52 @@ export default function NotificationDropdown() {
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{
                                                     fontWeight: n.isRead ? '500' : '600',
-                                                    color: n.isRead ? '#94a3b8' : 'white',
+                                                    color: n.isRead ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
                                                     fontSize: '0.875rem', marginBottom: '2px',
                                                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                                 }}>
                                                     {n.title}
                                                 </div>
                                                 <div style={{
-                                                    color: '#64748b', fontSize: '0.8rem', lineHeight: '1.4',
+                                                    color: 'var(--dropdown-muted)', fontSize: '0.8rem', lineHeight: '1.4',
                                                     display: '-webkit-box', WebkitLineClamp: 2,
                                                     WebkitBoxOrient: 'vertical', overflow: 'hidden',
                                                 }}>
                                                     {n.message}
                                                 </div>
-                                                <div style={{ color: '#475569', fontSize: '0.72rem', marginTop: '4px' }}>
+                                                {bookingAction && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                                                        {canExtend && (
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-primary"
+                                                                style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
+                                                                onClick={(e) => goToBookingAction(e, n, 'extend')}
+                                                            >
+                                                                Extend
+                                                            </button>
+                                                        )}
+                                                        {canCheckout && (
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-secondary"
+                                                                style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
+                                                                onClick={(e) => goToBookingAction(e, n, 'checkout')}
+                                                            >
+                                                                Check out
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-outline"
+                                                            style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
+                                                            onClick={(e) => goToBookingAction(e, n, 'open')}
+                                                        >
+                                                            View booking
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72rem', marginTop: '4px' }}>
                                                     {timeAgo(n.createdAt)}
                                                 </div>
                                             </div>
@@ -380,12 +422,12 @@ export default function NotificationDropdown() {
                                                         onClick={(e) => handleDelete(e, n.id)}
                                                         title="Delete notification"
                                                         style={{
-                                                            background: 'transparent', border: 'none', color: '#64748b',
+                                                            background: 'transparent', border: 'none', color: 'var(--dropdown-muted)',
                                                             cursor: 'pointer', fontSize: '1rem', padding: '0.2rem',
                                                             borderRadius: '4px', transition: 'color 0.2s',
                                                         }}
-                                                        onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                                                        onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                                                        onMouseEnter={e => e.currentTarget.style.color = 'var(--color-error)'}
+                                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--dropdown-muted)'}
                                                     >
                                                         🗑️
                                                     </button>
@@ -393,7 +435,7 @@ export default function NotificationDropdown() {
                                                 {!n.isRead && (
                                                     <div style={{
                                                         width: '8px', height: '8px', borderRadius: '50%',
-                                                        background: '#3b82f6', flexShrink: 0, marginTop: '2px',
+                                                        background: 'var(--color-primary)', flexShrink: 0, marginTop: '2px',
                                                     }} />
                                                 )}
                                             </div>
@@ -407,8 +449,8 @@ export default function NotificationDropdown() {
                                             disabled={loading}
                                             style={{
                                                 background: 'transparent',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#94a3b8', padding: '0.4rem 1rem',
+                                                border: '1px solid var(--control-border)',
+                                                color: 'var(--color-text-secondary)', padding: '0.4rem 1rem',
                                                 borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem',
                                             }}
                                         >

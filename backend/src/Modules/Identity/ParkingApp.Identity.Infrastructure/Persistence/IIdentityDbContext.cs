@@ -11,6 +11,7 @@ public interface IIdentityDbContext
     DbSet<User> Users { get; }
     DbSet<Vehicle> Vehicles { get; }
     DbSet<DeviceToken> DeviceTokens { get; }
+    DbSet<UserExternalLogin> ExternalLogins { get; }
 
     DbSet<TEntity> Set<TEntity>() where TEntity : class;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

@@ -1,8 +1,45 @@
-using ParkingApp.Infrastructure.Services;
+using FluentAssertions;
 using ParkingApp.Identity.Infrastructure.Services;
-using FluentAssertions; using ParkingApp.Marketplace.Infrastructure.Services; using Xunit;  namespace ParkingApp.UnitTests.Infrastructure.Services;  public class BcryptPasswordHasherTests {     private readonly BcryptPasswordHasher _hasher = new();      [Fact]     public void Hash_Then_Verify_Succeeds_ForSamePassword()     {         var hash = _hasher.Hash("Secret123!");         _hasher.Verify("Secret123!", hash).Should().BeTrue();     }      [Fact]     public void Verify_Fails_ForWrongPassword()     {         var hash = _hasher.Hash("Secret123!");         _hasher.Verify("WrongPassword", hash).Should().BeFalse();     }      [Fact]     public void Hash_Throws_ForEmptyPassword()     {         var act = () => _hasher.Hash("");         act.Should().Throw<ArgumentException>();     } }
+using Xunit;
 
+namespace ParkingApp.UnitTests.Infrastructure.Services;
 
+public class BcryptPasswordHasherTests
+{
+    private readonly BcryptPasswordHasher _hasher = new();
 
+    [Fact]
+    public void Hash_Then_Verify_Succeeds_ForSamePassword()
+    {
+        var hash = _hasher.Hash("Secret123!");
+        _hasher.Verify("Secret123!", hash).Should().BeTrue();
+    }
 
+    [Fact]
+    public void Verify_Fails_ForWrongPassword()
+    {
+        var hash = _hasher.Hash("Secret123!");
+        _hasher.Verify("WrongPassword", hash).Should().BeFalse();
+    }
 
+    [Fact]
+    public void Hash_Throws_ForEmptyPassword()
+    {
+        var act = () => _hasher.Hash("");
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Verify_NullPasswordHash_ReturnsFalse_NoThrow()
+    {
+        var act = () => _hasher.Verify("any-password", null);
+        act.Should().NotThrow();
+        act().Should().BeFalse();
+    }
+
+    [Fact]
+    public void Verify_EmptyPasswordHash_ReturnsFalse()
+    {
+        _hasher.Verify("any-password", "").Should().BeFalse();
+    }
+}

@@ -8,23 +8,23 @@ import showToast from '../utils/toast.jsx';
 
 const BOOKING_STATUS = ['Pending', 'Confirmed', 'InProgress', 'Completed', 'Cancelled', 'Expired', 'Awaiting Payment', 'Rejected', 'Extension Pending', 'Extension Payment Due'];
 const STATUS_COLORS = {
-    0: '#f59e0b',
-    1: '#10b981',
-    2: '#6366f1',
-    3: '#22c55e',
-    4: '#ef4444',
-    5: '#9ca3af',
-    6: '#8b5cf6',
-    7: '#ef4444',
-    8: '#f59e0b',
-    9: '#8b5cf6',
+    0: 'var(--color-warning)',
+    1: 'var(--color-success)',
+    2: 'var(--color-primary)',
+    3: 'var(--color-success)',
+    4: 'var(--color-error)',
+    5: 'var(--color-text-muted)',
+    6: 'var(--color-secondary)',
+    7: 'var(--color-error)',
+    8: 'var(--color-warning)',
+    9: 'var(--color-secondary)',
 };
 
 const ALLOC_STATUS = {
-    0: { label: 'Pending Approval', color: '#f59e0b' },
-    1: { label: 'Active', color: '#10b981' },
-    2: { label: 'Rejected', color: '#ef4444' },
-    3: { label: 'Expired', color: '#94a3b8' },
+    0: { label: 'Pending Approval', color: 'var(--color-warning)' },
+    1: { label: 'Active', color: 'var(--color-success)' },
+    2: { label: 'Rejected', color: 'var(--color-error)' },
+    3: { label: 'Expired', color: 'var(--color-text-secondary)' },
 };
 
 const REFRESH_TRIGGERS = ['booking.requested', 'payment.completed', 'booking.cancelled', 'booking.checkin', 'booking.checkout', 'extension.requested', 'extension.approved', 'extension.rejected'];
@@ -33,6 +33,20 @@ const formatMoney = (value) => {
     const n = Number(value);
     if (Number.isNaN(n)) return '—';
     return n.toLocaleString(undefined, { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+};
+
+/** PricingType: 0=Hourly; Daily/Weekly/Monthly show dates only. */
+const formatBookingRangeValue = (dateTime, pricingType) => {
+    const d = new Date(dateTime);
+    if (Number.isNaN(d.getTime())) return '—';
+    if (Number(pricingType) > 0) {
+        return d.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+        });
+    }
+    return d.toLocaleString();
 };
 
 export default function VendorBookings() {
@@ -249,11 +263,16 @@ export default function VendorBookings() {
             <div className="container">
                 <div className="flex-between mb-3" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
-                        <h1 style={{ margin: '0 0 0.25rem 0' }}>Vendor Inbox</h1>
+                        <h1 style={{ margin: '0 0 0.25rem 0' }}>
+                            Vendor Inbox{' '}
+                            <Link to="/my/access-scan" className="btn btn-outline" style={{ fontSize: '0.8rem', marginLeft: '0.5rem', verticalAlign: 'middle' }}>
+                                📱 Scan pass
+                            </Link>
+                        </h1>
                         <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
                             Marketplace booking requests and corporate bulk allocation approvals.
                             {pendingAllocCount > 0 && (
-                                <span style={{ marginLeft: '0.5rem', color: '#fbbf24', fontWeight: 600 }}>
+                                <span style={{ marginLeft: '0.5rem', color: 'var(--color-warning)', fontWeight: 600 }}>
                                     {pendingAllocCount} allocation{pendingAllocCount === 1 ? '' : 's'} pending
                                 </span>
                             )}
@@ -350,11 +369,11 @@ export default function VendorBookings() {
                                             </div>
                                             <div>
                                                 <small style={{ color: 'var(--color-text-muted)' }}>Start</small>
-                                                <div>{new Date(booking.startDateTime).toLocaleString()}</div>
+                                                <div>{formatBookingRangeValue(booking.startDateTime, booking.pricingType)}</div>
                                             </div>
                                             <div>
                                                 <small style={{ color: 'var(--color-text-muted)' }}>End</small>
-                                                <div>{new Date(booking.endDateTime).toLocaleString()}</div>
+                                                <div>{formatBookingRangeValue(booking.endDateTime, booking.pricingType)}</div>
                                             </div>
                                             <div>
                                                 <small style={{ color: 'var(--color-text-muted)' }}>Vehicle</small>
@@ -372,7 +391,7 @@ export default function VendorBookings() {
                                                             alignItems: 'center',
                                                             gap: '0.3rem',
                                                             background: 'rgba(99,102,241,0.15)',
-                                                            color: '#818cf8',
+                                                            color: 'var(--color-accent-light)',
                                                             border: '1px solid rgba(99,102,241,0.35)',
                                                             borderRadius: '6px',
                                                             padding: '0.1rem 0.5rem',
@@ -385,7 +404,144 @@ export default function VendorBookings() {
                                                     </div>
                                                 </div>
                                             )}
+                                            {(booking.bayLabel || booking.facilityLevel || booking.facilityZone) && (
+                                                <div>
+                                                    <small style={{ color: 'var(--color-text-muted)' }}>Bay</small>
+                                                    <div style={{ fontWeight: 600 }}>
+                                                        {[booking.facilityLevel, booking.facilityZone, booking.bayLabel].filter(Boolean).join(' · ')}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
+
+                                        {(booking.isBayGuidanceEnabled || booking.valetStatus > 0) && [1, 2, 6, 8, 9].includes(booking.status) && (
+                                            <div style={{
+                                                marginTop: '0.6rem',
+                                                padding: '0.55rem 0.7rem',
+                                                background: 'rgba(59,130,246,0.08)',
+                                                borderRadius: 'var(--radius-sm)',
+                                                fontSize: '0.85rem',
+                                            }}>
+                                                {booking.isBayGuidanceEnabled && (
+                                                    <div className="flex gap-1" style={{ flexWrap: 'wrap', marginBottom: booking.valetStatus > 0 ? '0.5rem' : 0 }}>
+                                                        <button
+                                                            className="btn btn-outline"
+                                                            type="button"
+                                                            style={{ fontSize: '0.8rem' }}
+                                                            disabled={processingId === booking.id}
+                                                            onClick={async () => {
+                                                                const level = window.prompt('Facility level', booking.facilityLevel || 'P1');
+                                                                if (level === null) return;
+                                                                const zone = window.prompt('Zone', booking.facilityZone || '');
+                                                                if (zone === null) return;
+                                                                const bay = window.prompt('Bay label', booking.bayLabel || (booking.slotNumber ? `B-${booking.slotNumber}` : ''));
+                                                                if (bay === null) return;
+                                                                setProcessingId(booking.id);
+                                                                try {
+                                                                    const res = await api.assignBay(booking.id, {
+                                                                        facilityLevel: level || null,
+                                                                        facilityZone: zone || null,
+                                                                        bayLabel: bay || null,
+                                                                    });
+                                                                    if (res.success) {
+                                                                        showToast.success('Bay assignment updated');
+                                                                        fetchData();
+                                                                    } else {
+                                                                        showToast.error(res.message || 'Failed to assign bay');
+                                                                    }
+                                                                } catch (err) {
+                                                                    showToast.error(handleApiError(err, 'Failed to assign bay'));
+                                                                }
+                                                                setProcessingId(null);
+                                                            }}
+                                                        >
+                                                            Assign bay
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {booking.valetStatus > 0 && booking.valetStatus < 4 && (
+                                                    <div className="flex gap-1" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+                                                        <span style={{ color: 'var(--color-secondary)', fontWeight: 600 }}>
+                                                            Valet: {['None', 'Requested', 'Retrieving', 'Ready', 'Completed', 'Cancelled'][booking.valetStatus] || booking.valetStatus}
+                                                            {booking.valetTargetReadyAt && (
+                                                                <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>
+                                                                    {' '}· target {new Date(booking.valetTargetReadyAt).toLocaleTimeString()}
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                        {booking.valetStatus === 1 && (
+                                                            <button
+                                                                className="btn btn-primary"
+                                                                type="button"
+                                                                style={{ fontSize: '0.8rem' }}
+                                                                disabled={processingId === booking.id}
+                                                                onClick={async () => {
+                                                                    setProcessingId(booking.id);
+                                                                    try {
+                                                                        const res = await api.acknowledgeValet(booking.id);
+                                                                        if (res.success) {
+                                                                            showToast.success('Valet acknowledged');
+                                                                            fetchData();
+                                                                        } else showToast.error(res.message || 'Failed');
+                                                                    } catch (err) {
+                                                                        showToast.error(handleApiError(err, 'Failed'));
+                                                                    }
+                                                                    setProcessingId(null);
+                                                                }}
+                                                            >
+                                                                Acknowledge
+                                                            </button>
+                                                        )}
+                                                        {[1, 2].includes(booking.valetStatus) && (
+                                                            <button
+                                                                className="btn btn-primary"
+                                                                type="button"
+                                                                style={{ fontSize: '0.8rem' }}
+                                                                disabled={processingId === booking.id}
+                                                                onClick={async () => {
+                                                                    setProcessingId(booking.id);
+                                                                    try {
+                                                                        const res = await api.markValetReady(booking.id);
+                                                                        if (res.success) {
+                                                                            showToast.success('Vehicle ready — guest notified');
+                                                                            fetchData();
+                                                                        } else showToast.error(res.message || 'Failed');
+                                                                    } catch (err) {
+                                                                        showToast.error(handleApiError(err, 'Failed'));
+                                                                    }
+                                                                    setProcessingId(null);
+                                                                }}
+                                                            >
+                                                                Mark ready
+                                                            </button>
+                                                        )}
+                                                        {[1, 2, 3].includes(booking.valetStatus) && (
+                                                            <button
+                                                                className="btn btn-outline"
+                                                                type="button"
+                                                                style={{ fontSize: '0.8rem' }}
+                                                                disabled={processingId === booking.id}
+                                                                onClick={async () => {
+                                                                    setProcessingId(booking.id);
+                                                                    try {
+                                                                        const res = await api.completeValet(booking.id);
+                                                                        if (res.success) {
+                                                                            showToast.success('Valet completed');
+                                                                            fetchData();
+                                                                        } else showToast.error(res.message || 'Failed');
+                                                                    } catch (err) {
+                                                                        showToast.error(handleApiError(err, 'Failed'));
+                                                                    }
+                                                                    setProcessingId(null);
+                                                                }}
+                                                            >
+                                                                Complete
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {booking.status === 0 && (
                                             <div className="flex gap-1 mt-2">
@@ -483,6 +639,11 @@ export default function VendorBookings() {
                                                 <div>
                                                     <small style={{ color: 'var(--color-text-muted)' }}>Total slots</small>
                                                     <div style={{ fontWeight: 'bold' }}>{allocation.totalSlots}</div>
+                                                    {(allocation.fourWheeler || allocation.twoWheeler) && (
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 4 }}>
+                                                            4W {allocation.fourWheeler?.totalSlots ?? 0} · 2W {allocation.twoWheeler?.totalSlots ?? 0}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <small style={{ color: 'var(--color-text-muted)' }}>Fixed / Shared</small>
@@ -503,7 +664,7 @@ export default function VendorBookings() {
                                             </div>
 
                                             {allocation.status === 0 && (
-                                                <div className="flex gap-1 mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <div className="flex gap-1 mt-2 pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
                                                     <button
                                                         className="btn btn-primary"
                                                         type="button"
@@ -546,7 +707,7 @@ export default function VendorBookings() {
                     <div style={{
                         position: 'fixed',
                         top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.7)',
+                        background: 'var(--overlay-bg)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

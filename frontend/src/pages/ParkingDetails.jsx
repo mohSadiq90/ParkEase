@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, Suspense, lazy } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 // Leaflet only when the details map mounts
@@ -10,11 +10,21 @@ import ParkingSlotModal from '../components/ParkingSlotModal';
 import AvailabilityForecastWidget from '../components/AvailabilityForecastWidget';
 import { getErrorMessage, handleApiError } from '../utils/errorHandler';
 import showToast from '../utils/toast.jsx';
-import { useCompany } from '../contexts/CompanyContext';
-import corporateService from '../services/corporateService';
+import {
+    isParkingShareable,
+    shareParking,
+    buildParkingShareContent,
+    buildWhatsAppShareUrl,
+    buildTelegramShareUrl,
+} from '../utils/parkingShare';
 
 const PARKING_TYPES = ['Open', 'Covered', 'Garage', 'Street', 'Underground'];
 import { API_BASE_URL } from '../config';
+import {
+    isDayBasedPricing,
+    toDateOnly,
+    resolveBookingRangeIso,
+} from '../utils/extensionPricing';
 
 const VEHICLE_TYPES = ['Car', 'Motorcycle', 'SUV', 'Truck', 'Van', 'Electric'];
 const PRICING_TYPES = ['Hourly', 'Daily', 'Weekly', 'Monthly'];
@@ -25,7 +35,6 @@ export default function ParkingDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { isAuthenticated, user } = useAuth();
-    const { activeCompanyId, isCorporateMode } = useCompany();
 
     const [parking, setParking] = useState(null);
     const [reviews, setReviews] = useState([]);
@@ -33,6 +42,8 @@ export default function ParkingDetails() {
     const [error, setError] = useState(''); // Keep for initial page load errors
     const [isFavorite, setIsFavorite] = useState(false);
     const [favoritesLoading, setFavoritesLoading] = useState(false);
+    const [shareLoading, setShareLoading] = useState(false);
+    const [shareMenuOpen, setShareMenuOpen] = useState(false);
 
     const [booking, setBooking] = useState({
         startDateTime: '',
@@ -44,22 +55,17 @@ export default function ParkingDetails() {
         vehicleModel: '',
         vehicleColor: '',
         discountCode: '',
+        includeEvCharging: false,
+        ancillaryServiceIds: [],
     });
 
     const [priceBreakdown, setPriceBreakdown] = useState(null);
+    const [ancillaryCatalog, setAncillaryCatalog] = useState([]);
+    const [eventPackages, setEventPackages] = useState([]);
     const [bookingLoading, setBookingLoading] = useState(false);
     const [bookingSuccess, setBookingSuccess] = useState(null);
     const [showPayment, setShowPayment] = useState(false);
     const [pendingBooking, setPendingBooking] = useState(null);
-    
-    // Corporate state
-    const [corporateAllocation, setCorporateAllocation] = useState(null);
-    const [isVisitor, setIsVisitor] = useState(false);
-    const [visitorName, setVisitorName] = useState('');
-    const [visitorPlate, setVisitorPlate] = useState('');
-    const [showAllocationRequest, setShowAllocationRequest] = useState(false);
-    const [allocationRequesting, setAllocationRequesting] = useState(false);
-
     // Host review response state
     const [replyingReviewId, setReplyingReviewId] = useState(null);
     const [replyText, setReplyText] = useState('');
@@ -88,122 +94,29 @@ export default function ParkingDetails() {
             setSubmittingReply(false);
         }
     };
-    const [allocationRequest, setAllocationRequest] = useState({
-        totalSlots: 1,
-        fixedSlots: 0,
-        sharedSlots: 1,
-        monthlyRate: 0,
-        startDate: '',
-        endDate: '',
-        maxBookingsPerEmployeePerDay: 1,
-        maxBookingsPerEmployeePerWeek: 5,
-        priorityThreshold: 1,
-        allowedStartTime: '07:00',
-        allowedEndTime: '22:00',
-        allowWeekends: false,
-        leaseReference: '',
-    });
     const [paymentMethod, setPaymentMethod] = useState(0);
     const [savedVehicles, setSavedVehicles] = useState([]);
     const [selectedVehicleId, setSelectedVehicleId] = useState('');
     const [showSlotModal, setShowSlotModal] = useState(false);
 
     useEffect(() => {
+        setShareMenuOpen(false);
         fetchParkingDetails();
+        (async () => {
+            try {
+                const res = await api.getEventPackagesByParking(id, true);
+                if (res.success) setEventPackages((res.data || []).filter((p) => p.isOnSale));
+                else setEventPackages([]);
+            } catch {
+                setEventPackages([]);
+            }
+        })();
         if (isAuthenticated) {
             checkFavoriteStatus();
             fetchUserVehicles();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, isAuthenticated]);
-
-    useEffect(() => {
-        if (isCorporateMode && activeCompanyId) {
-            checkCorporateAllocation();
-        } else {
-            setCorporateAllocation(null);
-        }
-    }, [isCorporateMode, activeCompanyId, id]);
-
-    const checkCorporateAllocation = async () => {
-        try {
-            const res = await corporateService.getAllocations();
-            if (res.success && res.data) {
-                const activeAlloc = res.data.find(a => a.parkingSpaceId === id && a.status === 1);
-                setCorporateAllocation(activeAlloc || null);
-            }
-        } catch (err) {
-            console.error("Failed to fetch corporate allocations", err);
-        }
-    };
-
-    const handleAllocationRequestChange = (field, value) => {
-        setAllocationRequest(prev => {
-            const next = { ...prev, [field]: value };
-            if (field === 'totalSlots') {
-                const total = Math.max(1, parseInt(value, 10) || 1);
-                next.totalSlots = total;
-                next.fixedSlots = Math.min(parseInt(next.fixedSlots, 10) || 0, total);
-                next.sharedSlots = Math.min(parseInt(next.sharedSlots, 10) || 0, total - next.fixedSlots);
-            }
-            if (field === 'fixedSlots' || field === 'sharedSlots') {
-                next[field] = Math.max(0, parseInt(value, 10) || 0);
-            }
-            return next;
-        });
-    };
-
-    const handleRequestAllocation = async (e) => {
-        e.preventDefault();
-
-        const totalSlots = parseInt(allocationRequest.totalSlots, 10);
-        const fixedSlots = parseInt(allocationRequest.fixedSlots, 10);
-        const sharedSlots = parseInt(allocationRequest.sharedSlots, 10);
-
-        if (fixedSlots + sharedSlots > totalSlots) {
-            showToast.error('Fixed and shared slots cannot exceed total slots.');
-            return;
-        }
-
-        if (allocationRequest.allowedEndTime <= allocationRequest.allowedStartTime) {
-            showToast.error('Allowed end time must be after allowed start time.');
-            return;
-        }
-
-        setAllocationRequesting(true);
-        try {
-            const response = await corporateService.requestAllocation({
-                parkingSpaceId: id,
-                totalSlots,
-                fixedSlots,
-                sharedSlots,
-                monthlyRate: parseFloat(allocationRequest.monthlyRate) || 0,
-                startDate: new Date(allocationRequest.startDate).toISOString(),
-                endDate: new Date(allocationRequest.endDate).toISOString(),
-                leaseReference: allocationRequest.leaseReference || null,
-                policy: {
-                    maxBookingsPerEmployeePerDay: parseInt(allocationRequest.maxBookingsPerEmployeePerDay, 10),
-                    maxBookingsPerEmployeePerWeek: parseInt(allocationRequest.maxBookingsPerEmployeePerWeek, 10),
-                    priorityThreshold: parseInt(allocationRequest.priorityThreshold, 10),
-                    allowedStartTime: `${allocationRequest.allowedStartTime}:00`,
-                    allowedEndTime: `${allocationRequest.allowedEndTime}:00`,
-                    allowWeekends: allocationRequest.allowWeekends,
-                },
-            });
-
-            if (response.success) {
-                showToast.success('Allocation request submitted for owner approval.');
-                setShowAllocationRequest(false);
-                checkCorporateAllocation();
-            } else {
-                showToast.error(response.message || 'Failed to request allocation.');
-            }
-        } catch (err) {
-            showToast.error(handleApiError(err, 'Failed to request allocation.'));
-        } finally {
-            setAllocationRequesting(false);
-        }
-    };
 
     const fetchUserVehicles = async () => {
         try {
@@ -255,6 +168,66 @@ export default function ParkingDetails() {
         }
     };
 
+    const handleShare = async () => {
+        if (!isParkingShareable(parking)) {
+            showToast.error('This parking space cannot be shared.');
+            setShareMenuOpen(false);
+            return;
+        }
+        if (shareLoading) return;
+        setShareLoading(true);
+        setShareMenuOpen(false);
+        try {
+            const result = await shareParking(parking);
+            if (result.ok && result.method === 'clipboard') {
+                showToast.success('Link copied — paste it in WhatsApp, Telegram, or anywhere.');
+            } else if (result.ok && result.method === 'native') {
+                // OS share sheet handled the share; no toast needed.
+            } else if (result.reason === 'cancelled') {
+                // User dismissed share sheet.
+            } else if (result.reason === 'not_shareable') {
+                showToast.error('This parking space cannot be shared.');
+            } else {
+                showToast.error('Could not share this parking space. Try Copy link below.');
+                setShareMenuOpen(true);
+            }
+        } finally {
+            setShareLoading(false);
+        }
+    };
+
+    const openMessengerShare = (builder) => {
+        if (!isParkingShareable(parking)) {
+            showToast.error('This parking space cannot be shared.');
+            return;
+        }
+        const content = buildParkingShareContent(parking);
+        if (!content) return;
+        const href = builder(content);
+        window.open(href, '_blank', 'noopener,noreferrer');
+        setShareMenuOpen(false);
+    };
+
+    const copyShareLink = async () => {
+        if (!isParkingShareable(parking)) {
+            showToast.error('This parking space cannot be shared.');
+            return;
+        }
+        const content = buildParkingShareContent(parking);
+        if (!content) return;
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(content.text);
+                showToast.success('Link copied to clipboard.');
+            } else {
+                showToast.error('Could not copy link.');
+            }
+        } catch {
+            showToast.error('Could not copy link.');
+        }
+        setShareMenuOpen(false);
+    };
+
     const toggleFavorite = async () => {
         if (!isAuthenticated) {
             showToast.error("Please log in to save favorites");
@@ -283,19 +256,22 @@ export default function ParkingDetails() {
         if (booking.startDateTime && booking.endDateTime && parking) {
             calculatePrice();
         }
-    }, [booking.startDateTime, booking.endDateTime, booking.pricingType, booking.discountCode]);
+    }, [booking.startDateTime, booking.endDateTime, booking.pricingType, booking.discountCode, booking.includeEvCharging, booking.ancillaryServiceIds]);
 
     const slotAvailability = useMemo(() => {
         if (!parking || parking.totalSpots <= 1) return [];
         const reservations = parking.activeReservations || [];
         const hasTimeRange = Boolean(booking.startDateTime && booking.endDateTime);
-        const selectedStart = hasTimeRange ? new Date(booking.startDateTime) : null;
-        const selectedEnd = hasTimeRange ? new Date(booking.endDateTime) : null;
+        const range = hasTimeRange
+            ? resolveBookingRangeIso(booking.startDateTime, booking.endDateTime, booking.pricingType)
+            : null;
+        const selectedStart = range?.startIso ? new Date(range.startIso) : null;
+        const selectedEnd = range?.endIso ? new Date(range.endIso) : null;
 
         return Array.from({ length: parking.totalSpots }, (_, i) => {
             const slotNumber = i + 1;
             const slotReservations = reservations.filter(r => r.slotNumber === slotNumber);
-            const blockedForSelection = hasTimeRange
+            const blockedForSelection = hasTimeRange && selectedStart && selectedEnd
                 ? slotReservations.some(r => {
                     const reservedStart = new Date(r.startDateTime);
                     const reservedEnd = new Date(r.endDateTime);
@@ -309,7 +285,7 @@ export default function ParkingDetails() {
                 reservations: slotReservations
             };
         });
-    }, [parking, booking.startDateTime, booking.endDateTime]);
+    }, [parking, booking.startDateTime, booking.endDateTime, booking.pricingType]);
 
     // Auto-clear slot selection if it becomes blocked by the chosen time range
     useEffect(() => {
@@ -336,22 +312,50 @@ export default function ParkingDetails() {
             if (reviewsRes.success && reviewsRes.data) {
                 setReviews(reviewsRes.data);
             }
+
+            try {
+                const addOnsRes = await api.getAncillaryServicesByParking(id, true);
+                if (addOnsRes.success && Array.isArray(addOnsRes.data)) {
+                    setAncillaryCatalog(addOnsRes.data);
+                }
+            } catch {
+                setAncillaryCatalog([]);
+            }
         } catch (err) {
             setError('Failed to load parking details');
         }
         setLoading(false);
     };
 
+    const toggleAncillaryService = (serviceId) => {
+        setBooking(prev => {
+            const current = prev.ancillaryServiceIds || [];
+            const next = current.includes(serviceId)
+                ? current.filter(id => id !== serviceId)
+                : [...current, serviceId];
+            return { ...prev, ancillaryServiceIds: next };
+        });
+    };
+
     const calculatePrice = async () => {
         if (!booking.startDateTime || !booking.endDateTime) return;
+
+        const { startIso, endIso } = resolveBookingRangeIso(
+            booking.startDateTime,
+            booking.endDateTime,
+            booking.pricingType
+        );
+        if (!startIso || !endIso) return;
 
         try {
             const response = await api.calculatePrice({
                 parkingSpaceId: id,
-                startDateTime: new Date(booking.startDateTime).toISOString(),
-                endDateTime: new Date(booking.endDateTime).toISOString(),
+                startDateTime: startIso,
+                endDateTime: endIso,
                 pricingType: booking.pricingType,
                 discountCode: booking.discountCode || null,
+                includeEvCharging: !!booking.includeEvCharging,
+                ancillaryServiceIds: booking.ancillaryServiceIds?.length ? booking.ancillaryServiceIds : null,
             });
 
             if (response.success && response.data) {
@@ -370,12 +374,12 @@ export default function ParkingDetails() {
             return;
         }
 
-        if (parking?.totalSpots > 1 && !booking.slotNumber && !corporateAllocation) {
+        if (parking?.totalSpots > 1 && !booking.slotNumber) {
             showToast.error('Please select a parking slot');
             return;
         }
 
-        if (parking?.totalSpots > 1 && booking.slotNumber && booking.startDateTime && booking.endDateTime && !corporateAllocation) {
+        if (parking?.totalSpots > 1 && booking.slotNumber && booking.startDateTime && booking.endDateTime) {
             const selectedSlotNumber = parseInt(booking.slotNumber, 10);
             const selectedSlot = slotAvailability.find(s => s.slotNumber === selectedSlotNumber);
             if (selectedSlot?.blockedForSelection) {
@@ -387,58 +391,31 @@ export default function ParkingDetails() {
         setBookingLoading(true);
 
         try {
-            // Corporate Booking Flow
-            if (corporateAllocation) {
-                const payload = {
-                    allocationId: corporateAllocation.id,
-                    startDateTime: new Date(booking.startDateTime).toISOString(),
-                    endDateTime: new Date(booking.endDateTime).toISOString(),
-                };
-                
-                let res;
-                if (isVisitor) {
-                    res = await corporateService.bookVisitorParking({
-                        ...payload,
-                        visitorName: visitorName,
-                        visitorLicensePlate: visitorPlate,
-                        accessExpiry: new Date(booking.endDateTime).toISOString()
-                    });
-                } else {
-                    res = await corporateService.bookEmployeeParking({
-                        ...payload,
-                        vehicleType: booking.vehicleType,
-                        vehicleNumber: booking.vehicleNumber || null
-                    });
-                }
-                
-                if (res.success) {
-                    setBookingSuccess({
-                        reference: res.data.booking?.bookingReference || 'WAITLIST',
-                        message: res.data.waitlist ? 'Added to waitlist based on allocation policy.' : 'Corporate Booking Confirmed!',
-                        isPending: false,
-                    });
-                    showToast.success('Corporate booking handled successfully');
-                    setBooking(prev => ({ ...prev, slotNumber: '' }));
-                    fetchParkingDetails();
-                } else {
-                    showToast.error(res.message || 'Corporate booking failed');
-                }
+            const { startIso, endIso } = resolveBookingRangeIso(
+                booking.startDateTime,
+                booking.endDateTime,
+                booking.pricingType
+            );
+            if (!startIso || !endIso) {
+                showToast.error('Please select a valid start and end date');
                 setBookingLoading(false);
                 return;
             }
 
-            // Standard User Booking Flow
+            // Marketplace booking only (PR8) — corporate lease/book lives under /corporate/*
             const response = await api.createBooking({
                 parkingSpaceId: id,
-                startDateTime: new Date(booking.startDateTime).toISOString(),
-                endDateTime: new Date(booking.endDateTime).toISOString(),
+                startDateTime: startIso,
+                endDateTime: endIso,
                 pricingType: booking.pricingType,
                 vehicleType: booking.vehicleType,
+                includeEvCharging: !!booking.includeEvCharging,
                 slotNumber: booking.slotNumber ? parseInt(booking.slotNumber, 10) : null,
                 vehicleNumber: booking.vehicleNumber || null,
                 vehicleModel: booking.vehicleModel || null,
                 vehicleColor: booking.vehicleColor || null,
                 discountCode: booking.discountCode || null,
+                ancillaryServiceIds: booking.ancillaryServiceIds?.length ? booking.ancillaryServiceIds : null,
             });
 
             if (response.success && response.data) {
@@ -518,7 +495,7 @@ export default function ParkingDetails() {
             <div className="container">
                 {bookingSuccess && (
                     <div className={`alert ${bookingSuccess.isPending ? 'alert-warning' : 'alert-success'} mb-2`}
-                        style={bookingSuccess.isPending ? { background: 'rgba(245, 158, 11, 0.15)', borderColor: '#f59e0b' } : {}}>
+                        style={bookingSuccess.isPending ? { background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--color-warning)' } : {}}>
                         <strong>{bookingSuccess.message}</strong><br />
                         Booking Reference: <strong>{bookingSuccess.reference}</strong>
                         {bookingSuccess.isPending && (
@@ -535,29 +512,136 @@ export default function ParkingDetails() {
                         {/* Image Gallery */}
                         <ImageGallery images={parking.imageUrls} title={parking.title} />
 
-                        <div className="flex-between align-center" style={{ marginBottom: '0.5rem' }}>
+                        <div className="flex-between align-center" style={{ marginBottom: '0.5rem', gap: '0.75rem', flexWrap: 'wrap' }}>
                             <h1 style={{ margin: 0 }}>{parking.title}</h1>
-                            <button
-                                className="btn btn-outline"
-                                onClick={toggleFavorite}
-                                disabled={favoritesLoading}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    fontSize: '1rem',
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: 'var(--radius-full)',
-                                    borderColor: isFavorite ? 'var(--color-primary)' : 'var(--color-border)',
-                                    color: isFavorite ? 'var(--color-primary)' : 'inherit'
-                                }}
-                            >
-                                <span style={{ fontSize: '1.2rem' }}>{isFavorite ? '❤️' : '🤍'}</span>
-                                {isFavorite ? 'Saved' : 'Save'}
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                {isParkingShareable(parking) && (
+                                    <div style={{ position: 'relative' }}>
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline"
+                                            onClick={() => setShareMenuOpen((open) => !open)}
+                                            disabled={shareLoading}
+                                            aria-expanded={shareMenuOpen}
+                                            aria-haspopup="menu"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                fontSize: '1rem',
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: 'var(--radius-full)',
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '1.1rem' }} aria-hidden>🔗</span>
+                                            {shareLoading ? 'Sharing…' : 'Share'}
+                                        </button>
+                                        {shareMenuOpen && (
+                                            <div
+                                                role="menu"
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: 0,
+                                                    top: 'calc(100% + 0.35rem)',
+                                                    minWidth: '11.5rem',
+                                                    background: 'var(--color-surface, #fff)',
+                                                    border: '1px solid var(--color-border)',
+                                                    borderRadius: 'var(--radius-md, 0.5rem)',
+                                                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                                                    zIndex: 20,
+                                                    padding: '0.35rem',
+                                                }}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="btn btn-outline"
+                                                    onClick={handleShare}
+                                                    style={{
+                                                        width: '100%',
+                                                        justifyContent: 'flex-start',
+                                                        border: 'none',
+                                                        marginBottom: '0.15rem',
+                                                    }}
+                                                >
+                                                    Share…
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="btn btn-outline"
+                                                    onClick={() => openMessengerShare(buildWhatsAppShareUrl)}
+                                                    style={{
+                                                        width: '100%',
+                                                        justifyContent: 'flex-start',
+                                                        border: 'none',
+                                                        marginBottom: '0.15rem',
+                                                    }}
+                                                >
+                                                    WhatsApp
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="btn btn-outline"
+                                                    onClick={() => openMessengerShare(buildTelegramShareUrl)}
+                                                    style={{
+                                                        width: '100%',
+                                                        justifyContent: 'flex-start',
+                                                        border: 'none',
+                                                        marginBottom: '0.15rem',
+                                                    }}
+                                                >
+                                                    Telegram
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="btn btn-outline"
+                                                    onClick={copyShareLink}
+                                                    style={{
+                                                        width: '100%',
+                                                        justifyContent: 'flex-start',
+                                                        border: 'none',
+                                                    }}
+                                                >
+                                                    Copy link
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    className="btn btn-outline"
+                                    onClick={toggleFavorite}
+                                    disabled={favoritesLoading}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        fontSize: '1rem',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: 'var(--radius-full)',
+                                        borderColor: isFavorite ? 'var(--color-primary)' : 'var(--color-border)',
+                                        color: isFavorite ? 'var(--color-primary)' : 'inherit'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.2rem' }}>{isFavorite ? '❤️' : '🤍'}</span>
+                                    {isFavorite ? 'Saved' : 'Save'}
+                                </button>
+                            </div>
                         </div>
                         <div className="parking-location" style={{ fontSize: '1.1rem' }}>
                             📍 {parking.address}, {parking.city}, {parking.state}
+                        </div>
+                        <div className="flex gap-1 mt-1" style={{ flexWrap: 'wrap' }}>
+                            {(parking.listingCategory === 1 || parking.listingCategory === 'Residential') && (
+                                <span className="parking-tag">🏠 Residential driveway</span>
+                            )}
+                            {parking.instantBook && (
+                                <span className="parking-tag">Instant book</span>
+                            )}
                         </div>
                         <div style={{ marginTop: '0.75rem' }}>
                             <a
@@ -605,7 +689,27 @@ export default function ParkingDetails() {
                             <h3 className="card-title">Pricing</h3>
                             <div className="grid grid-4" style={{ marginTop: '1rem' }}>
                                 <div>
-                                    <div className="stat-value" style={{ fontSize: '1.5rem' }}>₹{parking.hourlyRate}</div>
+                                    <div className="stat-value" style={{ fontSize: '1.5rem' }}>
+                                        {parking.dynamicPricingApplied
+                                            && parking.effectiveHourlyRate != null
+                                            && Number(parking.effectiveHourlyRate) !== Number(parking.hourlyRate)
+                                            ? (
+                                                <>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>from </span>
+                                                    ₹{Number(parking.effectiveHourlyRate).toFixed(0)}
+                                                    <span style={{
+                                                        marginLeft: '0.4rem',
+                                                        fontSize: '0.9rem',
+                                                        color: 'var(--color-text-muted)',
+                                                        textDecoration: 'line-through',
+                                                        fontWeight: 400,
+                                                    }}>
+                                                        ₹{parking.hourlyRate}
+                                                    </span>
+                                                </>
+                                            )
+                                            : <>₹{parking.hourlyRate}</>}
+                                    </div>
                                     <div className="stat-label">Per Hour</div>
                                 </div>
                                 <div>
@@ -623,14 +727,28 @@ export default function ParkingDetails() {
                             </div>
                         </div>
 
-                        {parking.amenities?.length > 0 && (
+                        {(parking.hasEvCharging || parking.amenities?.length > 0) && (
                             <div className="card mt-2">
                                 <h3 className="card-title">Amenities</h3>
                                 <div className="flex gap-1 mt-1" style={{ flexWrap: 'wrap' }}>
-                                    {parking.amenities.map(a => (
+                                    {parking.hasEvCharging && (
+                                        <span className="parking-tag" style={{ background: 'rgba(16,185,129,0.2)', color: 'var(--color-success)' }}>
+                                            🔌 EV Charging
+                                            {Number(parking.evChargerCount) > 0 ? ` · ${parking.evChargerCount} bay(s)` : ''}
+                                            {Number(parking.evPricingMode) === 1
+                                                ? (Number(parking.evRatePerKwh) > 0 ? ` · ₹${parking.evRatePerKwh}/kWh` : ' · billed by kWh')
+                                                : (Number(parking.evChargingRatePerHour) > 0 ? ` · ₹${parking.evChargingRatePerHour}/hr` : '')}
+                                        </span>
+                                    )}
+                                    {parking.amenities?.map(a => (
                                         <span key={a} className="parking-tag">{a}</span>
                                     ))}
                                 </div>
+                                {parking.hasEvCharging && Number(parking.evIdleRatePerHour) > 0 && (
+                                    <p style={{ margin: '0.75rem 0 0', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                                        Idle fee after session end + {parking.evIdleGraceMinutes ?? 15} min grace: ₹{parking.evIdleRatePerHour}/hr
+                                    </p>
+                                )}
                             </div>
                         )}
 
@@ -638,6 +756,37 @@ export default function ParkingDetails() {
                             <div className="card mt-2">
                                 <h3 className="card-title">Special Instructions</h3>
                                 <p>{parking.specialInstructions}</p>
+                            </div>
+                        )}
+
+                        {eventPackages.length > 0 && (
+                            <div className="card mt-2">
+                                <h3 className="card-title">🎟️ Event packages</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                                    {eventPackages.map((pkg) => (
+                                        <div key={pkg.id} style={{
+                                            padding: '0.75rem',
+                                            borderRadius: '8px',
+                                            background: 'rgba(99,102,241,0.08)',
+                                            border: '1px solid rgba(99,102,241,0.2)',
+                                        }}>
+                                            <div className="flex-between">
+                                                <strong>{pkg.zoneName ? `${pkg.zoneName} · ` : ''}{pkg.title}</strong>
+                                                <span>₹{Number(pkg.packagePrice).toFixed(0)}</span>
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
+                                                Access:{' '}
+                                                {new Date(pkg.accessStartUtc || pkg.eventStartUtc).toLocaleString()}
+                                                {' → '}
+                                                {new Date(pkg.accessEndUtc || pkg.eventEndUtc).toLocaleString()}
+                                                {' · '}{pkg.availableSpots} left
+                                            </div>
+                                            <Link to="/events" className="btn btn-outline" style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
+                                                Buy on Events page
+                                            </Link>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
@@ -795,58 +944,49 @@ export default function ParkingDetails() {
                             </div>
                         ) : (
                             <div className="booking-summary">
-                                {corporateAllocation ? (
-                                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', padding: '15px', borderRadius: '8px', marginBottom: '1rem', color: '#10b981' }}>
-                                        <strong>🏢 Corporate Booking Available</strong>
-                                        <p style={{ margin: '5px 0 0', fontSize: '0.9rem' }}>
-                                            Your company has an active allocation here. Costs are covered by {activeCompanyId ? 'your employer' : 'your company'}!
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <h3 style={{ marginBottom: '1rem' }}>Book This Space</h3>
-                                        {isCorporateMode && activeCompanyId && (
-                                            <div style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.45)', padding: '15px', borderRadius: '8px', marginBottom: '1rem' }}>
-                                                <strong style={{ color: '#c4b5fd' }}>No corporate allocation at this parking space</strong>
-                                                <p style={{ margin: '5px 0 12px', fontSize: '0.9rem', color: '#cbd5e1' }}>
-                                                    Request slots for your company and the parking owner can approve them from vendor bookings.
-                                                </p>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-secondary"
-                                                    onClick={() => setShowAllocationRequest(true)}
-                                                >
-                                                    Request Corporate Allocation
-                                                </button>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
+                                <h3 style={{ marginBottom: '1rem' }}>Book This Space</h3>
 
                                 <form onSubmit={handleBooking}>
                                     <div className="form-group">
-                                        <label className="form-label">Start Date & Time</label>
+                                        <label className="form-label">
+                                            {isDayBasedPricing(booking.pricingType) ? 'Start Date' : 'Start Date & Time'}
+                                        </label>
                                         <input
-                                            type="datetime-local"
+                                            type={isDayBasedPricing(booking.pricingType) ? 'date' : 'datetime-local'}
                                             className="form-input"
-                                            value={booking.startDateTime}
+                                            value={
+                                                isDayBasedPricing(booking.pricingType)
+                                                    ? toDateOnly(booking.startDateTime)
+                                                    : booking.startDateTime
+                                            }
                                             onChange={(e) => setBooking(prev => ({ ...prev, startDateTime: e.target.value }))}
                                             required
                                         />
+                                        {isDayBasedPricing(booking.pricingType) && (
+                                            <small style={{ display: 'block', marginTop: '0.35rem', color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>
+                                                Full calendar day — clock time is not used for daily/weekly/monthly pricing.
+                                            </small>
+                                        )}
                                     </div>
 
                                     <div className="form-group">
-                                        <label className="form-label">End Date & Time</label>
+                                        <label className="form-label">
+                                            {isDayBasedPricing(booking.pricingType) ? 'End Date' : 'End Date & Time'}
+                                        </label>
                                         <input
-                                            type="datetime-local"
+                                            type={isDayBasedPricing(booking.pricingType) ? 'date' : 'datetime-local'}
                                             className="form-input"
-                                            value={booking.endDateTime}
+                                            value={
+                                                isDayBasedPricing(booking.pricingType)
+                                                    ? toDateOnly(booking.endDateTime)
+                                                    : booking.endDateTime
+                                            }
                                             onChange={(e) => setBooking(prev => ({ ...prev, endDateTime: e.target.value }))}
                                             required
                                         />
                                     </div>
 
-                                    {parking.totalSpots > 1 && !corporateAllocation && (
+                                    {parking.totalSpots > 1 && (
                                         <div className="form-group">
                                             <label className="form-label">Parking Slot</label>
                                             {/* Selected slot preview */}
@@ -863,8 +1003,8 @@ export default function ParkingDetails() {
                                                 }}>
                                                     <span style={{ fontSize: '1.4rem' }}>🅿️</span>
                                                     <div>
-                                                        <div style={{ fontWeight: 700, color: '#818cf8' }}>Slot {booking.slotNumber} Selected</div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#a0a0b0' }}>Click below to change</div>
+                                                        <div style={{ fontWeight: 700, color: 'var(--color-accent-light)' }}>Slot {booking.slotNumber} Selected</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>Click below to change</div>
                                                     </div>
                                                 </div>
                                             )}
@@ -877,7 +1017,7 @@ export default function ParkingDetails() {
                                                     background: 'var(--color-bg-tertiary)',
                                                     border: '1px dashed rgba(99,102,241,0.5)',
                                                     borderRadius: 'var(--radius-md)',
-                                                    color: booking.slotNumber ? '#818cf8' : 'var(--color-text-muted)',
+                                                    color: booking.slotNumber ? 'var(--color-accent-light)' : 'var(--color-text-muted)',
                                                     fontWeight: 600,
                                                     cursor: 'pointer',
                                                     display: 'flex',
@@ -898,145 +1038,227 @@ export default function ParkingDetails() {
                                         </div>
                                     )}
 
-                                    {!corporateAllocation && (
-                                        <div className="form-group">
-                                            <label className="form-label">Pricing Type</label>
-                                            <select
-                                                className="form-select"
-                                                value={booking.pricingType}
-                                                onChange={(e) => setBooking(prev => ({ ...prev, pricingType: parseInt(e.target.value) }))}
-                                            >
-                                                {PRICING_TYPES.map((type, i) => (
-                                                    <option key={i} value={i}>{type}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
+                                    <div className="form-group">
+                                        <label className="form-label">Pricing Type</label>
+                                        <select
+                                            className="form-select"
+                                            value={booking.pricingType}
+                                            onChange={(e) => {
+                                                const nextType = parseInt(e.target.value, 10);
+                                                setBooking(prev => {
+                                                    // When switching to day-based, strip times so date inputs stay valid.
+                                                    if (isDayBasedPricing(nextType)) {
+                                                        return {
+                                                            ...prev,
+                                                            pricingType: nextType,
+                                                            startDateTime: toDateOnly(prev.startDateTime),
+                                                            endDateTime: toDateOnly(prev.endDateTime),
+                                                        };
+                                                    }
+                                                    return { ...prev, pricingType: nextType };
+                                                });
+                                            }}
+                                        >
+                                            {PRICING_TYPES.map((type, i) => (
+                                                <option key={i} value={i}>{type}</option>
+                                            ))}
+                                        </select>
+                                    </div>
 
-                                    {corporateAllocation && (
-                                        <div className="form-group" style={{ background: 'var(--color-bg-tertiary)', padding: '10px', borderRadius: '8px', marginBottom: '15px' }}>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', margin: 0 }}>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={isVisitor}
-                                                    onChange={e => setIsVisitor(e.target.checked)}
-                                                    style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
+                                    <div className="form-group">
+                                        <label className="form-label">Saved Vehicles</label>
+                                        <select
+                                            className="form-select"
+                                            value={selectedVehicleId}
+                                            onChange={(e) => handleSelectSavedVehicle(e.target.value)}
+                                        >
+                                            <option value="">-- Enter Details Manually --</option>
+                                            {savedVehicles.map(v => (
+                                                <option key={v.id} value={v.id}>
+                                                    {v.make} {v.model} ({v.licensePlate})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Vehicle Type</label>
+                                        <select
+                                            className="form-select"
+                                            value={booking.vehicleType}
+                                            onChange={(e) => {
+                                                setBooking(prev => ({ ...prev, vehicleType: parseInt(e.target.value) }));
+                                                setSelectedVehicleId('');
+                                            }}
+                                        >
+                                            {VEHICLE_TYPES.map((type, i) => (
+                                                <option key={i} value={i}>{type}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Vehicle Number (Optional)</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="e.g., MH12AB1234"
+                                            value={booking.vehicleNumber}
+                                            onChange={(e) => {
+                                                setBooking(prev => ({ ...prev, vehicleNumber: e.target.value }));
+                                                setSelectedVehicleId('');
+                                            }}
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Vehicle Color (Optional)</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="e.g., Red, Blue"
+                                            value={booking.vehicleColor}
+                                            onChange={(e) => {
+                                                setBooking(prev => ({ ...prev, vehicleColor: e.target.value }));
+                                                setSelectedVehicleId('');
+                                            }}
+                                        />
+                                    </div>
+
+                                    {parking?.hasEvCharging && (
+                                        <div className="form-group">
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!booking.includeEvCharging}
+                                                    onChange={(e) => setBooking(prev => ({ ...prev, includeEvCharging: e.target.checked }))}
                                                 />
-                                                <strong style={{ color: 'white' }}>This is for a Visitor</strong>
+                                                Include EV charging
+                                                {Number(parking.evPricingMode) === 1
+                                                    ? (Number(parking.evRatePerKwh) > 0
+                                                        ? ` (+₹${parking.evRatePerKwh}/kWh after charge)`
+                                                        : ' (billed by kWh after charge)')
+                                                    : (Number(parking.evChargingRatePerHour) > 0
+                                                        ? ` (+₹${parking.evChargingRatePerHour}/hr)`
+                                                        : '')}
                                             </label>
                                         </div>
                                     )}
 
-                                    {isVisitor ? (
-                                        <>
-                                            <div className="form-group">
-                                                <label className="form-label">Visitor Name</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-input"
-                                                    placeholder="Required"
-                                                    value={visitorName}
-                                                    onChange={(e) => setVisitorName(e.target.value)}
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Visitor License Plate</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-input"
-                                                    placeholder="Required"
-                                                    value={visitorPlate}
-                                                    onChange={(e) => setVisitorPlate(e.target.value)}
-                                                    required
-                                                />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="form-group">
-                                                <label className="form-label">Saved Vehicles</label>
-                                                <select
-                                                    className="form-select"
-                                                    value={selectedVehicleId}
-                                                    onChange={(e) => handleSelectSavedVehicle(e.target.value)}
-                                                >
-                                                    <option value="">-- Enter Details Manually --</option>
-                                                    {savedVehicles.map(v => (
-                                                        <option key={v.id} value={v.id}>
-                                                            {v.make} {v.model} ({v.licensePlate})
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            <div className="form-group">
-                                                <label className="form-label">Vehicle Type</label>
-                                                <select
-                                                    className="form-select"
-                                                    value={booking.vehicleType}
-                                                    onChange={(e) => {
-                                                        setBooking(prev => ({ ...prev, vehicleType: parseInt(e.target.value) }));
-                                                        setSelectedVehicleId('');
-                                                    }}
-                                                >
-                                                    {VEHICLE_TYPES.map((type, i) => (
-                                                        <option key={i} value={i}>{type}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            <div className="form-group">
-                                                <label className="form-label">Vehicle Number (Optional)</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-input"
-                                                    placeholder="e.g., MH12AB1234"
-                                                    value={booking.vehicleNumber}
-                                                    onChange={(e) => {
-                                                        setBooking(prev => ({ ...prev, vehicleNumber: e.target.value }));
-                                                        setSelectedVehicleId('');
-                                                    }}
-                                                />
-                                            </div>
-                                            
-                                            {!corporateAllocation && (
-                                                <div className="form-group">
-                                                    <label className="form-label">Vehicle Color (Optional)</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-input"
-                                                        placeholder="e.g., Red, Blue"
-                                                        value={booking.vehicleColor}
-                                                        onChange={(e) => {
-                                                            setBooking(prev => ({ ...prev, vehicleColor: e.target.value }));
-                                                            setSelectedVehicleId('');
-                                                        }}
-                                                    />
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-
-                                    {!corporateAllocation && (
+                                    {ancillaryCatalog.length > 0 && (
                                         <div className="form-group">
-                                            <label className="form-label">Discount Code</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                placeholder="Enter code"
-                                                value={booking.discountCode}
-                                                onChange={(e) => setBooking(prev => ({ ...prev, discountCode: e.target.value }))}
-                                            />
+                                            <label className="form-label">Add-on services</label>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                                                {ancillaryCatalog.map(svc => {
+                                                    const selected = (booking.ancillaryServiceIds || []).includes(svc.id);
+                                                    return (
+                                                        <label
+                                                            key={svc.id}
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'flex-start',
+                                                                gap: '0.5rem',
+                                                                cursor: 'pointer',
+                                                                padding: '0.5rem 0.65rem',
+                                                                borderRadius: 'var(--radius-sm)',
+                                                                border: selected
+                                                                    ? '1px solid rgba(244, 114, 182, 0.55)'
+                                                                    : '1px solid var(--color-border)',
+                                                                background: selected
+                                                                    ? 'rgba(244, 114, 182, 0.1)'
+                                                                    : 'transparent',
+                                                            }}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selected}
+                                                                onChange={() => toggleAncillaryService(svc.id)}
+                                                                style={{ marginTop: '0.2rem' }}
+                                                            />
+                                                            <span>
+                                                                <strong>{svc.name}</strong>
+                                                                <span style={{ marginLeft: '0.4rem', color: 'var(--color-primary)' }}>
+                                                                    ₹{svc.price}
+                                                                </span>
+                                                                {svc.durationMinutes ? (
+                                                                    <span style={{ marginLeft: '0.35rem', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                                                        · ~{svc.durationMinutes} min
+                                                                    </span>
+                                                                ) : null}
+                                                                {svc.description ? (
+                                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+                                                                        {svc.description}
+                                                                    </div>
+                                                                ) : null}
+                                                            </span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
 
-                                    {priceBreakdown && !corporateAllocation && (
+                                    <div className="form-group">
+                                        <label className="form-label">Discount Code</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="Enter code"
+                                            value={booking.discountCode}
+                                            onChange={(e) => setBooking(prev => ({ ...prev, discountCode: e.target.value }))}
+                                        />
+                                    </div>
+
+                                    {priceBreakdown && (
                                         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem', marginTop: '1rem' }}>
                                             <div className="price-row">
                                                 <span>Base ({priceBreakdown.duration} {priceBreakdown.durationUnit})</span>
                                                 <span>₹{priceBreakdown.baseAmount}</span>
                                             </div>
+                                            {priceBreakdown.includeEvCharging && Number(priceBreakdown.evPricingMode) === 1 && (
+                                                <div className="price-row" style={{ color: 'var(--color-success)', fontSize: '0.9rem' }}>
+                                                    <span>EV energy (after charge)</span>
+                                                    <span>
+                                                        {Number(priceBreakdown.evRatePerKwh) > 0
+                                                            ? `₹${priceBreakdown.evRatePerKwh}/kWh`
+                                                            : 'Metered'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {priceBreakdown.includeEvCharging && Number(priceBreakdown.evPricingMode) !== 1 && Number(priceBreakdown.evChargingFeeAmount) > 0 && (
+                                                <div className="price-row" style={{ color: 'var(--color-success)', fontSize: '0.9rem' }}>
+                                                    <span>EV charging (in base)</span>
+                                                    <span>₹{priceBreakdown.evChargingFeeAmount}</span>
+                                                </div>
+                                            )}
+                                            {Number(priceBreakdown.ancillarySubtotal) > 0 && (
+                                                <>
+                                                    {(priceBreakdown.ancillaryLines || []).map((line, idx) => (
+                                                        <div
+                                                            key={line.id || `${line.snapshotName}-${idx}`}
+                                                            className="price-row"
+                                                            style={{ color: 'var(--color-secondary)', fontSize: '0.9rem' }}
+                                                        >
+                                                            <span>{line.snapshotName}{line.quantity > 1 ? ` ×${line.quantity}` : ''}</span>
+                                                            <span>₹{line.lineTotal ?? line.unitPrice}</span>
+                                                        </div>
+                                                    ))}
+                                                    {(priceBreakdown.ancillaryLines || []).length === 0 && (
+                                                        <div className="price-row" style={{ color: 'var(--color-secondary)', fontSize: '0.9rem' }}>
+                                                            <span>Add-ons (in base)</span>
+                                                            <span>₹{priceBreakdown.ancillarySubtotal}</span>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                            {priceBreakdown.dynamicPricingApplied && (
+                                                <div className="price-row" style={{ color: 'var(--color-warning)', fontSize: '0.9rem' }}>
+                                                    <span>
+                                                        Dynamic pricing ×{Number(priceBreakdown.dynamicMultiplier || 1).toFixed(2)}
+                                                    </span>
+                                                    <span title={priceBreakdown.dynamicPricingFactors || ''}>demand</span>
+                                                </div>
+                                            )}
                                             <div className="price-row">
                                                 <span>Tax (18%)</span>
                                                 <span>₹{priceBreakdown.taxAmount}</span>
@@ -1055,6 +1277,11 @@ export default function ParkingDetails() {
                                                 <span>Total</span>
                                                 <span>₹{priceBreakdown.totalAmount}</span>
                                             </div>
+                                            {priceBreakdown.dynamicPricingApplied && priceBreakdown.dynamicPricingFactors && (
+                                                <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                                    {priceBreakdown.dynamicPricingFactors}
+                                                </p>
+                                            )}
                                         </div>
                                     )}
 
@@ -1063,10 +1290,9 @@ export default function ParkingDetails() {
                                     <button
                                         type="submit"
                                         className="btn btn-primary btn-full mt-2"
-                                        disabled={bookingLoading || (!priceBreakdown && !corporateAllocation) || (corporateAllocation && (!booking.startDateTime || !booking.endDateTime))}
-                                        style={corporateAllocation ? { background: '#10b981', borderColor: '#10b981' } : {}}
+                                        disabled={bookingLoading || !priceBreakdown}
                                     >
-                                        {bookingLoading ? 'Submitting Request...' : corporateAllocation ? 'Confirm Corporate Booking' : 'Request Booking'}
+                                        {bookingLoading ? 'Submitting Request...' : 'Request Booking'}
                                     </button>
                                 </form>
                             </div>
@@ -1074,97 +1300,6 @@ export default function ParkingDetails() {
                     </div>
                 </div>
             </div>
-
-            {showAllocationRequest && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-                    <div className="card" style={{ width: '100%', maxWidth: '620px', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h3 className="card-title">Request Corporate Allocation</h3>
-                        <p className="card-subtitle mb-2">{parking?.title}</p>
-                        <form onSubmit={handleRequestAllocation}>
-                            <div className="grid grid-3" style={{ gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Total Slots</label>
-                                    <input type="number" min="1" max={parking?.totalSpots || 1000} className="form-input" value={allocationRequest.totalSlots} onChange={(e) => handleAllocationRequestChange('totalSlots', e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Fixed Slots</label>
-                                    <input type="number" min="0" className="form-input" value={allocationRequest.fixedSlots} onChange={(e) => handleAllocationRequestChange('fixedSlots', e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Shared Slots</label>
-                                    <input type="number" min="0" className="form-input" value={allocationRequest.sharedSlots} onChange={(e) => handleAllocationRequestChange('sharedSlots', e.target.value)} required />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-3" style={{ gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Monthly Rate</label>
-                                    <input type="number" min="0" step="0.01" className="form-input" value={allocationRequest.monthlyRate} onChange={(e) => handleAllocationRequestChange('monthlyRate', e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Start Date</label>
-                                    <input type="date" className="form-input" value={allocationRequest.startDate} onChange={(e) => handleAllocationRequestChange('startDate', e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">End Date</label>
-                                    <input type="date" className="form-input" value={allocationRequest.endDate} onChange={(e) => handleAllocationRequestChange('endDate', e.target.value)} required />
-                                </div>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">Lease Reference</label>
-                                <input
-                                    type="text"
-                                    maxLength="100"
-                                    className="form-input"
-                                    placeholder="Optional contract or purchase order reference"
-                                    value={allocationRequest.leaseReference}
-                                    onChange={(e) => handleAllocationRequestChange('leaseReference', e.target.value)}
-                                />
-                            </div>
-
-                            <div className="grid grid-3" style={{ gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Max/Day</label>
-                                    <input type="number" min="1" className="form-input" value={allocationRequest.maxBookingsPerEmployeePerDay} onChange={(e) => handleAllocationRequestChange('maxBookingsPerEmployeePerDay', e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Max/Week</label>
-                                    <input type="number" min="1" className="form-input" value={allocationRequest.maxBookingsPerEmployeePerWeek} onChange={(e) => handleAllocationRequestChange('maxBookingsPerEmployeePerWeek', e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Min Priority</label>
-                                    <input type="number" min="1" max="10" className="form-input" value={allocationRequest.priorityThreshold} onChange={(e) => handleAllocationRequestChange('priorityThreshold', e.target.value)} required />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-3" style={{ gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Allowed Start</label>
-                                    <input type="time" className="form-input" value={allocationRequest.allowedStartTime} onChange={(e) => handleAllocationRequestChange('allowedStartTime', e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Allowed End</label>
-                                    <input type="time" className="form-input" value={allocationRequest.allowedEndTime} onChange={(e) => handleAllocationRequestChange('allowedEndTime', e.target.value)} required />
-                                </div>
-                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', paddingTop: '1.8rem' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={allocationRequest.allowWeekends} onChange={(e) => handleAllocationRequestChange('allowWeekends', e.target.checked)} />
-                                        Allow weekends
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-1 mt-2" style={{ justifyContent: 'flex-end' }}>
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowAllocationRequest(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary" disabled={allocationRequesting}>
-                                    {allocationRequesting ? 'Submitting...' : 'Submit Request'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
 
             {/* Slot selection modal */}
             {parking?.totalSpots > 1 && (

@@ -15,13 +15,21 @@ using ParkingApp.Messaging.Infrastructure.Persistence;
 using MessagingConfigs = ParkingApp.Messaging.Infrastructure.Configurations;
 using MarketplaceConfigs = ParkingApp.Marketplace.Infrastructure.Configurations;
 using ParkingApp.Marketplace.Infrastructure.Persistence;
+using ParkingApp.Admin.Domain.Entities;
+using ParkingApp.Admin.Infrastructure.Persistence;
+using AdminConfigs = ParkingApp.Admin.Infrastructure.Configurations;
 
 namespace ParkingApp.Infrastructure.Data;
 
 /// <summary>
-/// Shared database context implementing module persistence facades (Identity, Messaging, Marketplace, ΓÇª).
+/// Shared database context implementing module persistence facades (Identity, Messaging, Marketplace, …).
 /// </summary>
-public class ApplicationDbContext : DbContext, ParkingApp.Identity.Infrastructure.Persistence.IIdentityDbContext, ParkingApp.Messaging.Infrastructure.Persistence.IMessagingDbContext, IMarketplaceDbContext, ICorporateDbContext
+public class ApplicationDbContext : DbContext,
+    ParkingApp.Identity.Infrastructure.Persistence.IIdentityDbContext,
+    ParkingApp.Messaging.Infrastructure.Persistence.IMessagingDbContext,
+    IMarketplaceDbContext,
+    ICorporateDbContext,
+    IAdminDbContext
 {
     private readonly ICorporateTenantContext? _tenantContext;
 
@@ -42,9 +50,17 @@ public class ApplicationDbContext : DbContext, ParkingApp.Identity.Infrastructur
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
+    public DbSet<LprAccessAttempt> LprAccessAttempts => Set<LprAccessAttempt>();
+    public DbSet<LprCameraKey> LprCameraKeys => Set<LprCameraKey>();
+    public DbSet<LprPlateRule> LprPlateRules => Set<LprPlateRule>();
+    public DbSet<EventParkingPackage> EventParkingPackages => Set<EventParkingPackage>();
+    public DbSet<EvChargingSession> EvChargingSessions => Set<EvChargingSession>();
+    public DbSet<ParkingAncillaryService> ParkingAncillaryServices => Set<ParkingAncillaryService>();
+    public DbSet<BookingAncillaryLine> BookingAncillaryLines => Set<BookingAncillaryLine>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+    public DbSet<UserExternalLogin> ExternalLogins => Set<UserExternalLogin>();
 
     // Corporate Module
     public DbSet<Company> Companies => Set<Company>();
@@ -58,6 +74,7 @@ public class ApplicationDbContext : DbContext, ParkingApp.Identity.Infrastructur
     public DbSet<CorporateInvoice> CorporateInvoices => Set<CorporateInvoice>();
     public DbSet<CorporateInvoiceLineItem> CorporateInvoiceLineItems => Set<CorporateInvoiceLineItem>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<AdminActionLog> AdminActionLogs => Set<AdminActionLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -85,6 +102,7 @@ public class ApplicationDbContext : DbContext, ParkingApp.Identity.Infrastructur
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MarketplaceConfigs.ParkingSpaceConfiguration).Assembly);
         // E1: Corporate EF ownership in Corporate.Infrastructure (public module entry type for assembly scan)
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CorporateInfrastructureModule).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AdminConfigs.AdminActionLogConfiguration).Assembly);
 
         // Tenant filters need ApplicationDbContext.CurrentTenantId (not available in standalone configs).
         ApplyCorporateTenantFilters(modelBuilder);
@@ -92,29 +110,35 @@ public class ApplicationDbContext : DbContext, ParkingApp.Identity.Infrastructur
 
     private void ApplyCorporateTenantFilters(ModelBuilder modelBuilder)
     {
+        // IMPORTANT: never use CurrentTenantId.Value here.
+        // EF Core parameterizes filter expressions client-side; when CompanyId is null
+        // (background jobs, pre-tenant HTTP), .Value throws
+        // "Nullable object must have a value". Compare the Guid? directly instead.
+        // When tenant is null, the filter only enforces soft-delete (cross-tenant OK).
+        // When tenant is set, rows are scoped to that company.
         modelBuilder.Entity<UserCompanyMembership>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<ParkingAllocation>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CorporateBooking>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<FixedSlotAssignment>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<EmployeeInvitation>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CompanyUsage>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CorporateWaitlistEntry>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CorporateInvoice>()
-            .HasQueryFilter(e => !e.IsDeleted && (!CurrentTenantId.HasValue || e.CompanyId == CurrentTenantId.Value));
+            .HasQueryFilter(e => !e.IsDeleted && (CurrentTenantId == null || e.CompanyId == CurrentTenantId));
 
         modelBuilder.Entity<CorporateInvoiceLineItem>()
             .HasQueryFilter(e => !e.IsDeleted);

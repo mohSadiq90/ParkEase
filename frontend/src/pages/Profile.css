@@ -21,9 +21,9 @@
     justify-content: center;
     font-size: 2rem;
     font-weight: 700;
-    color: white;
+    color: var(--color-text-on-accent);
     margin-bottom: 1rem;
-    box-shadow: 0 0 30px rgba(99, 102, 241, 0.35);
+    box-shadow: var(--shadow-glow);
 }
 
 .profile-header h1 {
@@ -35,6 +35,64 @@
 .profile-header .profile-role {
     color: var(--color-text-secondary);
     font-size: 0.9rem;
+}
+
+.profile-banner {
+    background: color-mix(in srgb, var(--color-primary, #4f46e5) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary, #4f46e5) 35%, transparent);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.92rem;
+    color: var(--color-text-primary, inherit);
+    line-height: 1.45;
+}
+
+.profile-section-hint {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    margin: 0 0 1rem;
+    line-height: 1.45;
+}
+
+.linked-accounts-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+}
+
+.linked-accounts-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 0.85rem;
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-md, 8px);
+    margin-bottom: 0.5rem;
+}
+
+.linked-accounts-empty {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+}
+
+.linked-accounts-badge {
+    font-weight: 600;
+}
+
+.linked-accounts-status {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.linked-accounts-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
 }
 
 /* Section Cards */
@@ -120,7 +178,7 @@
 .profile-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: var(--overlay-bg);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;

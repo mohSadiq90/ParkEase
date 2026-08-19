@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ParkingApp.BuildingBlocks.Enums;
 using ParkingApp.BuildingBlocks.Domain;
 using ParkingApp.Domain.Enums;
@@ -31,7 +32,8 @@ public class Company : BaseEntity
     public virtual ICollection<CompanyUsage> Usages { get; private set; } = new List<CompanyUsage>();
     public virtual ICollection<CorporateWaitlistEntry> WaitlistEntries { get; private set; } = new List<CorporateWaitlistEntry>();
 
-    // Required for EF Core
+    // Required for EF Core materialization — no business logic.
+    [ExcludeFromCodeCoverage]
     private Company()
     {
     }
@@ -219,22 +221,50 @@ public class Company : BaseEntity
         int parkingCapacity,
         BookingPolicy? bookingPolicy = null)
     {
+        ArgumentNullException.ThrowIfNull(quota);
+        // Legacy: single pool maps to FourWheeler
+        return RequestAllocation(
+            adminUserId,
+            parkingSpaceId,
+            Quota.None,
+            quota,
+            monthlyRate,
+            startDate,
+            endDate,
+            parkingCapacity,
+            bookingPolicy);
+    }
+
+    public ParkingAllocation RequestAllocation(
+        Guid adminUserId,
+        Guid parkingSpaceId,
+        Quota twoWheelerQuota,
+        Quota fourWheelerQuota,
+        decimal monthlyRate,
+        DateTime startDate,
+        DateTime endDate,
+        int parkingCapacity,
+        BookingPolicy? bookingPolicy = null,
+        int twoWheelerPhysicalSpots = 0,
+        int fourWheelerPhysicalSpots = 0)
+    {
         EnsureIsActive();
         RequireAdminMembership(adminUserId);
 
-        if (quota == null)
-        {
-            throw new ArgumentNullException(nameof(quota));
-        }
+        ArgumentNullException.ThrowIfNull(twoWheelerQuota);
+        ArgumentNullException.ThrowIfNull(fourWheelerQuota);
 
-        if (quota.TotalSlots > parkingCapacity)
-        {
-            throw new InvalidOperationException($"Cannot allocate more than {parkingCapacity} total spots available.");
-        }
+        EnsureAllocationFitsCapacity(
+            twoWheelerQuota,
+            fourWheelerQuota,
+            parkingCapacity,
+            twoWheelerPhysicalSpots,
+            fourWheelerPhysicalSpots);
 
         EnsureNoOverlappingAllocation(parkingSpaceId, startDate, endDate);
 
-        var allocation = ParkingAllocation.Create(Id, parkingSpaceId, quota, monthlyRate, startDate, endDate, bookingPolicy);
+        var allocation = ParkingAllocation.Create(
+            Id, parkingSpaceId, twoWheelerQuota, fourWheelerQuota, monthlyRate, startDate, endDate, bookingPolicy);
         Allocations.Add(allocation);
 
         return allocation;
@@ -250,25 +280,52 @@ public class Company : BaseEntity
         int parkingCapacity,
         BookingPolicy? bookingPolicy = null)
     {
+        ArgumentNullException.ThrowIfNull(quota);
+        return CreateOwnedParkingAllocation(
+            adminUserId,
+            parkingSpaceId,
+            Quota.None,
+            quota,
+            monthlyRate,
+            startDate,
+            endDate,
+            parkingCapacity,
+            bookingPolicy);
+    }
+
+    public ParkingAllocation CreateOwnedParkingAllocation(
+        Guid adminUserId,
+        Guid parkingSpaceId,
+        Quota twoWheelerQuota,
+        Quota fourWheelerQuota,
+        decimal monthlyRate,
+        DateTime startDate,
+        DateTime endDate,
+        int parkingCapacity,
+        BookingPolicy? bookingPolicy = null,
+        int twoWheelerPhysicalSpots = 0,
+        int fourWheelerPhysicalSpots = 0)
+    {
         EnsureIsActive();
         RequireAdminMembership(adminUserId);
 
-        if (quota == null)
-        {
-            throw new ArgumentNullException(nameof(quota));
-        }
+        ArgumentNullException.ThrowIfNull(twoWheelerQuota);
+        ArgumentNullException.ThrowIfNull(fourWheelerQuota);
 
-        if (quota.TotalSlots > parkingCapacity)
-        {
-            throw new InvalidOperationException($"Cannot allocate more than {parkingCapacity} total spots available.");
-        }
+        EnsureAllocationFitsCapacity(
+            twoWheelerQuota,
+            fourWheelerQuota,
+            parkingCapacity,
+            twoWheelerPhysicalSpots,
+            fourWheelerPhysicalSpots);
 
         EnsureNoOverlappingAllocation(parkingSpaceId, startDate, endDate);
 
         var allocation = ParkingAllocation.CreateCompanyOwned(
             Id,
             parkingSpaceId,
-            quota,
+            twoWheelerQuota,
+            fourWheelerQuota,
             monthlyRate,
             startDate,
             endDate,
@@ -316,6 +373,14 @@ public class Company : BaseEntity
     }
 
     public void AssignFixedSlot(Guid adminUserId, Guid allocationId, Guid membershipId, int slotNumber)
+        => AssignFixedSlot(adminUserId, allocationId, membershipId, VehicleClass.FourWheeler, slotNumber);
+
+    public void AssignFixedSlot(
+        Guid adminUserId,
+        Guid allocationId,
+        Guid membershipId,
+        VehicleClass vehicleClass,
+        int slotNumber)
     {
         EnsureIsActive();
         RequireAdminMembership(adminUserId);
@@ -323,7 +388,7 @@ public class Company : BaseEntity
         var member = RequireMembershipById(membershipId, requireActive: true);
         var allocation = RequireAllocation(allocationId, requireActive: true);
 
-        allocation.AssignFixedSlot(member, slotNumber);
+        allocation.AssignFixedSlot(member, vehicleClass, slotNumber);
     }
 
     public CorporateFraudAssessment AssessFraudRisk(
@@ -391,6 +456,8 @@ public class Company : BaseEntity
         var allocation = RequireAllocation(allocationId, requireActive: true);
 
         ValidateBookingTarget(draft, allocation);
+        var vehicleClass = VehicleClassMapper.ToVehicleClass(draft.VehicleType);
+        allocation.EnsureClassOffered(vehicleClass);
         allocation.EnsureEmployeeBookingAllowed(
             membership.Priority,
             draft.StartUtc,
@@ -401,12 +468,13 @@ public class Company : BaseEntity
         EnsureFraudAssessmentAllowed(fraudAssessment);
 
         CorporateWaitlistEntry? waitlistEntry = null;
-        if (!allocation.HasFixedSlotAssignment(membership.Id))
+        if (!allocation.HasFixedSlotAssignment(membership.Id, vehicleClass))
         {
             waitlistEntry = FindPendingEmployeeWaitlist(membership.Id, allocation.Id, draft.StartUtc, draft.EndUtc, draft.VehicleNumber);
-            var queueHead = GetPendingWaitlistHead(allocation.Id, draft.StartUtc, draft.EndUtc);
+            var queueHead = GetPendingWaitlistHead(allocation.Id, draft.StartUtc, draft.EndUtc, vehicleClass);
 
-            var canAllocateSharedSlot = allocation.GetAvailableSharedSlots(occupiedSharedSlotNumbers, anonymousOccupiedSharedBookings) > 0;
+            var canAllocateSharedSlot = allocation.GetAvailableSharedSlots(
+                vehicleClass, occupiedSharedSlotNumbers, anonymousOccupiedSharedBookings) > 0;
             var queueBlocksRequester = queueHead != null && (waitlistEntry == null || queueHead.Id != waitlistEntry.Id);
             if (!canAllocateSharedSlot || queueBlocksRequester)
             {
@@ -417,6 +485,7 @@ public class Company : BaseEntity
 
         var slotReservation = allocation.ResolveSlotReservation(
             membership.Id,
+            vehicleClass,
             occupiedSharedSlotNumbers,
             sharedSlotUsageBySlot,
             anonymousOccupiedSharedBookings);
@@ -456,13 +525,16 @@ public class Company : BaseEntity
         var allocation = RequireAllocation(allocationId, requireActive: true);
 
         ValidateBookingTarget(draft, allocation);
+        var vehicleClass = VehicleClassMapper.ToVehicleClass(draft.VehicleType);
+        allocation.EnsureClassOffered(vehicleClass);
         allocation.EnsureVisitorBookingAllowed(draft.StartUtc, draft.EndUtc);
 
         EnsureFraudAssessmentAllowed(fraudAssessment);
 
         var waitlistEntry = FindPendingVisitorWaitlist(membership.Id, allocation.Id, draft.StartUtc, draft.EndUtc, visitorLicensePlate);
-        var queueHead = GetPendingWaitlistHead(allocation.Id, draft.StartUtc, draft.EndUtc);
-        var canAllocateSharedSlot = allocation.GetAvailableSharedSlots(occupiedSharedSlotNumbers, anonymousOccupiedSharedBookings) > 0;
+        var queueHead = GetPendingWaitlistHead(allocation.Id, draft.StartUtc, draft.EndUtc, vehicleClass);
+        var canAllocateSharedSlot = allocation.GetAvailableSharedSlots(
+            vehicleClass, occupiedSharedSlotNumbers, anonymousOccupiedSharedBookings) > 0;
         var queueBlocksRequester = queueHead != null && (waitlistEntry == null || queueHead.Id != waitlistEntry.Id);
         if (!canAllocateSharedSlot || queueBlocksRequester)
         {
@@ -471,6 +543,7 @@ public class Company : BaseEntity
         }
 
         var slotReservation = allocation.ResolveSharedSlotReservation(
+            vehicleClass,
             occupiedSharedSlotNumbers,
             sharedSlotUsageBySlot,
             anonymousOccupiedSharedBookings);
@@ -608,7 +681,12 @@ public class Company : BaseEntity
             throw new InvalidOperationException("Waitlist entry not found.");
         }
 
-        return GetPendingWaitlistEntries(targetEntry.AllocationId, targetEntry.RequestedStartDateTime, targetEntry.RequestedEndDateTime)
+        var vehicleClass = VehicleClassMapper.ToVehicleClass(targetEntry.VehicleType);
+        return GetPendingWaitlistEntries(
+                targetEntry.AllocationId,
+                targetEntry.RequestedStartDateTime,
+                targetEntry.RequestedEndDateTime,
+                vehicleClass)
             .ToList()
             .FindIndex(w => w.Id == waitlistEntryId) + 1;
     }
@@ -722,6 +800,45 @@ public class Company : BaseEntity
         }
 
         return allocation;
+    }
+
+    /// <summary>
+    /// Combined pools must fit TotalSpots. When the lot has typed physical capacity
+    /// (2W or 4W physical &gt; 0), each class pool is also capped by that physical count.
+    /// </summary>
+    private static void EnsureAllocationFitsCapacity(
+        Quota twoWheelerQuota,
+        Quota fourWheelerQuota,
+        int parkingCapacity,
+        int twoWheelerPhysicalSpots,
+        int fourWheelerPhysicalSpots)
+    {
+        var combined = twoWheelerQuota.TotalSlots + fourWheelerQuota.TotalSlots;
+        if (combined <= 0)
+        {
+            throw new InvalidOperationException("At least one vehicle class pool must have capacity.");
+        }
+
+        if (combined > parkingCapacity)
+        {
+            throw new InvalidOperationException($"Cannot allocate more than {parkingCapacity} total spots available.");
+        }
+
+        var hasTypedPhysical = twoWheelerPhysicalSpots > 0 || fourWheelerPhysicalSpots > 0;
+        if (!hasTypedPhysical)
+            return;
+
+        if (twoWheelerQuota.TotalSlots > twoWheelerPhysicalSpots)
+        {
+            throw new InvalidOperationException(
+                $"Cannot allocate more than {twoWheelerPhysicalSpots} two-wheeler spots available on this parking space.");
+        }
+
+        if (fourWheelerQuota.TotalSlots > fourWheelerPhysicalSpots)
+        {
+            throw new InvalidOperationException(
+                $"Cannot allocate more than {fourWheelerPhysicalSpots} four-wheeler spots available on this parking space.");
+        }
     }
 
     /// <summary>
@@ -853,7 +970,8 @@ public class Company : BaseEntity
             visitorName,
             visitorLicensePlate,
             accessExpiry,
-            membership.Priority);
+            membership.Priority,
+            draft.VehicleType);
 
         WaitlistEntries.Add(waitlistEntry);
         return waitlistEntry;
@@ -877,18 +995,27 @@ public class Company : BaseEntity
             w.MatchesVisitorRequest(membershipId, startUtc, endUtc, visitorLicensePlate));
     }
 
-    private CorporateWaitlistEntry? GetPendingWaitlistHead(Guid allocationId, DateTime startUtc, DateTime endUtc)
+    private CorporateWaitlistEntry? GetPendingWaitlistHead(
+        Guid allocationId,
+        DateTime startUtc,
+        DateTime endUtc,
+        VehicleClass vehicleClass)
     {
-        return GetPendingWaitlistEntries(allocationId, startUtc, endUtc).FirstOrDefault();
+        return GetPendingWaitlistEntries(allocationId, startUtc, endUtc, vehicleClass).FirstOrDefault();
     }
 
-    private IOrderedEnumerable<CorporateWaitlistEntry> GetPendingWaitlistEntries(Guid allocationId, DateTime startUtc, DateTime endUtc)
+    private IOrderedEnumerable<CorporateWaitlistEntry> GetPendingWaitlistEntries(
+        Guid allocationId,
+        DateTime startUtc,
+        DateTime endUtc,
+        VehicleClass vehicleClass)
     {
         return WaitlistEntries
             .Where(w =>
                 !w.IsDeleted &&
                 w.Status == WaitlistStatus.Pending &&
                 w.AllocationId == allocationId &&
+                VehicleClassMapper.ToVehicleClass(w.VehicleType) == vehicleClass &&
                 w.Overlaps(startUtc, endUtc))
             .OrderByDescending(w => w.PriorityAtRequest)
             .ThenBy(w => w.CreatedAt);

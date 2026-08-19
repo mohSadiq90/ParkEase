@@ -58,7 +58,7 @@
     align-items: center;
     font-size: 0.95rem;
     padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .detail-item:last-child {
@@ -66,7 +66,7 @@
 }
 
 .vehicle-plate {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-primary-alpha);
     letter-spacing: 1px;
     font-family: monospace;
     color: var(--color-accent-light);
@@ -120,7 +120,7 @@
 .form-select:focus {
     border-color: var(--color-primary);
     outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(63, 114, 175, 0.25);
+    box-shadow: 0 0 0 0.2rem var(--color-focus-ring);
 }
 
 .border-top {
@@ -128,8 +128,8 @@
 }
 
 .badge-success {
-    background-color: rgba(40, 167, 69, 0.15);
-    color: #28a745;
+    background-color: color-mix(in srgb, var(--color-success) 15%, transparent);
+    color: var(--color-success);
 }
 
 .badge-secondary {
