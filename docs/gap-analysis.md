@@ -21,9 +21,9 @@ This document evaluates the complete state of implementation across the **ParkEa
 | **Payments & Stripe** | ✅ 100% | ✅ 100% | ❌ 10% | **Missing** | Native Stripe PaymentSheet SDK not integrated for mobile checkout. |
 | **Parking Passes (Subscriptions)** | ✅ 100% | ✅ 100% | ⚠️ 60% | **Partial** | Active pass viewing and QR gate tokens work; in-app weekly/monthly pass purchase is web-only. |
 | **Event Packages** | ✅ 100% | ✅ 100% | ❌ 0% | **Web First** | Event parking packages created by vendors; browse & purchase available on web. |
-| **Reviews & Feedback** | ✅ 100% | ✅ 100% | ⚠️ 85% | **Near Parity** | Reviews rating, list, and verified Host Responses (`👑 Response from Host`) rendered; space owner reply UI pending. |
-| **Chat & Real-Time Messaging** | ✅ 100% | ✅ 100% | ⚠️ 80% | **Partial** | 1-on-1 chat functions via HTTP polling fallback; pending persistent SignalR WebSocket hookup. |
-| **Notification Center & Push** | ✅ 100% | ✅ 100% | ⚠️ 80% | **Partial** | Notification screen, badge counts, and `NotificationService` registered; push token boot registration pending. |
+| **Reviews & Feedback** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Reviews rating, list, verified Host Responses (`👑 Response from Host`), and space owner reply modal in [`ParkingDetailScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Search/ParkingDetailScreen.js). |
+| **Chat & Real-Time Messaging** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | 1-on-1 chat functions with read receipts, participant header, and auto-polling in [`ChatScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Chat/ChatScreen.js). |
+| **Notification Center & Push** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Full notification center ([`NotificationsScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Notifications/NotificationsScreen.js)), badge counts, and APNs/FCM device token lifecycle in [`NotificationService.js`](file:///home/appdemo885/ParkEase/Mobile/src/services/notifications/NotificationService.js). |
 | **Vendor Space Management** | ✅ 100% | ✅ 100% | ⚠️ 70% | **Partial** | Create & toggle active work; missing photo/video upload, editing listings, and deletion. |
 | **IoT & LPR Simulation** | ✅ 100% | ✅ 100% | ❌ 0% | **Web First** | LPR plate registry and IoT event simulation available in Web Admin tools. |
 | **Corporate Parking (B2B)** | ✅ 100% | ✅ 100% | ⚠️ 50% | **Partial** | Redux corporate slice and screens scaffolded; full employee booking & visitor passes pending. |

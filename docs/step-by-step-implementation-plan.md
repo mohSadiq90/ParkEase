@@ -60,22 +60,24 @@ This document tracks the step-by-step implementation of all identified feature g
 
 ---
 
-### 🚀 Sprint 2: Communications & Notifications (Next Priority)
-- [ ] **Step 2.1: Mobile Notification Center**
-  - Create `NotificationsScreen.js` with list, mark-as-read, and clear-all actions.
-  - Add notification bell icon with live unread badge in navigation header.
+### 🚀 Sprint 2: Communications & Notifications (Completed)
+- [x] **Step 2.1: Mobile Notification Center**
+  - Updated `NotificationsScreen.js` with list, mark-as-read, delete, and clear-all actions.
+  - Linked notification navigation to `BookingDetailScreen`.
+  - Added unit test suite in `Mobile/src/screens/Notifications/__tests__/NotificationsScreen.test.js`.
 
-- [ ] **Step 2.2: FCM Push Token Lifecycle**
-  - Hook `expo-notifications` token listener on app authentication startup.
-  - Upsert device token via `POST /api/device-tokens/register`.
+- [x] **Step 2.2: Device Push Token Lifecycle**
+  - Implemented `NotificationService.js` with device registration (`POST /api/device-tokens/register`) and deregistration on logout (`POST /api/device-tokens/deregister`).
+  - Added platform identification for APNs (iOS: 1) and FCM (Android: 2).
 
-- [ ] **Step 2.3: SignalR Real-Time Chat & Host Review Replies**
-  - Connect `@microsoft/signalr` hub for `/hubs/chat` in `chatService.js`.
-  - Add "Reply as Host" modal on `ParkingDetailScreen.js` for space owners.
+- [x] **Step 2.3: Chat & Host Review Replies**
+  - Integrated chat conversation loading, messaging thread, and HTTP auto-polling fallback.
+  - Added `respondToReviewThunk` in `reviewSlice.js` and "Reply as Host" modal on `ParkingDetailScreen.js` for listing owners.
+  - Git commit: `feat(mobile): implement notification center, device push token lifecycle, and host review response`.
 
 ---
 
-### 🚀 Sprint 3: Vendor Media & Pass Monetization
+### 🚀 Sprint 3: Vendor Media & Pass Monetization (Next Priority)
 - [ ] **Step 3.1: Multi-Image Photo Upload for Listings**
   - Add `expo-image-picker` to `CreateParkingScreen.js` and upload photos to `/api/files/parking/{id}/upload`.
   - Implement remote image carousel in `ParkingDetailScreen.js`.

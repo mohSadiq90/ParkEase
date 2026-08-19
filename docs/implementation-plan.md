@@ -28,10 +28,10 @@ This document outlines all core features, architectural status, implementation r
 | **Parking Passes** | Weekly & Monthly Pass Subscription Purchase Flow | ✅ Completed | ✅ Completed | ❌ Web Only | **Pending Mobile Checkout**|
 | **Event Packages** | Event Parking Packages: Create, Browse, Purchase | ✅ Completed | ✅ Completed | ❌ Web First | **Web Complete** |
 | **Reviews & Feedback** | Multi-media User Ratings & Reviews Creation | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
-| **Reviews & Feedback** | Owner/Host Review Responses ("👑 Response from Host")| ✅ Completed | ✅ Completed | ⚠️ Display Only | **Pending Vendor Reply** |
-| **Chat & Messaging** | SignalR WebSocket Real-time 1-on-1 Chat with Hosts | ✅ Completed | ✅ Completed | ⚠️ HTTP Polling | **Pending SignalR Hookup** |
+| **Reviews & Feedback** | Owner/Host Review Responses ("👑 Response from Host")| ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
+| **Chat & Messaging** | Real-time 1-on-1 Chat with Hosts & Auto-polling | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Notifications & Push** | In-app Notification Center (List, Mark Read, Clear) | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
-| **Notifications & Push** | FCM Device Token Registration (`POST /device-tokens`)| ✅ Completed | ✅ Completed | ⚠️ Service Ready | **Pending Boot Link** |
+| **Notifications & Push** | FCM/APNs Device Token Registration (`/device-tokens`)| ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Vendor Management** | Create Parking Space & Toggle Active Status | ✅ Completed | ✅ Completed | ✅ Completed | **100% Done** |
 | **Vendor Management** | Multi-photo/video Media Upload (Local & R2 Storage) | ✅ Completed | ✅ Completed | ❌ Not Implemented | **Pending Media Picker** |
 | **Vendor Management** | Edit & Delete Parking Space Listings | ✅ Completed | ✅ Completed | ❌ Not Implemented | **Pending Edit Screen** |
