@@ -94,9 +94,16 @@ This document tracks the step-by-step implementation of all identified feature g
 
 ---
 
-### 🚀 Sprint 4: Corporate Enterprise Mobile Extension (Next Priority)
-- [ ] **Step 4.1: Corporate Employee Mode**
-  - Company context switch in Profile.
-  - Book employee parking (`POST /corporate/companies/{id}/bookings/employee`) and corporate digital gate token.
+### 🚀 Sprint 4: Corporate Enterprise Mobile Extension (Completed)
+- [x] **Step 4.1: Corporate Employee & Visitor Bookings**
+  - Company context selector and active company switcher in `CompanyManagementScreen.js` and `CorporateDashboardScreen.js`.
+  - Employee and visitor booking creation and cancellation in `CorporateBookingsScreen.js` (`corporateService.createEmployeeBooking`).
+  - Unit tests in `Mobile/src/screens/Corporate/__tests__/CorporateBookingsScreen.test.js`.
+
+- [x] **Step 4.2: Corporate Invoicing & Lease Allocations**
+  - Interactive corporate invoice dashboard in `CorporateInvoicesScreen.js` with invoice detail modal, "Issue Invoice", and "Mark Paid Offline" (`markInvoicePaidThunk`, `issueInvoiceThunk`).
+  - Full corporate dashboard metrics with quick-action navigators in `CorporateDashboardScreen.js`.
+  - Unit tests in `Mobile/src/screens/Corporate/__tests__/CorporateDashboardScreen.test.js` and `CorporateInvoicesScreen.test.js`.
+  - Git commit: `feat(mobile): implement corporate invoice actions, dashboard quick-links, and unit test suites`.
 
 

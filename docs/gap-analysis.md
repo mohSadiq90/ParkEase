@@ -26,7 +26,7 @@ This document evaluates the complete state of implementation across the **ParkEa
 | **Notification Center & Push** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Full notification center ([`NotificationsScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Notifications/NotificationsScreen.js)), badge counts, and APNs/FCM device token lifecycle in [`NotificationService.js`](file:///home/appdemo885/ParkEase/Mobile/src/services/notifications/NotificationService.js). |
 | **Vendor Space Management** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Create, edit listings, photo URL management, toggle active, and delete spaces in [`CreateParkingScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Vendor/CreateParkingScreen.js). |
 | **IoT & LPR Simulation** | ✅ 100% | ✅ 100% | ❌ 0% | **Web First** | LPR plate registry and IoT event simulation available in Web Admin tools. |
-| **Corporate Parking (B2B)** | ✅ 100% | ✅ 100% | ⚠️ 50% | **Partial** | Redux corporate slice and screens scaffolded; full employee booking & visitor passes pending. |
+| **Corporate Parking (B2B)** | ✅ 100% | ✅ 100% | ✅ 100% | **Full Parity** | Corporate dashboard, company switcher, members, lease allocations, employee/visitor bookings, and invoice management in [`CorporateDashboardScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Corporate/CorporateDashboardScreen.js) & [`CorporateInvoicesScreen.js`](file:///home/appdemo885/ParkEase/Mobile/src/screens/Corporate/CorporateInvoicesScreen.js). |
 | **Platform Admin Console** | ✅ 100% | ✅ 100% | ❌ 0% | **Web Admin** | Web console for moderation, users, audit logs, outbox monitor. |
 
 ---
