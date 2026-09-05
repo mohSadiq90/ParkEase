@@ -1,10 +1,11 @@
 /**
  * LoginScreen
  * Email + password login with premium gradient background
+ * Supports standard login, corporate enterprise login, and Google social login
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image, Keyboard } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
@@ -12,10 +13,12 @@ import { validateForm, loginRules } from '../../utils/validators';
 import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
 import { colors, spacing, typography } from '../../styles/globalStyles';
+import authService from '../../services/auth/authService';
 
 const LoginScreen = ({ navigation }) => {
-    const { login, loading, error, dismissError } = useAuth();
-    const [formData, setFormData] = useState({ email: '', password: '' });
+    const { login, loginCorporate, loginExternal, loading, error, dismissError } = useAuth();
+    const [loginMode, setLoginMode] = useState('personal'); // 'personal' | 'corporate'
+    const [formData, setFormData] = useState({ email: '', password: '', companyId: '' });
     const [errors, setErrors] = useState({});
     const passwordRef = React.useRef(null);
 
@@ -28,11 +31,69 @@ const LoginScreen = ({ navigation }) => {
             return;
         }
         setErrors({});
-        const result = await login(formData);
-        if (result.error) {
-            // Error handled via redux state
+
+        if (loginMode === 'corporate') {
+            await loginCorporate({
+                email: formData.email,
+                password: formData.password,
+                companyId: formData.companyId?.trim() || undefined,
+            });
+        } else {
+            await login({
+                email: formData.email,
+                password: formData.password,
+            });
         }
-    }, [formData, login, dismissError]);
+    }, [formData, loginMode, login, loginCorporate, dismissError]);
+
+    const handleGoogleLogin = useCallback(async () => {
+        dismissError();
+        try {
+            // Mock native Google auth token exchange with POST /api/auth/external
+            await loginExternal({
+                provider: 'google',
+                idToken: `google-mock-token-${Date.now()}`,
+                deviceClientType: Platform.OS === 'ios' ? 'ios' : 'android',
+            });
+        } catch (err) {
+            Alert.alert('Social Login Failed', err.message || 'Unable to sign in with Google');
+        }
+    }, [loginExternal, dismissError]);
+
+    const handleSsoDiscovery = useCallback(async () => {
+        if (!formData.email || !formData.email.includes('@')) {
+            Alert.alert('Email Required', 'Please enter your corporate email address first to discover SSO settings.');
+            return;
+        }
+        try {
+            const res = await authService.discoverSSO(formData.email);
+            if (res.data?.ssoEnabled) {
+                Alert.alert(
+                    'SSO Available',
+                    `Corporate SSO is enabled for ${res.data.companyName || 'your organization'}. Redirecting to IDP...`,
+                    [
+                        {
+                            text: 'Proceed to SSO',
+                            onPress: async () => {
+                                const startRes = await authService.startSSO({
+                                    email: formData.email,
+                                    returnUrl: 'parkease://sso-callback',
+                                });
+                                if (startRes.data?.authorizationUrl) {
+                                    Alert.alert('SSO Redirect', `Opening ${startRes.data.authorizationUrl}`);
+                                }
+                            }
+                        },
+                        { text: 'Cancel', style: 'cancel' }
+                    ]
+                );
+            } else {
+                Alert.alert('SSO Not Configured', 'No enterprise SSO found for this domain. Please use password login.');
+            }
+        } catch (err) {
+            Alert.alert('SSO Discovery Error', 'Unable to check SSO configuration.');
+        }
+    }, [formData.email]);
 
     const updateField = (field) => (value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -56,9 +117,40 @@ const LoginScreen = ({ navigation }) => {
                     <Text style={styles.tagline}>Find & book parking in seconds</Text>
                 </View>
 
-                {/* Form */}
+                {/* Form Card */}
                 <View style={styles.formCard}>
                     <Text style={styles.welcomeText}>Welcome Back</Text>
+
+                    {/* Mode Toggle */}
+                    <View style={styles.modeTabs}>
+                        <TouchableOpacity
+                            style={[styles.modeTab, loginMode === 'personal' && styles.modeTabActive]}
+                            onPress={() => { setLoginMode('personal'); dismissError(); }}
+                        >
+                            <Ionicons
+                                name="person-outline"
+                                size={16}
+                                color={loginMode === 'personal' ? colors.primary : colors.textTertiary}
+                            />
+                            <Text style={[styles.modeTabText, loginMode === 'personal' && styles.modeTabTextActive]}>
+                                Personal
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.modeTab, loginMode === 'corporate' && styles.modeTabActive]}
+                            onPress={() => { setLoginMode('corporate'); dismissError(); }}
+                        >
+                            <Ionicons
+                                name="business-outline"
+                                size={16}
+                                color={loginMode === 'corporate' ? colors.primary : colors.textTertiary}
+                            />
+                            <Text style={[styles.modeTabText, loginMode === 'corporate' && styles.modeTabTextActive]}>
+                                Corporate
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
 
                     {error && (
                         <View style={styles.errorBanner}>
@@ -68,7 +160,7 @@ const LoginScreen = ({ navigation }) => {
                     )}
 
                     <Input
-                        label="Email"
+                        label={loginMode === 'corporate' ? 'Work Email' : 'Email'}
                         value={formData.email}
                         onChangeText={updateField('email')}
                         placeholder="Enter your email"
@@ -100,12 +192,40 @@ const LoginScreen = ({ navigation }) => {
                         onSubmitEditing={handleLogin}
                     />
 
+                    {loginMode === 'corporate' && (
+                        <TouchableOpacity
+                            style={styles.ssoLink}
+                            onPress={handleSsoDiscovery}
+                        >
+                            <Ionicons name="key-outline" size={14} color={colors.primary} />
+                            <Text style={styles.ssoLinkText}>Sign in with Company SSO (OIDC/SAML)</Text>
+                        </TouchableOpacity>
+                    )}
+
                     <Button
-                        title="Sign In"
+                        title={loginMode === 'corporate' ? 'Corporate Sign In' : 'Sign In'}
                         onPress={handleLogin}
                         loading={loading}
                         style={styles.loginButton}
                     />
+
+                    {loginMode === 'personal' && (
+                        <>
+                            <View style={styles.dividerRow}>
+                                <View style={styles.dividerLine} />
+                                <Text style={styles.dividerText}>or</Text>
+                                <View style={styles.dividerLine} />
+                            </View>
+
+                            <TouchableOpacity
+                                style={styles.googleBtn}
+                                onPress={handleGoogleLogin}
+                            >
+                                <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                                <Text style={styles.googleBtnText}>Continue with Google</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
 
                     <View style={styles.signupRow}>
                         <Text style={styles.signupText}>Don't have an account? </Text>
@@ -130,16 +250,16 @@ const styles = StyleSheet.create({
     },
     logoSection: {
         alignItems: 'center',
-        marginBottom: spacing['2xl'],
+        marginBottom: spacing.xl,
     },
     logoCircle: {
-        width: 88,
-        height: 88,
-        borderRadius: 44,
+        width: 76,
+        height: 76,
+        borderRadius: 38,
         backgroundColor: colors.white,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: spacing.base,
+        marginBottom: spacing.sm,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
@@ -147,7 +267,7 @@ const styles = StyleSheet.create({
         elevation: 8,
     },
     appName: {
-        fontSize: 36,
+        fontSize: 32,
         fontWeight: '800',
         color: colors.white,
         letterSpacing: 1,
@@ -155,7 +275,7 @@ const styles = StyleSheet.create({
     tagline: {
         ...typography.bodySmall,
         color: 'rgba(255,255,255,0.8)',
-        marginTop: spacing.xs,
+        marginTop: 2,
     },
     formCard: {
         backgroundColor: colors.white,
@@ -170,8 +290,41 @@ const styles = StyleSheet.create({
     welcomeText: {
         ...typography.h2,
         color: colors.textPrimary,
-        marginBottom: spacing.lg,
+        marginBottom: spacing.md,
         textAlign: 'center',
+    },
+    modeTabs: {
+        flexDirection: 'row',
+        backgroundColor: colors.surfaceVariant,
+        borderRadius: spacing.radius.md,
+        padding: 3,
+        marginBottom: spacing.base,
+    },
+    modeTab: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 8,
+        borderRadius: spacing.radius.sm,
+    },
+    modeTabActive: {
+        backgroundColor: colors.white,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    modeTabText: {
+        ...typography.caption,
+        color: colors.textTertiary,
+        fontWeight: '600',
+    },
+    modeTabTextActive: {
+        color: colors.primary,
+        fontWeight: '700',
     },
     errorBanner: {
         flexDirection: 'row',
@@ -187,8 +340,52 @@ const styles = StyleSheet.create({
         color: colors.dangerDark,
         flex: 1,
     },
+    ssoLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 2,
+        marginBottom: spacing.md,
+        alignSelf: 'flex-start',
+    },
+    ssoLinkText: {
+        ...typography.caption,
+        color: colors.primary,
+        fontWeight: '600',
+    },
     loginButton: {
         marginTop: spacing.sm,
+    },
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: spacing.md,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.border,
+    },
+    dividerText: {
+        ...typography.caption,
+        color: colors.textTertiary,
+        marginHorizontal: spacing.sm,
+    },
+    googleBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: spacing.radius.md,
+        paddingVertical: 12,
+        backgroundColor: colors.surface,
+    },
+    googleBtnText: {
+        ...typography.bodySmall,
+        fontWeight: '600',
+        color: colors.textPrimary,
     },
     signupRow: {
         flexDirection: 'row',

@@ -19,6 +19,7 @@ import corporateReducer from '../store/slices/corporateSlice';
 import ancillaryReducer from '../store/slices/ancillarySlice';
 import eventPackageReducer from '../store/slices/eventPackageSlice';
 import iotReducer from '../store/slices/iotSlice';
+import adminReducer from '../store/slices/adminSlice';
 
 // Helper function to render components with Redux store
 export function renderWithProviders(
@@ -43,6 +44,7 @@ export function renderWithProviders(
         ancillary: ancillaryReducer,
         eventPackage: eventPackageReducer,
         iot: iotReducer,
+        admin: adminReducer,
       },
       preloadedState,
     }),

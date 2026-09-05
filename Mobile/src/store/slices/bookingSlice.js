@@ -207,6 +207,31 @@ export const verifyAccessPassThunk = createAsyncThunk(
     }
 );
 
+export const getGoogleWalletPassThunk = createAsyncThunk(
+    'booking/getGoogleWalletPass',
+    async (id, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.get(ENDPOINTS.BOOKINGS.ACCESS_PASS_GOOGLE(id));
+            return response.data.data || response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+export const updateBookingThunk = createAsyncThunk(
+    'booking/update',
+    async ({ id, data }, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.put(ENDPOINTS.BOOKINGS.BY_ID(id), data);
+            return response.data.data || response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+
 // Check-in & Check-out Lifecycle
 export const checkInThunk = createAsyncThunk(
     'booking/checkIn',

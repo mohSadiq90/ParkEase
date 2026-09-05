@@ -57,7 +57,7 @@ const menuStyles = StyleSheet.create({
 
 const ProfileScreen = ({ navigation }) => {
     const dispatch = useDispatch();
-    const { user, logout, updateProfile, loading } = useAuth();
+    const { user, logout, updateProfile, loading, isAdmin } = useAuth();
     const [editing, setEditing] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [firstName, setFirstName] = useState(user?.firstName || '');
@@ -167,6 +167,18 @@ const ProfileScreen = ({ navigation }) => {
                     <MenuItem icon="heart-outline" label="Saved Favorites" value="Quick-book pinned locations" onPress={() => navigation.navigate('Favorites')} />
                     <MenuItem icon="ticket-outline" label="Parking Passes" value="Active gate access tokens" onPress={() => navigation.navigate('MyPasses')} />
                 </Card>
+
+                {/* Platform Admin Console (Only visible to Admin) */}
+                {isAdmin && (
+                    <Card style={{ marginBottom: spacing.md }}>
+                        <MenuItem
+                            icon="shield-checkmark-outline"
+                            label="Platform Admin Console"
+                            value="System health, outbox & verifications"
+                            onPress={() => navigation.navigate('AdminDashboard')}
+                        />
+                    </Card>
+                )}
 
                 {/* Account Settings Menu */}
                 <Card>

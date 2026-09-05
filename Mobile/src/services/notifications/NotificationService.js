@@ -1,7 +1,7 @@
-
 /**
  * NotificationService
  * Push notifications and FCM/APNs device token lifecycle
+ * Matches API_ENDPOINTS_MOBILE.md Section 17 & DeviceTokensController
  */
 
 import { Platform } from 'react-native';
@@ -23,15 +23,18 @@ export const NotificationService = {
         logger.info(TAG, 'Initializing NotificationService');
     },
 
-    registerCurrentDevice: async (token = null) => {
+    registerCurrentDevice: async (token = null, deviceId = null) => {
         try {
-            const deviceToken = token || `sim-token-${Platform.OS}-${Date.now()}`;
-            _currentToken = deviceToken;
+            const fcmToken = token || `sim-token-${Platform.OS}-${Date.now()}`;
+            const stableDeviceId = deviceId || `device-${Platform.OS}-default`;
+            _currentToken = fcmToken;
             const res = await apiClient.post(ENDPOINTS.DEVICE_TOKENS.REGISTER, {
-                token: deviceToken,
-                platform: Platform.OS === 'ios' ? 1 : 2, // 1: iOS (APNs), 2: Android (FCM)
+                deviceId: stableDeviceId,
+                platform: Platform.OS === 'ios' ? 'ios' : 'android',
+                fcmToken: fcmToken,
+                appVersion: '1.0.0',
             });
-            logger.info(TAG, 'Device token registered successfully', { token: deviceToken });
+            logger.info(TAG, 'Device token registered successfully', { fcmToken, deviceId: stableDeviceId });
             return res.data;
         } catch (error) {
             logger.warn(TAG, 'Failed to register device token with backend', error);
@@ -40,17 +43,9 @@ export const NotificationService = {
     },
 
     deregisterCurrentDevice: async () => {
-        try {
-            if (_currentToken) {
-                await apiClient.post(ENDPOINTS.DEVICE_TOKENS.DEREGISTER, {
-                    token: _currentToken,
-                });
-                _currentToken = null;
-                logger.info(TAG, 'Device token deregistered successfully');
-            }
-        } catch (error) {
-            logger.warn(TAG, 'Failed to deregister device token', error);
-        }
+        // Backend currently only maintains upsert on register
+        _currentToken = null;
+        logger.info(TAG, 'Local device token cleared');
     },
 
     onNotification: (callback) => {

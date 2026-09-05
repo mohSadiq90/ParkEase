@@ -4,13 +4,17 @@
  */
 
 import React, { useEffect, useCallback, useState } from 'react';
-import { View, Text, ScrollView, Alert, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, ScrollView, Alert, TouchableOpacity, StyleSheet, Modal, Linking } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { 
     getBookingDetailThunk, cancelBookingThunk, checkInThunk, checkOutThunk, extendBookingThunk,
-    requestValetThunk, cancelValetThunk, acknowledgeValetThunk, readyValetThunk, completeValetThunk, assignBayThunk 
+    requestValetThunk, cancelValetThunk, acknowledgeValetThunk, readyValetThunk, completeValetThunk, assignBayThunk,
+    getAccessPassThunk, getGoogleWalletPassThunk, getEvSessionThunk
 } from '../../store/slices/bookingSlice';
+import { createPaymentOrderThunk } from '../../store/slices/paymentSlice';
+import environment from '../../config/environment';
+import ENDPOINTS from '../../services/api/endpoints';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import Badge from '../../components/Common/Badge';
@@ -44,6 +48,8 @@ const BookingDetailScreen = ({ navigation, route }) => {
 
     useEffect(() => {
         dispatch(getBookingDetailThunk(bookingId));
+        dispatch(getAccessPassThunk(bookingId));
+        dispatch(getEvSessionThunk(bookingId));
     }, [dispatch, bookingId]);
 
     const handleCancel = useCallback(() => {
@@ -60,6 +66,36 @@ const BookingDetailScreen = ({ navigation, route }) => {
             ]
         );
     }, [dispatch, bookingId]);
+
+    const handlePayOverstay = useCallback(async () => {
+        if (!booking) return;
+        const res = await dispatch(createPaymentOrderThunk({ bookingId: booking.id, payOverstayFee: true }));
+        if (!res.error) {
+            navigation.navigate('PaymentScreen', {
+                bookingId: booking.id,
+                isOverstay: true,
+                amount: booking.overstayFeeOutstanding,
+            });
+        } else {
+            Alert.alert('Payment Initialization Failed', res.payload || 'Could not initiate overstay payment.');
+        }
+    }, [booking, dispatch, navigation]);
+
+    const handleOpenAppleWallet = useCallback(() => {
+        if (!booking) return;
+        const url = `${environment.apiUrl}${ENDPOINTS.BOOKINGS.ACCESS_PASS_APPLE(booking.id)}`;
+        Linking.openURL(url).catch(() => Alert.alert('Error', 'Unable to open Apple Wallet pass.'));
+    }, [booking]);
+
+    const handleOpenGoogleWallet = useCallback(async () => {
+        if (!booking) return;
+        const res = await dispatch(getGoogleWalletPassThunk(booking.id));
+        if (res.payload?.saveUrl) {
+            Linking.openURL(res.payload.saveUrl).catch(() => Alert.alert('Error', 'Unable to open Google Wallet link.'));
+        } else {
+            Alert.alert('Google Wallet', res.payload?.message || 'Google Wallet pass is not configured for this facility.');
+        }
+    }, [booking, dispatch]);
 
     const handleCheckIn = useCallback(() => {
         Alert.alert(
@@ -183,6 +219,31 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         </Card>
                     )}
 
+                    {/* Outstanding Overstay Fee */}
+                    {booking.overstayFeeOutstanding > 0 && (
+                        <Card style={{ backgroundColor: colors.dangerSoft, borderLeftWidth: 4, borderLeftColor: colors.danger }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Ionicons name="alert-circle" size={24} color={colors.danger} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ ...typography.label, color: colors.dangerDark, fontWeight: '700' }}>
+                                        Outstanding Overstay Fee
+                                    </Text>
+                                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
+                                        Vehicle stayed past booked window. Settle balance of {formatCurrency(booking.overstayFeeOutstanding)}.
+                                    </Text>
+                                </View>
+                            </View>
+                            <Button
+                                title={`Pay Overstay Fee (${formatCurrency(booking.overstayFeeOutstanding)})`}
+                                onPress={handlePayOverstay}
+                                variant="danger"
+                                loading={actionLoading}
+                                style={{ marginTop: spacing.md }}
+                                icon={<Ionicons name="card-outline" size={18} color={colors.white} />}
+                            />
+                        </Card>
+                    )}
+
                     {/* Digital Gate Access Token for Confirmed/Active Bookings */}
                     {[BookingStatus.Confirmed, BookingStatus.InProgress, BookingStatus.Completed].includes(booking.status) && (
                         <Card style={{ backgroundColor: colors.primarySoft, borderLeftWidth: 4, borderLeftColor: colors.primary }}>
@@ -195,6 +256,16 @@ const BookingDetailScreen = ({ navigation, route }) => {
                                     <Text style={{ ...typography.caption, color: colors.success, marginTop: 2 }}>✓ Verified Paid & Active</Text>
                                 </View>
                                 <Ionicons name="qr-code-outline" size={32} color={colors.primary} />
+                            </View>
+                            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+                                <TouchableOpacity style={styles.walletBtn} onPress={handleOpenAppleWallet}>
+                                    <Ionicons name="logo-apple" size={16} color={colors.white} />
+                                    <Text style={styles.walletBtnText}>Apple Wallet</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.walletBtn, { backgroundColor: '#4285F4' }]} onPress={handleOpenGoogleWallet}>
+                                    <Ionicons name="wallet-outline" size={16} color={colors.white} />
+                                    <Text style={styles.walletBtnText}>Google Wallet</Text>
+                                </TouchableOpacity>
                             </View>
                         </Card>
                     )}
@@ -228,6 +299,21 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             <InfoRow icon="key-outline" label="Valet Status" value={booking.valetStatus} />
                         )}
                     </Card>
+
+                    {/* EV Charging Session */}
+                    {booking.includeEvCharging && (
+                        <Card>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+                                <Text style={styles.sectionTitle}>⚡ EV Charging Session</Text>
+                                <Badge status={booking.evSessionStatus ? 1 : 0} />
+                            </View>
+                            <InfoRow icon="flash-outline" label="Energy Delivered" value={`${booking.evEnergyDeliveredKwh || 0} kWh`} />
+                            <InfoRow icon="cash-outline" label="Charging Fee" value={formatCurrency(booking.evChargingFeeAmount || 0)} />
+                            {booking.evIdleFeeAmount > 0 && (
+                                <InfoRow icon="timer-outline" label="Idle Fee" value={formatCurrency(booking.evIdleFeeAmount)} />
+                            )}
+                        </Card>
+                    )}
 
                     {/* Payment */}
                     <Card style={styles.paymentCard}>
@@ -505,6 +591,21 @@ const styles = StyleSheet.create({
     receiptLabel: { ...typography.caption, color: colors.textSecondary },
     receiptVal: { ...typography.caption, color: colors.textPrimary, fontWeight: '600' },
     receiptDivider: { height: 1, backgroundColor: colors.borderLight, marginVertical: spacing.xs },
+    walletBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: '#000',
+        paddingVertical: 8,
+        borderRadius: spacing.radius.md,
+    },
+    walletBtnText: {
+        ...typography.caption,
+        color: colors.white,
+        fontWeight: '700',
+    },
 });
 
 export default BookingDetailScreen;

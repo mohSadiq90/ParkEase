@@ -1,14 +1,24 @@
 /**
  * API Endpoints
- * All endpoint constants matching the backend controllers
+ * All endpoint constants matching the backend controllers as documented in API_ENDPOINTS_MOBILE.md
  */
 
 export const ENDPOINTS = {
-    // Auth
+    // Auth & Users
     AUTH: {
         REGISTER: '/auth/register',
         LOGIN: '/auth/login',
-        GOOGLE_LOGIN: '/auth/google',
+        LOGIN_CORPORATE: '/auth/login/corporate',
+        EXTERNAL: '/auth/external',
+        EXTERNAL_LINK: '/auth/external/link',
+        SET_PASSWORD: '/auth/set-password',
+        EXTERNAL_PROVIDERS: '/auth/external/providers',
+        CHANNEL: '/auth/channel',
+        CHANNEL_CONTEXT: '/auth/channel-context',
+        CORPORATE_SSO_DISCOVER: '/auth/corporate/sso/discover',
+        CORPORATE_SSO_START: '/auth/corporate/sso/start',
+        CORPORATE_SSO_CALLBACK: '/auth/corporate/sso/callback',
+        CORPORATE_SSO_COMPLETE: '/auth/corporate/sso/complete',
         REFRESH: '/auth/refresh',
         LOGOUT: '/auth/logout',
         CHANGE_PASSWORD: '/auth/change-password',
@@ -31,7 +41,6 @@ export const ENDPOINTS = {
 
     // Bookings
     // Keep this in sync with the ASP.NET controller route: /api/bookings.
-    // The old /v2/bookings route is no longer served by the backend.
     BOOKINGS: {
         BASE: '/bookings',
         MY_BOOKINGS: '/bookings/my-bookings',
@@ -57,6 +66,8 @@ export const ENDPOINTS = {
         BAY_ASSIGNMENT: (id) => `/bookings/${id}/bay-assignment`,
         EV_SESSION: (id) => `/bookings/${id}/ev-session`,
         ACCESS_PASS: (id) => `/bookings/${id}/access-pass`,
+        ACCESS_PASS_APPLE: (id) => `/bookings/${id}/access-pass/apple.pkpass`,
+        ACCESS_PASS_GOOGLE: (id) => `/bookings/${id}/access-pass/google-wallet`,
         ACCESS_PASS_VERIFY: '/bookings/access-pass/verify',
     },
 
@@ -92,6 +103,7 @@ export const ENDPOINTS = {
     // Vehicles
     VEHICLES: {
         BASE: '/vehicles',
+        BY_ID: (id) => `/vehicles/${id}`,
     },
 
     // Favorites
@@ -111,7 +123,6 @@ export const ENDPOINTS = {
     // Device Tokens (FCM)
     DEVICE_TOKENS: {
         REGISTER: '/device-tokens/register',
-        DEREGISTER: '/device-tokens/deregister',
     },
 
     // Dashboard
@@ -133,8 +144,9 @@ export const ENDPOINTS = {
         CORPORATE: '/passes/corporate',
     },
 
-    // Files
+    // Files (Parking Media)
     FILES: {
+        UPLOAD: (parkingSpaceId) => `/files/parking/${parkingSpaceId}/upload`,
         SIGN_UPLOAD: (parkingSpaceId) => `/files/parking/${parkingSpaceId}/sign-upload`,
         CONFIRM_UPLOAD: (parkingSpaceId) => `/files/parking/${parkingSpaceId}/confirm-upload`,
         DELETE: (parkingSpaceId, fileName) => `/files/parking/${parkingSpaceId}/${fileName}`,
@@ -183,14 +195,14 @@ export const ENDPOINTS = {
 
     // Corporate Module
     CORPORATE: {
-        // 16.1 Companies
+        // 20.1 Companies
         COMPANIES: '/v1/corporate/companies',
         COMPANY_BY_ID: (companyId) => `/v1/corporate/companies/${companyId}`,
         MY_COMPANIES: '/v1/corporate/me/companies',
         DASHBOARD: (companyId) => `/v1/corporate/companies/${companyId}/dashboard`,
         DASHBOARD_EXPORT: (companyId) => `/v1/corporate/companies/${companyId}/dashboard/export`,
         
-        // 16.2 Members & invitations
+        // 20.2 Members & invitations
         MEMBERS: (companyId) => `/v1/corporate/companies/${companyId}/members`,
         MEMBER_BY_ID: (companyId, membershipId) => `/v1/corporate/companies/${companyId}/members/${membershipId}`,
         INVITATIONS: (companyId) => `/v1/corporate/companies/${companyId}/invitations`,
@@ -198,7 +210,7 @@ export const ENDPOINTS = {
         INVITATION_RESEND: (companyId, invitationId) => `/v1/corporate/companies/${companyId}/invitations/${invitationId}/resend`,
         ACCEPT_INVITATION: '/v1/corporate/invitations/accept',
 
-        // 16.3 Allocations & company parking
+        // 20.3 Allocations & company parking
         ALLOCATIONS: (companyId) => `/v1/corporate/companies/${companyId}/allocations`,
         VENDOR_ALLOCATIONS: '/v1/corporate/vendor/allocations',
         ALLOCATION_APPROVE: (allocationId) => `/v1/corporate/allocations/${allocationId}/approve`,
@@ -213,7 +225,7 @@ export const ENDPOINTS = {
         PARKING_SPACE_TOGGLE_ACTIVE: (companyId, parkingSpaceId) => `/v1/corporate/companies/${companyId}/parking-spaces/${parkingSpaceId}/toggle-active`,
         PARKING_SPACE_ALLOCATIONS: (companyId, parkingSpaceId) => `/v1/corporate/companies/${companyId}/parking-spaces/${parkingSpaceId}/allocations`,
 
-        // 16.4 Corporate bookings & waitlist
+        // 20.4 Corporate bookings & waitlist
         BOOKINGS: (companyId) => `/v1/corporate/companies/${companyId}/bookings`,
         BOOKINGS_EXPORT: (companyId) => `/v1/corporate/companies/${companyId}/bookings/export`,
         BOOKING_EMPLOYEE: (companyId) => `/v1/corporate/companies/${companyId}/bookings/employee`,
@@ -223,13 +235,60 @@ export const ENDPOINTS = {
         WAITLIST_BY_ID: (companyId, waitlistEntryId) => `/v1/corporate/companies/${companyId}/waitlist/${waitlistEntryId}`,
         WAITLIST_PROMOTE: (companyId, waitlistEntryId) => `/v1/corporate/companies/${companyId}/waitlist/${waitlistEntryId}/promote`,
 
-        // 16.5 Corporate invoices
+        // 20.5 Corporate invoices
         INVOICES: (companyId) => `/v1/corporate/companies/${companyId}/invoices`,
         INVOICE_BY_ID: (companyId, invoiceId) => `/v1/corporate/companies/${companyId}/invoices/${invoiceId}`,
         INVOICE_ISSUE: (companyId, invoiceId) => `/v1/corporate/companies/${companyId}/invoices/${invoiceId}/issue`,
         INVOICE_MARK_PAID: (companyId, invoiceId) => `/v1/corporate/companies/${companyId}/invoices/${invoiceId}/mark-paid`,
         INVOICE_VOID: (companyId, invoiceId) => `/v1/corporate/companies/${companyId}/invoices/${invoiceId}/void`,
         INVOICE_EXPORT: (companyId, invoiceId) => `/v1/corporate/companies/${companyId}/invoices/${invoiceId}/export`,
+
+        // 20.6 Company SSO configuration (Admin)
+        SSO: (companyId) => `/v1/corporate/companies/${companyId}/sso`,
+        SSO_DOMAINS: (companyId) => `/v1/corporate/companies/${companyId}/sso/domains`,
+        SSO_DOMAIN_VERIFY: (companyId, domainId) => `/v1/corporate/companies/${companyId}/sso/domains/${domainId}/verify`,
+        SSO_DOMAIN_DELETE: (companyId, domainId) => `/v1/corporate/companies/${companyId}/sso/domains/${domainId}`,
+        SSO_TEST: (companyId) => `/v1/corporate/companies/${companyId}/sso/test`,
+        SSO_ENABLE: (companyId) => `/v1/corporate/companies/${companyId}/sso/enable`,
+        SSO_DISABLE: (companyId) => `/v1/corporate/companies/${companyId}/sso/disable`,
+        SSO_AUDIT: (companyId) => `/v1/corporate/companies/${companyId}/sso/audit`,
+        SSO_UNLINK: (companyId, linkId) => `/v1/corporate/companies/${companyId}/sso/links/${linkId}`,
+    },
+
+    // 21. Platform Admin Operations (Admin Role)
+    ADMIN: {
+        DASHBOARD: '/admin/dashboard',
+        USERS: '/admin/users',
+        USER_BY_ID: (id) => `/admin/users/${id}`,
+        USER_ACTIVATE: (id) => `/admin/users/${id}/activate`,
+        USER_DEACTIVATE: (id) => `/admin/users/${id}/deactivate`,
+        LISTINGS: '/admin/listings',
+        LISTING_BY_ID: (id) => `/admin/listings/${id}`,
+        LISTING_ACTIVATE: (id) => `/admin/listings/${id}/activate`,
+        LISTING_DEACTIVATE: (id) => `/admin/listings/${id}/deactivate`,
+        LISTING_VERIFY: (id) => `/admin/listings/${id}/verify`,
+        LISTING_UNVERIFY: (id) => `/admin/listings/${id}/unverify`,
+        BOOKINGS: '/admin/bookings',
+        BOOKING_BY_ID: (id) => `/admin/bookings/${id}`,
+        BOOKING_CANCEL: (id) => `/admin/bookings/${id}/cancel`,
+        PAYMENTS: '/admin/payments',
+        PAYMENT_BY_ID: (id) => `/admin/payments/${id}`,
+        PAYMENT_REFUND: (id) => `/admin/payments/${id}/refund`,
+        AUDIT: '/admin/audit',
+        CORPORATE_SSO: '/admin/corporate-sso',
+        CORPORATE_SSO_FORCE_DISABLE: (companyId) => `/admin/corporate-sso/${companyId}/force-disable`,
+        CORPORATE_SSO_CLEAR_FORCE_DISABLE: (companyId) => `/admin/corporate-sso/${companyId}/clear-force-disable`,
+        CORPORATE_SSO_AUDIT: (companyId) => `/admin/corporate-sso/${companyId}/audit`,
+        OUTBOX: '/admin/outbox',
+        OUTBOX_BY_ID: (id) => `/admin/outbox/${id}`,
+        OUTBOX_REQUEUE: (id) => `/admin/outbox/${id}/requeue`,
+        OUTBOX_REQUEUE_FAILED: '/admin/outbox/requeue-failed',
+        OUTBOX_PROCESS: '/admin/outbox/process',
+    },
+
+    // 22. Health
+    HEALTH: {
+        CHECK: '/health',
     },
 };
 

@@ -5,17 +5,50 @@
 
 import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { loginThunk, registerThunk, logoutThunk, updateProfileThunk, clearError } from '../store/slices/authSlice';
+import { 
+    loginThunk, 
+    loginCorporateThunk,
+    loginExternalThunk,
+    switchChannelThunk,
+    registerThunk, 
+    logoutThunk, 
+    updateProfileThunk, 
+    clearError 
+} from '../store/slices/authSlice';
 import { UserRole } from '../utils/constants';
 
 export const useAuth = () => {
     const dispatch = useDispatch();
-    const { user, loading, error, isAuthenticated, isSessionChecked } = useSelector(
-        (state) => state.auth
-    );
+    const { 
+        user, 
+        token,
+        channel,
+        companyId,
+        companyRole,
+        corporateCompanies,
+        loading, 
+        error, 
+        isAuthenticated, 
+        isSessionChecked 
+    } = useSelector((state) => state.auth);
 
     const login = useCallback(
         (credentials) => dispatch(loginThunk(credentials)),
+        [dispatch]
+    );
+
+    const loginCorporate = useCallback(
+        (credentials) => dispatch(loginCorporateThunk(credentials)),
+        [dispatch]
+    );
+
+    const loginExternal = useCallback(
+        (payload) => dispatch(loginExternalThunk(payload)),
+        [dispatch]
+    );
+
+    const switchChannel = useCallback(
+        (channelData) => dispatch(switchChannelThunk(channelData)),
         [dispatch]
     );
 
@@ -41,16 +74,28 @@ export const useAuth = () => {
 
     const isVendor = user?.role === UserRole.Vendor || user?.role === UserRole.Admin;
     const isMember = user?.role === UserRole.Member;
+    const isAdmin = user?.role === UserRole.Admin;
+    const isCorporate = channel === 'Corporate';
 
     return {
         user,
+        token,
+        channel,
+        companyId,
+        companyRole,
+        corporateCompanies,
         loading,
         error,
         isAuthenticated,
         isSessionChecked,
         isVendor,
         isMember,
+        isAdmin,
+        isCorporate,
         login,
+        loginCorporate,
+        loginExternal,
+        switchChannel,
         register,
         logout,
         updateProfile,

@@ -49,6 +49,9 @@ import CompanyManagementScreen from '../screens/Corporate/CompanyManagementScree
 import CorporateMembersScreen from '../screens/Corporate/CorporateMembersScreen';
 import CorporateAllocationsScreen from '../screens/Corporate/CorporateAllocationsScreen';
 import CorporateBookingsScreen from '../screens/Corporate/CorporateBookingsScreen';
+
+// Admin Screens
+import AdminDashboardScreen from '../screens/Admin/AdminDashboardScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -91,6 +94,7 @@ const HomeStack = () => (
         <Stack.Screen name="ReviewsList" component={ReviewsListScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
         <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
+        <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
     </Stack.Navigator>
 );
 
@@ -158,6 +162,7 @@ const ProfileStack = () => (
         <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
         <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
     </Stack.Navigator>
 );
 

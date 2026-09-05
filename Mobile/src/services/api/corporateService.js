@@ -1,8 +1,13 @@
+/**
+ * Corporate Service
+ * Matching API_ENDPOINTS_MOBILE.md Section 20 (Corporate Module & Enterprise SSO)
+ */
+
 import apiClient from './apiClient';
 import { ENDPOINTS } from './endpoints';
 
 class CorporateService {
-    // 16.1 Companies
+    // 20.1 Companies
     createCompany = async (companyData) => {
         const response = await apiClient.post(ENDPOINTS.CORPORATE.COMPANIES, companyData);
         return response.data;
@@ -28,7 +33,14 @@ class CorporateService {
         return response.data;
     };
 
-    // 16.2 Members & Invitations
+    exportDashboard = async (companyId) => {
+        const response = await apiClient.get(ENDPOINTS.CORPORATE.DASHBOARD_EXPORT(companyId), {
+            responseType: 'blob',
+        });
+        return response.data;
+    };
+
+    // 20.2 Members & Invitations
     getMembers = async (companyId, params) => {
         const response = await apiClient.get(ENDPOINTS.CORPORATE.MEMBERS(companyId), { params });
         return response.data;
@@ -72,12 +84,12 @@ class CorporateService {
     acceptInvitation = async (token) => {
         // Body is a raw string token
         const response = await apiClient.post(ENDPOINTS.CORPORATE.ACCEPT_INVITATION, `"${token}"`, {
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
         });
         return response.data;
     };
 
-    // 16.3 Allocations & Company Parking
+    // 20.3 Allocations & Company Parking
     getAllocations = async (companyId) => {
         const response = await apiClient.get(ENDPOINTS.CORPORATE.ALLOCATIONS(companyId));
         return response.data;
@@ -100,13 +112,18 @@ class CorporateService {
 
     rejectAllocation = async (allocationId, reason) => {
         const response = await apiClient.post(ENDPOINTS.CORPORATE.ALLOCATION_REJECT(allocationId), `"${reason}"`, {
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
         });
         return response.data;
     };
 
     updateAllocationPolicy = async (companyId, allocationId, policyData) => {
         const response = await apiClient.put(ENDPOINTS.CORPORATE.ALLOCATION_POLICY(companyId, allocationId), policyData);
+        return response.data;
+    };
+
+    updateAllocationContract = async (companyId, allocationId, contractData) => {
+        const response = await apiClient.put(ENDPOINTS.CORPORATE.ALLOCATION_CONTRACT(companyId, allocationId), contractData);
         return response.data;
     };
 
@@ -126,14 +143,46 @@ class CorporateService {
         return response.data;
     };
 
+    getCompanyParkingSpace = async (companyId, parkingSpaceId) => {
+        const response = await apiClient.get(ENDPOINTS.CORPORATE.PARKING_SPACE_BY_ID(companyId, parkingSpaceId));
+        return response.data;
+    };
+
     createCompanyParkingSpace = async (companyId, spaceData) => {
         const response = await apiClient.post(ENDPOINTS.CORPORATE.PARKING_SPACES(companyId), spaceData);
         return response.data;
     };
 
-    // 16.4 Corporate Bookings
+    updateCompanyParkingSpace = async (companyId, parkingSpaceId, spaceData) => {
+        const response = await apiClient.put(ENDPOINTS.CORPORATE.PARKING_SPACE_BY_ID(companyId, parkingSpaceId), spaceData);
+        return response.data;
+    };
+
+    retireCompanyParkingSpace = async (companyId, parkingSpaceId) => {
+        const response = await apiClient.delete(ENDPOINTS.CORPORATE.PARKING_SPACE_BY_ID(companyId, parkingSpaceId));
+        return response.data;
+    };
+
+    toggleActiveCompanyParkingSpace = async (companyId, parkingSpaceId) => {
+        const response = await apiClient.post(ENDPOINTS.CORPORATE.PARKING_SPACE_TOGGLE_ACTIVE(companyId, parkingSpaceId));
+        return response.data;
+    };
+
+    createOwnedAllocation = async (companyId, parkingSpaceId, allocationData) => {
+        const response = await apiClient.post(ENDPOINTS.CORPORATE.PARKING_SPACE_ALLOCATIONS(companyId, parkingSpaceId), allocationData);
+        return response.data;
+    };
+
+    // 20.4 Corporate Bookings & Waitlist
     getCorporateBookings = async (companyId, params) => {
         const response = await apiClient.get(ENDPOINTS.CORPORATE.BOOKINGS(companyId), { params });
+        return response.data;
+    };
+
+    exportCorporateBookings = async (companyId) => {
+        const response = await apiClient.get(ENDPOINTS.CORPORATE.BOOKINGS_EXPORT(companyId), {
+            responseType: 'blob',
+        });
         return response.data;
     };
 
@@ -152,7 +201,6 @@ class CorporateService {
         return response.data;
     };
 
-    // Waitlist
     getWaitlist = async (companyId) => {
         const response = await apiClient.get(ENDPOINTS.CORPORATE.WAITLIST(companyId));
         return response.data;
@@ -168,7 +216,7 @@ class CorporateService {
         return response.data;
     };
 
-    // 16.5 Corporate Invoices
+    // 20.5 Corporate Invoices
     generateInvoices = async (companyId, periodData) => {
         const response = await apiClient.post(ENDPOINTS.CORPORATE.INVOICES(companyId), periodData);
         return response.data;
@@ -196,6 +244,64 @@ class CorporateService {
 
     voidInvoice = async (companyId, invoiceId, reasonData) => {
         const response = await apiClient.post(ENDPOINTS.CORPORATE.INVOICE_VOID(companyId, invoiceId), reasonData);
+        return response.data;
+    };
+
+    exportInvoice = async (companyId, invoiceId) => {
+        const response = await apiClient.get(ENDPOINTS.CORPORATE.INVOICE_EXPORT(companyId, invoiceId), {
+            responseType: 'blob',
+        });
+        return response.data;
+    };
+
+    // 20.6 Company SSO Configuration (Corporate Admin)
+    getSSOConfig = async (companyId) => {
+        const response = await apiClient.get(ENDPOINTS.CORPORATE.SSO(companyId));
+        return response.data;
+    };
+
+    upsertSSOConfig = async (companyId, config) => {
+        const response = await apiClient.put(ENDPOINTS.CORPORATE.SSO(companyId), config);
+        return response.data;
+    };
+
+    addSSODomain = async (companyId, domain) => {
+        const response = await apiClient.post(ENDPOINTS.CORPORATE.SSO_DOMAINS(companyId), { domain });
+        return response.data;
+    };
+
+    verifySSODomain = async (companyId, domainId) => {
+        const response = await apiClient.post(ENDPOINTS.CORPORATE.SSO_DOMAIN_VERIFY(companyId, domainId));
+        return response.data;
+    };
+
+    deleteSSODomain = async (companyId, domainId) => {
+        const response = await apiClient.delete(ENDPOINTS.CORPORATE.SSO_DOMAIN_DELETE(companyId, domainId));
+        return response.data;
+    };
+
+    testSSOConnection = async (companyId) => {
+        const response = await apiClient.post(ENDPOINTS.CORPORATE.SSO_TEST(companyId));
+        return response.data;
+    };
+
+    enableSSO = async (companyId) => {
+        const response = await apiClient.post(ENDPOINTS.CORPORATE.SSO_ENABLE(companyId));
+        return response.data;
+    };
+
+    disableSSO = async (companyId) => {
+        const response = await apiClient.post(ENDPOINTS.CORPORATE.SSO_DISABLE(companyId));
+        return response.data;
+    };
+
+    getSSOAudit = async (companyId) => {
+        const response = await apiClient.get(ENDPOINTS.CORPORATE.SSO_AUDIT(companyId));
+        return response.data;
+    };
+
+    unlinkSSOUser = async (companyId, linkId) => {
+        const response = await apiClient.delete(ENDPOINTS.CORPORATE.SSO_UNLINK(companyId, linkId));
         return response.data;
     };
 }

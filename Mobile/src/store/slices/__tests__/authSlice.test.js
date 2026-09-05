@@ -17,6 +17,10 @@ const initialState = {
   error: null,
   isAuthenticated: false,
   isSessionChecked: false,
+  channel: 'Marketplace',
+  companyId: null,
+  companyRole: null,
+  corporateCompanies: [],
 };
 
 describe('authSlice', () => {

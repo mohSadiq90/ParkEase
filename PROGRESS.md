@@ -9,6 +9,46 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-05] - Backend API Parity & Mobile Module Implementation (API_ENDPOINTS_MOBILE.md)
+- **Features & Enhancements**:
+  - **Comprehensive Backend Route & Enum Alignment**: Synchronized `endpoints.js` and `constants.js` with all 25 sections of `API_ENDPOINTS_MOBILE.md` (Authentication, Users, Parking Spaces, Bookings, Payments, Reviews, Favorites, Vehicles, Passes, Ancillary, Events, IoT, LPR, Corporate, Platform Admin `/api/admin/*`, Health). Configured with remote backend `https://parkeaseapp.runasp.net`.
+  - **Auth, Channels & Enterprise SSO**: Implemented corporate login (`loginCorporate`), external OAuth (`loginExternal`), account linking, password reset/set endpoints, channel context inspection & switching (`switchChannel`), and enterprise SSO domain auto-discovery and authentication flow.
+  - **Booking, Overstay Fee & Digital Wallet Passes**: Added outstanding overstay fee card with instant in-app settlement (`POST /api/payments/create-order` with `{ bookingId, payOverstayFee: true }`), Apple Wallet (`.pkpass`) & Google Wallet pass integration (`GET /api/passes/{id}/google-wallet`), and live EV charging session tracker.
+  - **File Upload Service**: Added multipart file upload (`POST /api/files/upload`), pre-signed S3 upload flows (`POST /api/files/upload/sign`), upload confirmation (`POST /api/files/upload/confirm`), and parking space file management (`GET /api/files/parking/{id}`).
+  - **Corporate Platform Suite**: Extended `corporateService.js` with analytics dashboard export (`/export`), corporate bookings CSV export (`/bookings/export`), invoice PDF export (`/invoices/{id}/export`), allocation contract updates, owned allocation management, and full enterprise SSO config management (CRUD domains, test connection, kill-switch, SSO audit log, unlink user).
+  - **Platform Admin Operations**: Added `adminService.js`, `adminSlice.js`, and `AdminDashboardScreen.js` for system oversight, listing verification (`POST /api/admin/listings/{id}/verify`), outbox batch processing (`POST /api/admin/outbox/process`), audit logging, and platform management; integrated into `AppTabNavigator` and `ProfileScreen`.
+- **Bug Fixes & Refactoring**:
+  - Fixed FCM push device token registration to match backend schema (`{ deviceId, platform, fcmToken, appVersion }` instead of `{ token, platform }`).
+  - Corrected notification read mutations to `PUT /api/notifications/{id}/read` and `PUT /api/notifications/read-all`.
+  - Fixed Razorpay order creation to support overstay fee payloads cleanly.
+  - Updated Redux `authSlice` to maintain and reset active channel, corporate companies, and role context cleanly.
+- **Key Files Modified**:
+  - `Mobile/src/services/api/endpoints.js`
+  - `Mobile/src/utils/constants.js`
+  - `Mobile/src/services/auth/authService.js`
+  - `Mobile/src/store/slices/authSlice.js`
+  - `Mobile/src/hooks/useAuth.js`
+  - `Mobile/src/screens/Auth/LoginScreen.js`
+  - `Mobile/src/store/slices/paymentSlice.js`
+  - `Mobile/src/store/slices/bookingSlice.js`
+  - `Mobile/src/screens/Booking/BookingDetailScreen.js`
+  - `Mobile/src/services/api/notificationApiService.js`
+  - `Mobile/src/services/notifications/NotificationService.js`
+  - `Mobile/src/services/api/fileUploadService.js`
+  - `Mobile/src/services/api/corporateService.js`
+  - `Mobile/src/services/api/adminService.js`
+  - `Mobile/src/store/slices/adminSlice.js`
+  - `Mobile/src/screens/Admin/AdminDashboardScreen.js`
+  - `Mobile/src/screens/Admin/__tests__/AdminDashboardScreen.test.js`
+  - `Mobile/src/navigation/AppTabNavigator.js`
+  - `Mobile/src/screens/Profile/ProfileScreen.js`
+  - `Mobile/src/store/index.js`
+  - `Mobile/src/utils/test-utils.js`
+  - `API_ENDPOINTS_MOBILE.md`
+- **Current Status & Next Steps**:
+  - 100% test pass rate achieved across all 24 Jest test suites (83/83 tests passing).
+  - All missing endpoints and modules from `API_ENDPOINTS_MOBILE.md` implemented.
+
 ### [2026-08-19] - Repository Rules & Workflow Standardization
 - **Features & Enhancements**:
   - Integrated Antigravity automated SOP rules (`GEMINI.md`) and persistent progress tracker (`PROGRESS.md`).

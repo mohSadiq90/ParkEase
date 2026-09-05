@@ -1,6 +1,6 @@
 /**
  * Auth Slice
- * Authentication state management with thunks
+ * Authentication state management with thunks matching API_ENDPOINTS_MOBILE.md Section 3
  */
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
@@ -18,6 +18,75 @@ export const loginThunk = createAsyncThunk(
             if (!result.success) {
                 return rejectWithValue(result.message || 'Login failed');
             }
+            return result.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+/**
+ * Corporate login thunk
+ */
+export const loginCorporateThunk = createAsyncThunk(
+    'auth/loginCorporate',
+    async (credentials, { rejectWithValue }) => {
+        try {
+            const result = await authService.loginCorporate(credentials);
+            if (!result.success) {
+                return rejectWithValue(result.message || 'Corporate login failed');
+            }
+            return result.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+/**
+ * External social login thunk (Google)
+ */
+export const loginExternalThunk = createAsyncThunk(
+    'auth/loginExternal',
+    async (payload, { rejectWithValue }) => {
+        try {
+            const result = await authService.loginExternal(payload);
+            if (!result.success) {
+                return rejectWithValue(result.message || 'Social login failed');
+            }
+            return result.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+/**
+ * Switch channel thunk
+ */
+export const switchChannelThunk = createAsyncThunk(
+    'auth/switchChannel',
+    async (channelData, { rejectWithValue }) => {
+        try {
+            const result = await authService.switchChannel(channelData);
+            if (!result.success) {
+                return rejectWithValue(result.message || 'Channel switch failed');
+            }
+            return result.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+/**
+ * Get channel context thunk
+ */
+export const getChannelContextThunk = createAsyncThunk(
+    'auth/getChannelContext',
+    async (_, { rejectWithValue }) => {
+        try {
+            const result = await authService.getChannelContext();
             return result.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
@@ -93,9 +162,64 @@ export const updateProfileThunk = createAsyncThunk(
     }
 );
 
+/**
+ * Change password thunk
+ */
+export const changePasswordThunk = createAsyncThunk(
+    'auth/changePassword',
+    async (data, { rejectWithValue }) => {
+        try {
+            const result = await authService.changePassword(data);
+            if (!result.success) {
+                return rejectWithValue(result.message || 'Password change failed');
+            }
+            return result;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+/**
+ * Set password thunk (for social login accounts)
+ */
+export const setPasswordThunk = createAsyncThunk(
+    'auth/setPassword',
+    async (data, { rejectWithValue }) => {
+        try {
+            const result = await authService.setPassword(data);
+            if (!result.success) {
+                return rejectWithValue(result.message || 'Setting password failed');
+            }
+            return result;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+/**
+ * Delete account thunk
+ */
+export const deleteAccountThunk = createAsyncThunk(
+    'auth/deleteAccount',
+    async (_, { rejectWithValue }) => {
+        try {
+            const result = await authService.deleteAccount();
+            return result;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
 const initialState = {
     user: null,
     token: null,
+    channel: 'Marketplace',
+    companyId: null,
+    companyRole: null,
+    corporateCompanies: [],
     loading: false,
     error: null,
     isAuthenticated: false,
@@ -121,7 +245,10 @@ const authSlice = createSlice({
             .addCase(loginThunk.fulfilled, (state, action) => {
                 state.loading = false;
                 state.user = action.payload.user;
-                state.token = action.payload.accessToken;
+                state.token = action.payload.accessToken || action.payload.token;
+                state.channel = action.payload.channel || 'Marketplace';
+                state.companyId = action.payload.companyId || null;
+                state.companyRole = action.payload.companyRole || null;
                 state.isAuthenticated = true;
                 state.isSessionChecked = true;
             })
@@ -130,6 +257,67 @@ const authSlice = createSlice({
                 state.error = action.payload;
                 state.isAuthenticated = false;
             })
+
+            // Corporate Login
+            .addCase(loginCorporateThunk.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(loginCorporateThunk.fulfilled, (state, action) => {
+                state.loading = false;
+                const session = action.payload.session || action.payload;
+                state.user = session.user;
+                state.token = session.accessToken || session.token;
+                state.channel = 'Corporate';
+                state.companyId = session.companyId || null;
+                state.companyRole = session.companyRole || null;
+                state.corporateCompanies = action.payload.companies || [];
+                state.isAuthenticated = true;
+                state.isSessionChecked = true;
+            })
+            .addCase(loginCorporateThunk.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+
+            // External / Social Login
+            .addCase(loginExternalThunk.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(loginExternalThunk.fulfilled, (state, action) => {
+                state.loading = false;
+                const session = action.payload.tokens || action.payload;
+                state.user = action.payload.user || session.user;
+                state.token = session.accessToken || session.token;
+                state.channel = 'Marketplace';
+                state.isAuthenticated = true;
+                state.isSessionChecked = true;
+            })
+            .addCase(loginExternalThunk.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+
+            // Switch Channel
+            .addCase(switchChannelThunk.fulfilled, (state, action) => {
+                state.loading = false;
+                state.token = action.payload.accessToken || action.payload.token;
+                state.channel = action.payload.channel || state.channel;
+                state.companyId = action.payload.companyId || null;
+                state.companyRole = action.payload.companyRole || null;
+                if (action.payload.user) state.user = action.payload.user;
+            })
+
+            // Channel Context
+            .addCase(getChannelContextThunk.fulfilled, (state, action) => {
+                if (action.payload) {
+                    state.channel = action.payload.channel || state.channel;
+                    state.companyId = action.payload.companyId || state.companyId;
+                    state.companyRole = action.payload.companyRole || state.companyRole;
+                }
+            })
+
             // Register
             .addCase(registerThunk.pending, (state) => {
                 state.loading = true;
@@ -138,7 +326,8 @@ const authSlice = createSlice({
             .addCase(registerThunk.fulfilled, (state, action) => {
                 state.loading = false;
                 state.user = action.payload.user;
-                state.token = action.payload.accessToken;
+                state.token = action.payload.accessToken || action.payload.token;
+                state.channel = action.payload.channel || 'Marketplace';
                 state.isAuthenticated = true;
                 state.isSessionChecked = true;
             })
@@ -146,10 +335,17 @@ const authSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
+
             // Logout
             .addCase(logoutThunk.fulfilled, (state) => {
                 Object.assign(state, { ...initialState, isSessionChecked: true });
             })
+
+            // Delete Account
+            .addCase(deleteAccountThunk.fulfilled, (state) => {
+                Object.assign(state, { ...initialState, isSessionChecked: true });
+            })
+
             // Restore Session
             .addCase(restoreSessionThunk.pending, (state) => {
                 state.loading = true;
@@ -165,6 +361,7 @@ const authSlice = createSlice({
                 state.isAuthenticated = false;
                 state.isSessionChecked = true;
             })
+
             // Update Profile
             .addCase(updateProfileThunk.fulfilled, (state, action) => {
                 state.user = action.payload;

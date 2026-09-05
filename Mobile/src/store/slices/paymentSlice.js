@@ -33,14 +33,20 @@ export const processPaymentThunk = createAsyncThunk(
 );
 
 /**
- * Creates a Razorpay order for a booking. The backend expects the booking ID
- * as a raw JSON string, not an object such as { bookingId }.
+ * Creates a Razorpay order for a booking or overstay fee.
+ * Supports raw bookingId string or object { bookingId, payOverstayFee: true }.
  */
 export const createPaymentOrderThunk = createAsyncThunk(
     'payment/createOrder',
-    async (bookingId, { rejectWithValue }) => {
+    async (orderPayload, { rejectWithValue }) => {
         try {
-            const response = await apiClient.post(ENDPOINTS.PAYMENTS.CREATE_ORDER, bookingId);
+            const payload = typeof orderPayload === 'string'
+                ? orderPayload
+                : {
+                    bookingId: orderPayload.bookingId,
+                    payOverstayFee: !!orderPayload.payOverstayFee,
+                };
+            const response = await apiClient.post(ENDPOINTS.PAYMENTS.CREATE_ORDER, payload);
             return response.data.data || response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));

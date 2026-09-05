@@ -19,6 +19,7 @@ import corporateReducer from './slices/corporateSlice';
 import ancillaryReducer from './slices/ancillarySlice';
 import eventPackageReducer from './slices/eventPackageSlice';
 import iotReducer from './slices/iotSlice';
+import adminReducer from './slices/adminSlice';
 
 export const store = configureStore({
     reducer: {
@@ -38,6 +39,7 @@ export const store = configureStore({
         ancillary: ancillaryReducer,
         eventPackage: eventPackageReducer,
         iot: iotReducer,
+        admin: adminReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

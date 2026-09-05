@@ -193,6 +193,17 @@ Corporate company roles (`Employee` / `Admin`) are **per company**, not global J
 |--------|------|------|-------------|
 | POST | `/api/auth/register` | Public | Sign up |
 | POST | `/api/auth/login` | Public | Login → JWT |
+| POST | `/api/auth/login/corporate` | Public | Corporate password login |
+| POST | `/api/auth/external` | Public | Google / Social auth ID token exchange |
+| POST | `/api/auth/external/link` | JWT | Link social account to existing user |
+| POST | `/api/auth/set-password` | JWT | Set password for social-only account |
+| GET | `/api/auth/external/providers` | Public | Enabled social login providers |
+| POST | `/api/auth/channel` | JWT | Switch active product channel / corporate company |
+| GET | `/api/auth/channel-context` | JWT | Runtime channel context (Marketplace/Corporate) |
+| GET | `/api/auth/corporate/sso/discover` | Public | Discover corporate SSO settings by email or domain |
+| POST | `/api/auth/corporate/sso/start` | Public | Start SP-initiated enterprise SSO |
+| GET | `/api/auth/corporate/sso/callback` | Public | OIDC redirect URI callback |
+| POST | `/api/auth/corporate/sso/complete` | Public | Complete SSO code exchange for session |
 | POST | `/api/auth/refresh` | Public | Refresh tokens |
 | POST | `/api/auth/logout` | JWT | Invalidate session |
 | POST | `/api/auth/change-password` | JWT | Change password |
@@ -232,6 +243,10 @@ Corporate company roles (`Employee` / `Admin`) are **per company**, not global J
   "accessToken": "...",
   "refreshToken": "...",
   "expiresAt": "2026-07-12T12:00:00Z",
+  "channel": "Marketplace",
+  "companyId": null,
+  "companyRole": null,
+  "isBootstrap": false,
   "user": {
     "id": "guid",
     "email": "...",
@@ -245,6 +260,150 @@ Corporate company roles (`Employee` / `Admin`) are **per company**, not global J
   }
 }
 ```
+
+### `POST /api/auth/external` (Google / Social Login)
+
+Mobile client sends Google ID token obtained from native Google Sign-In SDK. Always mints Marketplace channel JWT.
+
+```json
+{
+  "provider": "google",
+  "idToken": "google-id-token-jwt",
+  "rawIdToken": null,
+  "userConsentGiven": true,
+  "deviceClientType": "android",
+  "nonce": null
+}
+```
+
+**200 OK** → `ApiResponse<ExternalAuthSessionDto>`:
+
+```json
+{
+  "success": true,
+  "message": "Authentication successful",
+  "data": {
+    "isNewUser": false,
+    "tokens": {
+      "accessToken": "...",
+      "refreshToken": "...",
+      "expiresAt": "..."
+    },
+    "user": {
+      "id": "guid",
+      "email": "user@example.com",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "role": 1
+    }
+  }
+}
+```
+
+### `POST /api/auth/external/link`
+
+Link a social account (Google) to the logged-in user.
+
+```json
+{
+  "provider": "google",
+  "idToken": "google-id-token-jwt"
+}
+```
+
+### `POST /api/auth/set-password`
+
+Set initial password for users who created account via Google Social Login.
+
+```json
+{
+  "newPassword": "Min8CharsPassword!"
+}
+```
+
+### `GET /api/auth/external/providers`
+
+Returns active social authentication providers for UI rendering.
+
+```json
+{
+  "success": true,
+  "data": {
+    "enabledProviders": ["google"]
+  }
+}
+```
+
+### `POST /api/auth/login/corporate`
+
+Corporate password login for enterprise employees.
+
+```json
+{
+  "email": "emp@company.com",
+  "password": "Password123!",
+  "companyId": "optional-guid"
+}
+```
+
+**200 OK** → `ApiResponse<CorporateLoginResponseDto>`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "session": { /* TokenDto */ },
+    "companies": [
+      {
+        "companyId": "guid",
+        "companyName": "Acme Corp",
+        "role": 0,
+        "employeeCode": "E001"
+      }
+    ],
+    "requiresCompanySelection": false
+  }
+}
+```
+
+### `POST /api/auth/channel`
+
+Switch active channel (`"Marketplace"` or `"Corporate"`) or switch active company ID within Corporate channel.
+
+```json
+{
+  "channel": "Corporate",
+  "companyId": "guid-company-id"
+}
+```
+
+Returns updated `TokenDto` bound to selected channel & company.
+
+### `GET /api/auth/channel-context`
+
+Returns current authenticated channel status and isolation state.
+
+```json
+{
+  "success": true,
+  "data": {
+    "channel": "Corporate",
+    "companyId": "guid",
+    "companyRole": "Admin",
+    "isolationEnabled": true
+  }
+}
+```
+
+### Corporate Enterprise SSO (OIDC / SAML)
+
+1. **Discover SSO:** `GET /api/auth/corporate/sso/discover?email=user@company.com`  
+   Returns `{ ssoEnabled: true, companyId: "guid", companyName: "Acme Corp", providerType: "OIDC" }`.
+2. **Start SSO:** `POST /api/auth/corporate/sso/start`  
+   `{ "email": "user@company.com", "returnUrl": "parkease://sso-callback" }`  
+   Returns `{ authorizationUrl: "https://idp.company.com/oauth/authorize?..." }`.
+3. **Redirect:** Mobile opens web browser / InAppBrowser to `authorizationUrl`.
+4. **Complete:** App catches deep link callback `parkease://sso-callback?sso_code=XYZ`, calls `POST /api/auth/corporate/sso/complete` with `{ "exchangeCode": "XYZ" }` to receive `CorporateLoginResponseDto` session.
 
 ### `POST /api/auth/refresh`
 
@@ -273,7 +432,8 @@ Corporate company roles (`Employee` / `Admin`) are **per company**, not global J
 
 All fields optional.
 
-> **Note:** Mobile `endpoints.js` may list `GOOGLE_LOGIN` / `device-tokens/deregister` — those are **not** implemented on the API today. Prefer email/password auth and `POST /api/device-tokens/register` only.
+> **Note on Mobile Social Auth & FCM:** Mobile native apps perform Google Sign-In using the native Google SDK to get an ID token, then call `POST /api/auth/external`. Push notification token registration uses `POST /api/device-tokens/register`.
+
 
 ---
 
@@ -1451,19 +1611,109 @@ Reservation result may include either a booking, a waitlist entry, and/or a frau
 
 Lifecycle: **Draft → Issued → Paid** (or **Void** from draft/issued).
 
----
+### 20.6 Company SSO configuration (Admin)
 
-## 21. Admin outbox (platform Admin only)
+Base route: **`/api/v1/corporate/companies/{companyId}/sso`**  
+Authorization: **JWT required** (Corporate channel bound; company Admin membership).
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/admin/outbox` | List messages (`status`, `type`, `page`, `pageSize`) |
-| GET | `/api/admin/outbox/{id}` | Message detail |
-| POST | `/api/admin/outbox/{id}/requeue` | Requeue one |
-| POST | `/api/admin/outbox/requeue-failed` | Requeue all failed |
-| POST | `/api/admin/outbox/process?batchSize=50` | Process batch now |
+| GET | `.../companies/{companyId}/sso` | Get company SSO configuration |
+| PUT | `.../companies/{companyId}/sso` | Upsert / update SSO config |
+| POST | `.../companies/{companyId}/sso/domains` | Add email domain |
+| POST | `.../companies/{companyId}/sso/domains/{domainId}/verify` | Verify domain DNS TXT record |
+| DELETE | `.../companies/{companyId}/sso/domains/{domainId}` | Remove domain |
+| POST | `.../companies/{companyId}/sso/test` | Test SSO connection |
+| POST | `.../companies/{companyId}/sso/enable` | Enable SSO for company |
+| POST | `.../companies/{companyId}/sso/disable` | Disable SSO for company |
+| GET | `.../companies/{companyId}/sso/audit` | View SSO audit logs |
+| DELETE | `.../companies/{companyId}/sso/links/{linkId}` | Unlink user SSO identity |
 
-Usually **not** needed in mobile consumer apps.
+**Upsert SSO Config Body:**
+
+```json
+{
+  "idpType": "OIDC",
+  "issuer": "https://identity.company.com/",
+  "clientId": "parkease-client-id",
+  "clientSecret": "client-secret-value",
+  "metadataUrl": "https://identity.company.com/.well-known/openid-configuration",
+  "redirectUri": "https://api.parkease.com/api/auth/corporate/sso/callback",
+  "allowAutoProvisioning": true,
+  "defaultRole": 0
+}
+```
+
+**Add Domain Body:**
+
+```json
+{ "domain": "acme.com" }
+```
+
+---
+
+## 21. Platform Admin operations (Platform Admin only)
+
+Requires JWT with `Admin` role (`/api/admin/*`).
+
+### 21.1 Dashboard
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/dashboard` | Platform metrics summary (users, listings, bookings, revenue) |
+
+### 21.2 User management
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/users` | List users (`search`, `isActive`, `page`, `pageSize`) |
+| GET | `/api/admin/users/{id}` | User detail |
+| POST | `/api/admin/users/{id}/activate` | Activate user (`{ "reason": "..." }`) |
+| POST | `/api/admin/users/{id}/deactivate` | Deactivate user (`{ "reason": "..." }`) |
+
+### 21.3 Listing oversight
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/listings` | List facilities (`search`, `isActive`, `isVerified`, `page`, `pageSize`) |
+| GET | `/api/admin/listings/{id}` | Listing detail |
+| POST | `/api/admin/listings/{id}/activate` | Activate listing (`{ "reason": "..." }`) |
+| POST | `/api/admin/listings/{id}/deactivate` | Deactivate listing (`{ "reason": "..." }`) |
+| POST | `/api/admin/listings/{id}/verify` | Verify listing (`{ "reason": "..." }`) |
+| POST | `/api/admin/listings/{id}/unverify` | Unverify listing (`{ "reason": "..." }`) |
+
+### 21.4 Booking oversight
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/bookings` | List all bookings (`search`, `status`, `userId`, `parkingSpaceId`, `page`, `pageSize`) |
+| GET | `/api/admin/bookings/{id}` | Booking detail |
+| POST | `/api/admin/bookings/{id}/cancel` | Force cancel booking (`{ "reason": "..." }`) |
+
+### 21.5 Payment & refund oversight
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/payments` | List payments (`search`, `status`, `userId`, `bookingId`, `page`, `pageSize`) |
+| GET | `/api/admin/payments/{id}` | Payment detail |
+| POST | `/api/admin/payments/{id}/refund` | Issue admin refund (`{ "reason": "...", "amount": 100.00 }`) |
+
+### 21.6 Audit logs
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/audit` | Audit logs (`action`, `resourceType`, `actorUserId`, `page`, `pageSize`) |
+
+### 21.7 Corporate SSO platform oversight
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/corporate-sso` | List platform corporate SSO configs (`search`, `forceDisabledOnly`, `enabledOnly`) |
+| POST | `/api/admin/corporate-sso/{companyId}/force-disable` | Sticky incident kill-switch (`{ "reason": "..." }`) |
+| POST | `/api/admin/corporate-sso/{companyId}/clear-force-disable` | Clear platform force-disable (`{ "reason": "..." }`) |
+| GET | `/api/admin/corporate-sso/{companyId}/audit` | Cross-tenant SSO audit view (`take`) |
+
+### 21.8 Outbox management
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/outbox` | List outbox messages (`status`, `type`, `page`, `pageSize`) |
+| GET | `/api/admin/outbox/{id}` | Message detail with full payload |
+| POST | `/api/admin/outbox/{id}/requeue` | Requeue single failed message |
+| POST | `/api/admin/outbox/requeue-failed` | Requeue all failed messages |
+| POST | `/api/admin/outbox/process?batchSize=50` | Force process batch now |
 
 ---
 
@@ -1488,6 +1738,7 @@ Use this to implement screens in the same order as the web app.
 | Web capability | Endpoints |
 |----------------|-----------|
 | Register / login / logout / refresh | Auth |
+| Social Login (Google) | `POST /api/auth/external`, `providers`, `link`, `set-password` |
 | Profile + change password | Users + Auth |
 | Search parking + map (EV / residential filters) | `parking/search`, `parking/map` |
 | Parking detail + forecast + effective dynamic rate | `parking/{id}`, `parking-availability/.../forecast` |
@@ -1533,15 +1784,30 @@ Use this to implement screens in the same order as the web app.
 
 | Web capability | Endpoints |
 |----------------|-----------|
+| Corporate Login & Channel Switch | Auth corporate login & channel switch |
 | Company create / switch / update | Corporate companies |
 | Dashboard + CSV | Dashboard + export |
 | Members + invites | Members / invitations |
+| Enterprise SSO Admin Setup | `corporate/companies/{id}/sso/*` & `auth/corporate/sso/*` |
 | Owned parking + allocations | Parking-spaces + allocations |
 | Lease request + policy / fixed slots | Allocations |
 | Employee / visitor book | Bookings employee/visitor |
 | Waitlist manage | Waitlist |
 | Corporate booking list + cancel + export | Bookings |
 | Invoices generate / issue / pay / void / export | Invoices |
+
+### Platform Admin
+
+| Capability | Endpoints |
+|------------|-----------|
+| Admin Dashboard | `GET /api/admin/dashboard` |
+| User Oversight & Lock/Unlock | `GET /POST /api/admin/users/*` |
+| Listing Oversight & Verification | `GET /POST /api/admin/listings/*` |
+| Booking Oversight & Force Cancel | `GET /POST /api/admin/bookings/*` |
+| Payment Oversight & Admin Refunds | `GET /POST /api/admin/payments/*` |
+| Audit Trail View | `GET /api/admin/audit` |
+| Corporate SSO Incident Kill-Switch | `GET /POST /api/admin/corporate-sso/*` |
+| Outbox Message Management | `GET /POST /api/admin/outbox/*` |
 
 ### IoT / facility hardware (usually not mobile-consumer)
 
@@ -1576,6 +1842,13 @@ Always check both HTTP status and `success` flag when present.
 GET    /health
 POST   /api/auth/register
 POST   /api/auth/login
+POST   /api/auth/login/corporate
+POST   /api/auth/external
+GET    /api/auth/external/providers
+GET    /api/auth/corporate/sso/discover
+POST   /api/auth/corporate/sso/start
+GET    /api/auth/corporate/sso/callback
+POST   /api/auth/corporate/sso/complete
 POST   /api/auth/refresh
 GET    /api/parking/{id}
 GET    /api/parking/search
@@ -1603,6 +1876,10 @@ POST   /api/iot/ocpp/stop-transaction       (X-Api-Key)
 ```
 POST   /api/auth/logout
 POST   /api/auth/change-password
+POST   /api/auth/external/link
+POST   /api/auth/set-password
+POST   /api/auth/channel
+GET    /api/auth/channel-context
 GET|PUT|DELETE /api/users/me
 
 GET|POST /api/parking ...
@@ -1626,9 +1903,9 @@ GET|PUT|DELETE /api/notifications ...
 POST   /api/device-tokens/register
 GET    /api/dashboard/vendor|member
 *      /api/v1/corporate/**
-       including .../invoices/**
+       including .../invoices/**, .../sso/**
 *      /api/files/parking/** (write)
-*      /api/admin/outbox/** (Admin)
+*      /api/admin/** (Platform Admin)
 ```
 
 ### SignalR
@@ -1660,13 +1937,11 @@ GET    /api/dashboard/vendor|member
 | Frontend `src/services/api.js` | Web client usage (source of parity) |
 | Frontend `src/services/corporateService.js` | Corporate web client |
 
-### Audit note (2026-07-26)
+### Audit note (2026-09-05)
 
-Full controller inventory under `ParkingApp.API/Controllers` was re-checked against this document:
+Full controller inventory under `ParkingApp.API/Controllers` (including `Admin/` sub-controllers) was re-checked against this document:
 
-- **No missing HTTP routes** relative to controllers (auth, parking, bookings, payments, reviews, dashboard, vehicles, favorites, passes, chat, notifications, device-tokens, files, ancillary, event-packages, LPR registry, IoT LPR/OCPP, corporate, admin outbox, health, SignalR hubs).
-- Gaps closed in this pass were **contract/detail** items (overstay `payOverstayFee`, pass coverage/corporate assign, chat join/leave, notification list shape, instant book, dashboard/file payload notes).
-- Session reminders and similar background workers have **no mobile REST surface**.
+- **100% Complete Route Coverage**: All HTTP endpoints across 21 controllers and 7 Admin controllers (Auth, Corporate SSO, Users, Parking, Bookings, Payments, Reviews, Dashboard, Vehicles, Favorites, Passes, Chat, Notifications, Device-Tokens, Files, Ancillary, Event-Packages, LPR Registry, IoT LPR/OCPP, Corporate, Platform Admin, Health, SignalR Hubs) are fully documented.
+- **Mobile Standalone Ready**: Document contains full DTO schemas, enum definitions, query parameters, header requirements (`X-Company-Id`), payment body variants (`payOverstayFee`), social login token exchange, corporate channel switching, and enterprise SSO flows so a mobile developer can implement full feature parity using this document alone.
 
 If an endpoint is missing from this document but exists in controllers, treat the controller as authoritative and update this file.
-)

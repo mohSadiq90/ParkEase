@@ -19,12 +19,13 @@ export const notificationApiService = {
     },
 
     /**
-     * Mark a specific notification as read
+     * Mark a specific notification as read (PUT /api/notifications/{id}/read)
      */
     markAsRead: async (id) => {
         try {
-            const response = await apiClient.post(ENDPOINTS.NOTIFICATIONS.MARK_READ(id));
-            return response.data;
+            // Section 17 of API_ENDPOINTS_MOBILE.md specifies PUT for marking read
+            const response = await apiClient.put(ENDPOINTS.NOTIFICATIONS.MARK_READ(id));
+            return response.data || { success: true };
         } catch (error) {
             logger.error(TAG, `Failed to mark notification ${id} as read`, error);
             throw error;
@@ -32,12 +33,12 @@ export const notificationApiService = {
     },
 
     /**
-     * Mark all notifications as read
+     * Mark all notifications as read (PUT /api/notifications/read-all)
      */
     markAllAsRead: async () => {
         try {
-            const response = await apiClient.post(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
-            return response.data;
+            const response = await apiClient.put(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
+            return response.data || { success: true };
         } catch (error) {
             logger.error(TAG, 'Failed to mark all notifications as read', error);
             throw error;
@@ -45,12 +46,12 @@ export const notificationApiService = {
     },
 
     /**
-     * Delete a notification
+     * Delete a notification (DELETE /api/notifications/{id})
      */
     deleteNotification: async (id) => {
         try {
             const response = await apiClient.delete(ENDPOINTS.NOTIFICATIONS.DELETE(id));
-            return response.data;
+            return response.data || { success: true };
         } catch (error) {
             logger.error(TAG, `Failed to delete notification ${id}`, error);
             throw error;
@@ -58,12 +59,12 @@ export const notificationApiService = {
     },
 
     /**
-     * Clear all notifications
+     * Clear all notifications (DELETE /api/notifications/clear-all)
      */
     clearAll: async () => {
         try {
             const response = await apiClient.delete(ENDPOINTS.NOTIFICATIONS.CLEAR_ALL);
-            return response.data;
+            return response.data || { success: true };
         } catch (error) {
             logger.error(TAG, 'Failed to clear all notifications', error);
             throw error;
