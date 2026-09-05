@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchMyCompanies, setActiveCompany } from '../../store/slices/corporateSlice';
 import corporateService from '../../services/api/corporateService';
@@ -117,8 +117,16 @@ const CompanyManagementScreen = () => {
                 />
             </View>
 
-            <Modal visible={isCreateModalVisible} animationType="slide" presentationStyle="pageSheet">
-                <View style={styles.modalContainer}>
+            <Modal
+                visible={isCreateModalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setCreateModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalContainer}
+                >
                     <View style={styles.modalHeader}>
                         <Text style={typography.h2}>Create Company</Text>
                         <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
@@ -126,7 +134,12 @@ const CompanyManagementScreen = () => {
                         </TouchableOpacity>
                     </View>
                     
-                    <View style={styles.modalBody}>
+                    <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode="on-drag"
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={[styles.modalBody, { flexGrow: 1, paddingBottom: 60 }]}
+                    >
                         <Input label="Company Name" value={name} onChangeText={setName} placeholder="Acme Corp" />
                         <Input label="Contact Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
                         <Input label="Contact Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
@@ -139,8 +152,8 @@ const CompanyManagementScreen = () => {
                             loading={isCreating}
                             style={{ marginTop: spacing.md }}
                         />
-                    </View>
-                </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );

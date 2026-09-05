@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Modal, Alert, KeyboardAvoidingView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -268,16 +268,26 @@ const BookingScreen = ({ navigation, route }) => {
     };
 
     return (
-        <ScreenLayout>
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Book Parking</Text>
-                    <View style={{ width: 40 }} />
-                </View>
+        <ScreenLayout keyboardAvoiding={false}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+                style={{ flex: 1 }}
+            >
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 140 }}
+                >
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Book Parking</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
 
                 <View style={styles.content}>
                     {/* Parking Info */}
@@ -557,10 +567,11 @@ const BookingScreen = ({ navigation, route }) => {
                     />
                 </View>
             </ScrollView>
+        </KeyboardAvoidingView>
 
-            {/* Date/Time Picker */}
-            {renderPicker()}
-        </ScreenLayout>
+        {/* Date/Time Picker */}
+        {renderPicker()}
+    </ScreenLayout>
     );
 };
 

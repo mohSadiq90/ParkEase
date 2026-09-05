@@ -101,7 +101,7 @@ const ChangePasswordScreen = ({ navigation }) => {
     };
 
     return (
-        <ScreenLayout style={styles.container}>
+        <ScreenLayout style={styles.container} keyboardAvoiding={false}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -112,9 +112,15 @@ const ChangePasswordScreen = ({ navigation }) => {
 
             <KeyboardAvoidingView 
                 style={styles.keyboardView}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent}>
+                <ScrollView 
+                    contentContainerStyle={[styles.scrollContent, { flexGrow: 1, paddingBottom: 120 }]}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
                     <Text style={styles.description}>
                         {isSocialOnly 
                             ? 'Set a secure password for your account to enable standard email and password login.' 

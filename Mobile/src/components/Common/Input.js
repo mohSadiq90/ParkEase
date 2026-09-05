@@ -23,10 +23,26 @@ const Input = React.forwardRef(({
     editable = true,
     style,
     inputStyle,
+    onFocus,
+    onBlur,
     ...props
 }, ref) => {
     const [focused, setFocused] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    const handleFocus = (e) => {
+        setFocused(true);
+        if (onFocus) {
+            onFocus(e);
+        }
+    };
+
+    const handleBlur = (e) => {
+        setFocused(false);
+        if (onBlur) {
+            onBlur(e);
+        }
+    };
 
     return (
         <View style={[styles.container, style]}>
@@ -60,14 +76,14 @@ const Input = React.forwardRef(({
                     multiline={multiline}
                     numberOfLines={numberOfLines}
                     editable={editable}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
+                    {...props}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                     style={[
                         styles.input,
                         multiline && styles.multilineInput,
                         inputStyle,
                     ]}
-                    {...props}
                 />
                 {secureTextEntry && (
                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../../styles/globalStyles';
@@ -136,6 +136,8 @@ const ReviewsListScreen = ({ route, navigation }) => {
                     data={reviews}
                     keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
                     renderItem={renderItem}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
                     contentContainerStyle={styles.listContainer}
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
@@ -153,7 +155,10 @@ const ReviewsListScreen = ({ route, navigation }) => {
                 animationType="slide"
                 onRequestClose={() => setReplyModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Reply to Review</Text>
@@ -185,7 +190,7 @@ const ReviewsListScreen = ({ route, navigation }) => {
                             />
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );

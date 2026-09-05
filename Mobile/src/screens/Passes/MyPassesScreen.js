@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyPassesThunk, createPassThunk } from '../../store/slices/passSlice';
@@ -188,6 +188,8 @@ const MyPassesScreen = ({ navigation }) => {
                     <EnhancedRefreshControl refreshing={refreshing} onRefresh={onRefresh} lastRefreshed={lastRefreshed} />
                 }
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 contentContainerStyle={styles.listContent}
             />
 
@@ -198,82 +200,92 @@ const MyPassesScreen = ({ navigation }) => {
                 transparent={true}
                 onRequestClose={() => setBuyModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Purchase Parking Pass</Text>
-                            <TouchableOpacity onPress={() => setBuyModalVisible(false)}>
-                                <Ionicons name="close" size={22} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
+                        <ScrollView
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ paddingBottom: spacing.sm }}
+                        >
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Purchase Parking Pass</Text>
+                                <TouchableOpacity onPress={() => setBuyModalVisible(false)}>
+                                    <Ionicons name="close" size={22} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
 
-                        <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm }}>
-                            Select pass duration for unlimited zone access:
-                        </Text>
+                            <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm }}>
+                                Select pass duration for unlimited zone access:
+                            </Text>
 
-                        {/* Type chips */}
-                        <View style={styles.typeChipRow}>
-                            <TouchableOpacity
-                                onPress={() => setSelectedType(0)}
-                                style={[styles.typeChip, selectedType === 0 && styles.typeChipActive]}
-                            >
-                                <Text style={[styles.typeChipTitle, selectedType === 0 && styles.typeChipTitleActive]}>
-                                    Monthly Pass (30 Days)
-                                </Text>
-                                <Text style={styles.typeChipPrice}>₹2,999</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => setSelectedType(1)}
-                                style={[styles.typeChip, selectedType === 1 && styles.typeChipActive]}
-                            >
-                                <Text style={[styles.typeChipTitle, selectedType === 1 && styles.typeChipTitleActive]}>
-                                    Weekly Pass (7 Days)
-                                </Text>
-                                <Text style={styles.typeChipPrice}>₹899</Text>
-                            </TouchableOpacity>
-                        </View>
+                            {/* Type chips */}
+                            <View style={styles.typeChipRow}>
+                                <TouchableOpacity
+                                    onPress={() => setSelectedType(0)}
+                                    style={[styles.typeChip, selectedType === 0 && styles.typeChipActive]}
+                                >
+                                    <Text style={[styles.typeChipTitle, selectedType === 0 && styles.typeChipTitleActive]}>
+                                        Monthly Pass (30 Days)
+                                    </Text>
+                                    <Text style={styles.typeChipPrice}>₹2,999</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setSelectedType(1)}
+                                    style={[styles.typeChip, selectedType === 1 && styles.typeChipActive]}
+                                >
+                                    <Text style={[styles.typeChipTitle, selectedType === 1 && styles.typeChipTitleActive]}>
+                                        Weekly Pass (7 Days)
+                                    </Text>
+                                    <Text style={styles.typeChipPrice}>₹899</Text>
+                                </TouchableOpacity>
+                            </View>
 
-                        {/* Inputs */}
-                        <View style={{ gap: spacing.sm, marginVertical: spacing.md }}>
-                            <Card style={{ backgroundColor: colors.background, padding: spacing.sm }}>
-                                <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: 2 }}>Vehicle License Plate (Optional)</Text>
-                                <TextInput
-                                    style={styles.textInput}
-                                    value={licensePlate}
-                                    onChangeText={setLicensePlate}
-                                    placeholder="e.g. MH01CD5678"
-                                    placeholderTextColor={colors.textTertiary}
+                            {/* Inputs */}
+                            <View style={{ gap: spacing.sm, marginVertical: spacing.md }}>
+                                <Card style={{ backgroundColor: colors.background, padding: spacing.sm }}>
+                                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: 2 }}>Vehicle License Plate (Optional)</Text>
+                                    <TextInput
+                                        style={styles.textInput}
+                                        value={licensePlate}
+                                        onChangeText={setLicensePlate}
+                                        placeholder="e.g. MH01CD5678"
+                                        placeholderTextColor={colors.textTertiary}
+                                    />
+                                </Card>
+                                <Card style={{ backgroundColor: colors.background, padding: spacing.sm }}>
+                                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: 2 }}>Zone / Facility Code (Optional)</Text>
+                                    <TextInput
+                                        style={styles.textInput}
+                                        value={zoneCode}
+                                        onChangeText={setZoneCode}
+                                        placeholder="e.g. ZONE-NORTH"
+                                        placeholderTextColor={colors.textTertiary}
+                                    />
+                                </Card>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
+                                <Button
+                                    title="Cancel"
+                                    onPress={() => setBuyModalVisible(false)}
+                                    variant="outline"
+                                    style={{ flex: 1 }}
                                 />
-                            </Card>
-                            <Card style={{ backgroundColor: colors.background, padding: spacing.sm }}>
-                                <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: 2 }}>Zone / Facility Code (Optional)</Text>
-                                <TextInput
-                                    style={styles.textInput}
-                                    value={zoneCode}
-                                    onChangeText={setZoneCode}
-                                    placeholder="e.g. ZONE-NORTH"
-                                    placeholderTextColor={colors.textTertiary}
+                                <Button
+                                    title="Confirm & Pay"
+                                    onPress={handleBuyPass}
+                                    variant="primary"
+                                    loading={createLoading}
+                                    style={{ flex: 1 }}
                                 />
-                            </Card>
-                        </View>
-
-                        <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
-                            <Button
-                                title="Cancel"
-                                onPress={() => setBuyModalVisible(false)}
-                                variant="outline"
-                                style={{ flex: 1 }}
-                            />
-                            <Button
-                                title="Confirm & Pay"
-                                onPress={handleBuyPass}
-                                variant="primary"
-                                loading={createLoading}
-                                style={{ flex: 1 }}
-                            />
-                        </View>
+                            </View>
+                        </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {loading && passes.length > 0 && (

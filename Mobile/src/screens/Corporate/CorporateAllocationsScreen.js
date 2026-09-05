@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSelector } from 'react-redux';
 import corporateService from '../../services/api/corporateService';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
@@ -123,8 +123,16 @@ const CorporateAllocationsScreen = () => {
             </View>
 
             {/* Request Modal */}
-            <Modal visible={isRequestModalVisible} animationType="slide" presentationStyle="pageSheet">
-                <View style={styles.modalContainer}>
+            <Modal
+                visible={isRequestModalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setRequestModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalContainer}
+                >
                     <View style={styles.modalHeader}>
                         <Text style={typography.h2}>Request Allocation</Text>
                         <TouchableOpacity onPress={() => setRequestModalVisible(false)}>
@@ -132,7 +140,12 @@ const CorporateAllocationsScreen = () => {
                         </TouchableOpacity>
                     </View>
                     
-                    <ScrollView contentContainerStyle={styles.modalBody}>
+                    <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode="on-drag"
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={[styles.modalBody, { flexGrow: 1, paddingBottom: 40 }]}
+                    >
                         <Text style={[typography.caption, { marginBottom: spacing.md }]}>
                             Enter the ID of the parking space you wish to lease in bulk.
                         </Text>
@@ -162,7 +175,7 @@ const CorporateAllocationsScreen = () => {
                             style={{ marginTop: spacing.md }}
                         />
                     </ScrollView>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );

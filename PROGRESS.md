@@ -9,6 +9,61 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-05] - Comprehensive Keyboard Avoidance & Active Field Auto-Scrolling Overhaul
+- **Features & Enhancements**:
+  - **ScreenLayout Keyboard-Aware Container**: Upgraded `ScreenLayout.js` with integrated `KeyboardAvoidingView` wrapper, safe area vertical offset calculations, `keyboardShouldPersistTaps="handled"`, `keyboardDismissMode="on-drag"`, and generous default bottom scroll clearance so that all scrollable screens dynamically elevate content above virtual keyboards.
+  - **Input Focus & Blur Propagation**: Refactored `Input.js` to explicitly chain caller-provided `onFocus` and `onBlur` callbacks alongside internal focus states, preventing callback swallowing and allowing parent scroll containers to respond accurately to field focus.
+  - **Universal Modal Keyboard Avoidance**: Enhanced all bottom-sheet and full-screen modals across the app with `KeyboardAvoidingView` (`Platform.OS === 'ios' ? 'padding' : 'height'`) and inner scroll containers, ensuring inputs, action buttons, and confirmation controls remain completely visible and scrollable when the virtual keyboard expands.
+- **Bug Fixes & Refactoring**:
+  - **Search & Filter Modal**:
+    - Wrapped advanced filter modal (`SearchScreen.js`) with `KeyboardAvoidingView` and added `keyboardShouldPersistTaps="handled"` with `keyboardDismissMode="on-drag"` to both the filter modal and main search results `FlatList`. Max Hourly Rate input now shifts into clear view without keyboard obstruction.
+  - **Profile & Account Screens**:
+    - `EditProfileScreen.js` & `ChangePasswordScreen.js`: Optimized `KeyboardAvoidingView` platform behaviors, added `keyboardShouldPersistTaps="handled"`, `keyboardDismissMode="on-drag"`, and `paddingBottom: 100-120` to prevent keyboard from hiding lower form fields and submit buttons.
+    - `ProfileScreen.js`: Added dynamic scroll padding when profile editing is activated.
+    - `MyVehiclesScreen.js`: Encapsulated Add/Edit Vehicle modal in `KeyboardAvoidingView` + `ScrollView` with `maxHeight: '85%'`, resolving obscured make, model, color, and save button.
+  - **Vehicles Garage Screen**:
+    - `VehiclesScreen.js`: Wrapped inline Add Vehicle form in a scrollable container with tap persistence and added `keyboardDismissMode="on-drag"` to the vehicles `FlatList`.
+  - **Corporate Management & Operations**:
+    - `CompanyManagementScreen.js`: Converted static modal container into a `KeyboardAvoidingView` + `ScrollView`, allowing smooth typing and scrolling across all 5 company creation inputs.
+    - `CorporateMembersScreen.js`: Added `KeyboardAvoidingView` + `ScrollView` to the Invite Member modal.
+    - `CorporateBookingsScreen.js` & `CorporateAllocationsScreen.js`: Added `KeyboardAvoidingView` and `keyboardShouldPersistTaps="handled"` to booking and bulk lease allocation request modals.
+  - **Vendor Listings & Operations**:
+    - `CreateParkingScreen.js`: Wrapped the massive 20+ field vendor space creation and edit form in `KeyboardAvoidingView` with `keyboardShouldPersistTaps="handled"`, `keyboardDismissMode="on-drag"`, and `paddingBottom: 120` so drivers and hosts can easily edit EV charging rates, pricing multipliers, and spot numbers without active fields getting covered.
+  - **Booking, Reviews & Passes**:
+    - `BookingScreen.js`: Added `KeyboardAvoidingView` with `keyboardShouldPersistTaps="handled"`, ensuring vehicle plate, model, and slot number inputs scroll above the keyboard.
+    - `CreateReviewScreen.js`: Enhanced `ScreenLayout` scrollable padding for review title and comment fields.
+    - `ParkingDetailScreen.js` & `ReviewsListScreen.js`: Wrapped host reply modals in `KeyboardAvoidingView` with scroll persistence.
+    - `EventPackagesScreen.js` & `Passes/MyPassesScreen.js`: Added `KeyboardAvoidingView` and `ScrollView` to pass purchase and checkout modals.
+  - **Authentication Screens**:
+    - `LoginScreen.js`: Wrapped form card and logo in `ScrollView` with `contentContainerStyle` centering and `keyboardShouldPersistTaps="handled"`, preventing company SSO and login fields from getting cut off on small Android screens.
+    - `SignupScreen.js`: Added `keyboardShouldPersistTaps="handled"` and `keyboardDismissMode="on-drag"` with generous bottom padding.
+- **Key Files Modified**:
+  - `Mobile/src/components/Common/Input.js`
+  - `Mobile/src/components/Layouts/ScreenLayout.js`
+  - `Mobile/src/screens/Auth/LoginScreen.js`
+  - `Mobile/src/screens/Auth/SignupScreen.js`
+  - `Mobile/src/screens/Booking/BookingScreen.js`
+  - `Mobile/src/screens/Corporate/CompanyManagementScreen.js`
+  - `Mobile/src/screens/Corporate/CorporateAllocationsScreen.js`
+  - `Mobile/src/screens/Corporate/CorporateBookingsScreen.js`
+  - `Mobile/src/screens/Corporate/CorporateMembersScreen.js`
+  - `Mobile/src/screens/Member/EventPackagesScreen.js`
+  - `Mobile/src/screens/Passes/MyPassesScreen.js`
+  - `Mobile/src/screens/Profile/ChangePasswordScreen.js`
+  - `Mobile/src/screens/Profile/EditProfileScreen.js`
+  - `Mobile/src/screens/Profile/MyVehiclesScreen.js`
+  - `Mobile/src/screens/Profile/ProfileScreen.js`
+  - `Mobile/src/screens/Review/CreateReviewScreen.js`
+  - `Mobile/src/screens/Review/ReviewsListScreen.js`
+  - `Mobile/src/screens/Search/ParkingDetailScreen.js`
+  - `Mobile/src/screens/Search/SearchScreen.js`
+  - `Mobile/src/screens/Vehicles/VehiclesScreen.js`
+  - `Mobile/src/screens/Vendor/CreateParkingScreen.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - 100% test pass rate maintained across all 30 Jest test suites (114/114 passing tests).
+  - All form screens, search inputs, and modal dialogues now smoothly scroll and avoid the virtual keyboard on both Android and iOS.
+
 ### [2026-09-05] - Google Sign-In DEVELOPER_ERROR Root Cause Diagnosis & SHA-1 Registration
 - **Features & Enhancements**:
   - **Firebase Android App SHA-1 & SHA-256 Fingerprint Registration**: Used Firebase CLI to register all release and debug certificate hashes into Firebase Android App `1:422771999600:android:3d23fc1d587d77f91a05b5` (`com.parkease.app`):

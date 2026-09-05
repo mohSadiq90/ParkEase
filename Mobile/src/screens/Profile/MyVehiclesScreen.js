@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, StyleSheet, Modal } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, StyleSheet, Modal, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import apiClient from '../../services/api/apiClient';
 import ENDPOINTS from '../../services/api/endpoints';
@@ -173,53 +173,68 @@ const MyVehiclesScreen = ({ navigation }) => {
             )}
 
             {/* Modal */}
-            <Modal visible={modalVisible} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
+            <Modal
+                visible={modalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>{editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}</Text>
-                        
-                        <Input
-                            label="License Plate Number"
-                            placeholder="e.g. MH02AB1234"
-                            value={plate}
-                            onChangeText={setPlate}
-                            autoCapitalize="characters"
-                        />
-                        <Input
-                            label="Make (Brand)"
-                            placeholder="e.g. Honda, Tesla, Hyundai"
-                            value={make}
-                            onChangeText={setMake}
-                        />
-                        <Input
-                            label="Model"
-                            placeholder="e.g. Civic, Model 3, Creta"
-                            value={model}
-                            onChangeText={setModel}
-                        />
-                        <Input
-                            label="Color"
-                            placeholder="e.g. White, Black, Silver"
-                            value={color}
-                            onChangeText={setColor}
-                        />
+                        <ScrollView
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ paddingBottom: spacing.md }}
+                        >
+                            <Text style={styles.modalTitle}>{editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}</Text>
+                            
+                            <Input
+                                label="License Plate Number"
+                                placeholder="e.g. MH02AB1234"
+                                value={plate}
+                                onChangeText={setPlate}
+                                autoCapitalize="characters"
+                            />
+                            <Input
+                                label="Make (Brand)"
+                                placeholder="e.g. Honda, Tesla, Hyundai"
+                                value={make}
+                                onChangeText={setMake}
+                            />
+                            <Input
+                                label="Model"
+                                placeholder="e.g. Civic, Model 3, Creta"
+                                value={model}
+                                onChangeText={setModel}
+                            />
+                            <Input
+                                label="Color"
+                                placeholder="e.g. White, Black, Silver"
+                                value={color}
+                                onChangeText={setColor}
+                            />
 
-                        <View style={styles.modalActions}>
-                            <Button
-                                title="Cancel"
-                                variant="ghost"
-                                onPress={() => setModalVisible(false)}
-                                style={{ flex: 1 }}
-                            />
-                            <Button
-                                title={editingVehicle ? 'Update' : 'Save'}
-                                onPress={handleSave}
-                                loading={submitting}
-                                style={{ flex: 1 }}
-                            />
-                        </View>
+                            <View style={styles.modalActions}>
+                                <Button
+                                    title="Cancel"
+                                    variant="ghost"
+                                    onPress={() => setModalVisible(false)}
+                                    style={{ flex: 1 }}
+                                />
+                                <Button
+                                    title={editingVehicle ? 'Update' : 'Save'}
+                                    onPress={handleSave}
+                                    loading={submitting}
+                                    style={{ flex: 1 }}
+                                />
+                            </View>
+                        </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );
@@ -270,7 +285,8 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: spacing.radius.xl,
         borderTopRightRadius: spacing.radius.xl,
         padding: spacing.xl,
-        paddingBottom: spacing['2xl']
+        paddingBottom: spacing['2xl'],
+        maxHeight: '85%',
     },
     modalTitle: { ...typography.h3, color: colors.textPrimary, marginBottom: spacing.lg },
     modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg }

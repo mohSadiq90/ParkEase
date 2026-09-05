@@ -130,7 +130,7 @@ const ProfileScreen = ({ navigation }) => {
     }, [dispatch]);
 
     return (
-        <ScreenLayout scrollable>
+        <ScreenLayout scrollable contentStyle={{ paddingBottom: editing ? 140 : spacing['3xl'] }}>
             <View style={styles.content}>
                 {/* Header */}
                 <View style={styles.header}>

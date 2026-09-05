@@ -168,71 +168,79 @@ const VehiclesScreen = ({ navigation }) => {
 
             {isAdding && (
                 <View style={styles.addForm}>
-                    <Text style={styles.formTitle}>Add New Vehicle</Text>
-                    
-                    {/* Vehicle Type selection */}
-                    <Text style={styles.inputLabel}>Vehicle Category</Text>
-                    <View style={styles.typeRow}>
-                        {Object.entries(VehicleTypeLabels).map(([val, label]) => (
-                            <TouchableOpacity
-                                key={val}
-                                onPress={() => setNewType(Number(val))}
-                                style={[styles.typeChip, newType === Number(val) && styles.typeChipActive]}
-                            >
-                                <Text style={[styles.typeChipText, newType === Number(val) && styles.typeChipTextActive]}>
-                                    {label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Make (e.g. Toyota, Tesla)"
-                        value={newMake}
-                        onChangeText={setNewMake}
-                        placeholderTextColor={colors.textTertiary}
-                    />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Model (e.g. Camry, Model 3)"
-                        value={newModel}
-                        onChangeText={setNewModel}
-                        placeholderTextColor={colors.textTertiary}
-                    />
-                    <View style={styles.row}>
-                        <TextInput
-                            style={[styles.input, { flex: 1 }]}
-                            placeholder="Plate (e.g. MH02AB1234)"
-                            value={newPlate}
-                            onChangeText={setNewPlate}
-                            autoCapitalize="characters"
-                            placeholderTextColor={colors.textTertiary}
-                        />
-                        <TextInput
-                            style={[styles.input, { flex: 1 }]}
-                            placeholder="Color (e.g. White)"
-                            value={newColor}
-                            onChangeText={setNewColor}
-                            placeholderTextColor={colors.textTertiary}
-                        />
-                    </View>
-
-                    <TouchableOpacity
-                        style={styles.defaultToggle}
-                        onPress={() => setIsDefault(!isDefault)}
+                    <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode="on-drag"
+                        showsVerticalScrollIndicator={false}
+                        style={{ maxHeight: 380 }}
+                        contentContainerStyle={{ paddingBottom: spacing.sm }}
                     >
-                        <Ionicons
-                            name={isDefault ? 'checkbox' : 'square-outline'}
-                            size={20}
-                            color={isDefault ? colors.primary : colors.textTertiary}
-                        />
-                        <Text style={styles.defaultToggleText}>Set as Primary / Default Vehicle</Text>
-                    </TouchableOpacity>
+                        <Text style={styles.formTitle}>Add New Vehicle</Text>
+                        
+                        {/* Vehicle Type selection */}
+                        <Text style={styles.inputLabel}>Vehicle Category</Text>
+                        <View style={styles.typeRow}>
+                            {Object.entries(VehicleTypeLabels).map(([val, label]) => (
+                                <TouchableOpacity
+                                    key={val}
+                                    onPress={() => setNewType(Number(val))}
+                                    style={[styles.typeChip, newType === Number(val) && styles.typeChipActive]}
+                                >
+                                    <Text style={[styles.typeChipText, newType === Number(val) && styles.typeChipTextActive]}>
+                                        {label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
 
-                    <TouchableOpacity style={styles.submitButton} onPress={handleAddVehicle}>
-                        <Text style={styles.submitButtonText}>Save to Garage</Text>
-                    </TouchableOpacity>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Make (e.g. Toyota, Tesla)"
+                            value={newMake}
+                            onChangeText={setNewMake}
+                            placeholderTextColor={colors.textTertiary}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Model (e.g. Camry, Model 3)"
+                            value={newModel}
+                            onChangeText={setNewModel}
+                            placeholderTextColor={colors.textTertiary}
+                        />
+                        <View style={styles.row}>
+                            <TextInput
+                                style={[styles.input, { flex: 1 }]}
+                                placeholder="Plate (e.g. MH02AB1234)"
+                                value={newPlate}
+                                onChangeText={setNewPlate}
+                                autoCapitalize="characters"
+                                placeholderTextColor={colors.textTertiary}
+                            />
+                            <TextInput
+                                style={[styles.input, { flex: 1 }]}
+                                placeholder="Color (e.g. White)"
+                                value={newColor}
+                                onChangeText={setNewColor}
+                                placeholderTextColor={colors.textTertiary}
+                            />
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.defaultToggle}
+                            onPress={() => setIsDefault(!isDefault)}
+                        >
+                            <Ionicons
+                                name={isDefault ? 'checkbox' : 'square-outline'}
+                                size={20}
+                                color={isDefault ? colors.primary : colors.textTertiary}
+                            />
+                            <Text style={styles.defaultToggleText}>Set as Primary / Default Vehicle</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.submitButton} onPress={handleAddVehicle}>
+                            <Text style={styles.submitButtonText}>Save to Garage</Text>
+                        </TouchableOpacity>
+                    </ScrollView>
                 </View>
             )}
 
@@ -240,6 +248,8 @@ const VehiclesScreen = ({ navigation }) => {
                 data={vehicles}
                 keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
                 renderItem={renderItem}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 refreshControl={
                     <RefreshControl 
                         refreshing={loading && !isAdding} 

@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, Alert, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
@@ -128,135 +128,143 @@ const LoginScreen = ({ navigation }) => {
     return (
         <LinearGradient colors={colors.gradients.hero} style={styles.gradient}>
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                 style={styles.container}
             >
-                {/* Logo Area */}
-                <View style={styles.logoSection}>
-                    <View style={styles.logoCircle}>
-                        <Ionicons name="car-sport" size={48} color={colors.primary} />
-                    </View>
-                    <Text style={styles.appName}>ParkEase</Text>
-                    <Text style={styles.tagline}>Find & book parking in seconds</Text>
-                </View>
-
-                {/* Form Card */}
-                <View style={styles.formCard}>
-                    <Text style={styles.welcomeText}>Welcome Back</Text>
-
-                    {/* Mode Toggle */}
-                    <View style={styles.modeTabs}>
-                        <TouchableOpacity
-                            style={[styles.modeTab, loginMode === 'personal' && styles.modeTabActive]}
-                            onPress={() => { setLoginMode('personal'); dismissError(); }}
-                        >
-                            <Ionicons
-                                name="person-outline"
-                                size={16}
-                                color={loginMode === 'personal' ? colors.primary : colors.textTertiary}
-                            />
-                            <Text style={[styles.modeTabText, loginMode === 'personal' && styles.modeTabTextActive]}>
-                                Personal
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.modeTab, loginMode === 'corporate' && styles.modeTabActive]}
-                            onPress={() => { setLoginMode('corporate'); dismissError(); }}
-                        >
-                            <Ionicons
-                                name="business-outline"
-                                size={16}
-                                color={loginMode === 'corporate' ? colors.primary : colors.textTertiary}
-                            />
-                            <Text style={[styles.modeTabText, loginMode === 'corporate' && styles.modeTabTextActive]}>
-                                Corporate
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {error && (
-                        <View style={styles.errorBanner}>
-                            <Ionicons name="alert-circle" size={18} color={colors.danger} />
-                            <Text style={styles.errorBannerText}>{error}</Text>
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Logo Area */}
+                    <View style={styles.logoSection}>
+                        <View style={styles.logoCircle}>
+                            <Ionicons name="car-sport" size={48} color={colors.primary} />
                         </View>
-                    )}
+                        <Text style={styles.appName}>ParkEase</Text>
+                        <Text style={styles.tagline}>Find & book parking in seconds</Text>
+                    </View>
 
-                    <Input
-                        label={loginMode === 'corporate' ? 'Work Email' : 'Email'}
-                        value={formData.email}
-                        onChangeText={updateField('email')}
-                        placeholder="Enter your email"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        leftIcon="mail-outline"
-                        error={errors.email}
-                        textContentType="username"
-                        autoComplete="email"
-                        importantForAutofill="yes"
-                        returnKeyType="next"
-                        onSubmitEditing={() => passwordRef.current?.focus()}
-                        blurOnSubmit={false}
-                    />
+                    {/* Form Card */}
+                    <View style={styles.formCard}>
+                        <Text style={styles.welcomeText}>Welcome Back</Text>
 
-                    <Input
-                        label="Password"
-                        value={formData.password}
-                        onChangeText={updateField('password')}
-                        placeholder="Enter your password"
-                        secureTextEntry
-                        leftIcon="lock-closed-outline"
-                        error={errors.password}
-                        textContentType="password"
-                        autoComplete="password"
-                        importantForAutofill="yes"
-                        returnKeyType="go"
-                        ref={passwordRef}
-                        onSubmitEditing={handleLogin}
-                    />
-
-                    {loginMode === 'corporate' && (
-                        <TouchableOpacity
-                            style={styles.ssoLink}
-                            onPress={handleSsoDiscovery}
-                        >
-                            <Ionicons name="key-outline" size={14} color={colors.primary} />
-                            <Text style={styles.ssoLinkText}>Sign in with Company SSO (OIDC/SAML)</Text>
-                        </TouchableOpacity>
-                    )}
-
-                    <Button
-                        title={loginMode === 'corporate' ? 'Corporate Sign In' : 'Sign In'}
-                        onPress={handleLogin}
-                        loading={loading}
-                        style={styles.loginButton}
-                    />
-
-                    {loginMode === 'personal' && (
-                        <>
-                            <View style={styles.dividerRow}>
-                                <View style={styles.dividerLine} />
-                                <Text style={styles.dividerText}>or</Text>
-                                <View style={styles.dividerLine} />
-                            </View>
+                        {/* Mode Toggle */}
+                        <View style={styles.modeTabs}>
+                            <TouchableOpacity
+                                style={[styles.modeTab, loginMode === 'personal' && styles.modeTabActive]}
+                                onPress={() => { setLoginMode('personal'); dismissError(); }}
+                            >
+                                <Ionicons
+                                    name="person-outline"
+                                    size={16}
+                                    color={loginMode === 'personal' ? colors.primary : colors.textTertiary}
+                                />
+                                <Text style={[styles.modeTabText, loginMode === 'personal' && styles.modeTabTextActive]}>
+                                    Personal
+                                </Text>
+                            </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={styles.googleBtn}
-                                onPress={handleGoogleLogin}
+                                style={[styles.modeTab, loginMode === 'corporate' && styles.modeTabActive]}
+                                onPress={() => { setLoginMode('corporate'); dismissError(); }}
                             >
-                                <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-                                <Text style={styles.googleBtnText}>Continue with Google</Text>
+                                <Ionicons
+                                    name="business-outline"
+                                    size={16}
+                                    color={loginMode === 'corporate' ? colors.primary : colors.textTertiary}
+                                />
+                                <Text style={[styles.modeTabText, loginMode === 'corporate' && styles.modeTabTextActive]}>
+                                    Corporate
+                                </Text>
                             </TouchableOpacity>
-                        </>
-                    )}
+                        </View>
 
-                    <View style={styles.signupRow}>
-                        <Text style={styles.signupText}>Don't have an account? </Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                            <Text style={styles.signupLink}>Sign Up</Text>
-                        </TouchableOpacity>
+                        {error && (
+                            <View style={styles.errorBanner}>
+                                <Ionicons name="alert-circle" size={18} color={colors.danger} />
+                                <Text style={styles.errorBannerText}>{error}</Text>
+                            </View>
+                        )}
+
+                        <Input
+                            label={loginMode === 'corporate' ? 'Work Email' : 'Email'}
+                            value={formData.email}
+                            onChangeText={updateField('email')}
+                            placeholder="Enter your email"
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            leftIcon="mail-outline"
+                            error={errors.email}
+                            textContentType="username"
+                            autoComplete="email"
+                            importantForAutofill="yes"
+                            returnKeyType="next"
+                            onSubmitEditing={() => passwordRef.current?.focus()}
+                            blurOnSubmit={false}
+                        />
+
+                        <Input
+                            label="Password"
+                            value={formData.password}
+                            onChangeText={updateField('password')}
+                            placeholder="Enter your password"
+                            secureTextEntry
+                            leftIcon="lock-closed-outline"
+                            error={errors.password}
+                            textContentType="password"
+                            autoComplete="password"
+                            importantForAutofill="yes"
+                            returnKeyType="go"
+                            ref={passwordRef}
+                            onSubmitEditing={handleLogin}
+                        />
+
+                        {loginMode === 'corporate' && (
+                            <TouchableOpacity
+                                style={styles.ssoLink}
+                                onPress={handleSsoDiscovery}
+                            >
+                                <Ionicons name="key-outline" size={14} color={colors.primary} />
+                                <Text style={styles.ssoLinkText}>Sign in with Company SSO (OIDC/SAML)</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        <Button
+                            title={loginMode === 'corporate' ? 'Corporate Sign In' : 'Sign In'}
+                            onPress={handleLogin}
+                            loading={loading}
+                            style={styles.loginButton}
+                        />
+
+                        {loginMode === 'personal' && (
+                            <>
+                                <View style={styles.dividerRow}>
+                                    <View style={styles.dividerLine} />
+                                    <Text style={styles.dividerText}>or</Text>
+                                    <View style={styles.dividerLine} />
+                                </View>
+
+                                <TouchableOpacity
+                                    style={styles.googleBtn}
+                                    onPress={handleGoogleLogin}
+                                >
+                                    <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                                    <Text style={styles.googleBtnText}>Continue with Google</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+
+                        <View style={styles.signupRow}>
+                            <Text style={styles.signupText}>Don't have an account? </Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+                                <Text style={styles.signupLink}>Sign Up</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
+                </ScrollView>
             </KeyboardAvoidingView>
         </LinearGradient>
     );
@@ -268,8 +276,13 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
         justifyContent: 'center',
         paddingHorizontal: spacing.screenHorizontal,
+        paddingTop: 40,
+        paddingBottom: 40,
     },
     logoSection: {
         alignItems: 'center',

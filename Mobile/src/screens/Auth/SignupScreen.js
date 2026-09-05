@@ -47,10 +47,15 @@ const SignupScreen = ({ navigation }) => {
     return (
         <LinearGradient colors={colors.gradients.hero} style={styles.gradient}>
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={styles.container}
             >
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    contentContainerStyle={styles.scrollContent}
+                >
                     {/* Header */}
                     <View style={styles.header}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -123,7 +128,7 @@ const SignupScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     gradient: { flex: 1 },
     container: { flex: 1 },
-    scrollContent: { flexGrow: 1, paddingHorizontal: spacing.screenHorizontal, paddingTop: 60, paddingBottom: 40 },
+    scrollContent: { flexGrow: 1, paddingHorizontal: spacing.screenHorizontal, paddingTop: 60, paddingBottom: 100 },
     header: { marginBottom: spacing.xl },
     backButton: { marginBottom: spacing.base },
     title: { fontSize: 32, fontWeight: '800', color: colors.white },

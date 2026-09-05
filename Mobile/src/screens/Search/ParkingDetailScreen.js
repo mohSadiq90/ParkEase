@@ -8,7 +8,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { EventBus } from '../../utils/EventBus';
 import {
     View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions, Share,
-    ActivityIndicator, Modal, TextInput, Alert,
+    ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -185,6 +185,8 @@ const ParkingDetailScreen = ({ navigation, route }) => {
         <View style={styles.screen}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 contentContainerStyle={{ paddingBottom: 120 }}
             >
                 {/* Hero Image */}
@@ -577,13 +579,17 @@ const ParkingDetailScreen = ({ navigation, route }) => {
             </View>
 
             {/* Host Review Response Modal */}
+            {/* Host Reply Modal */}
             <Modal
                 visible={replyModalVisible}
                 animationType="slide"
                 transparent={true}
                 onRequestClose={() => setReplyModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Reply as Host</Text>
@@ -624,7 +630,7 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                             </TouchableOpacity>
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

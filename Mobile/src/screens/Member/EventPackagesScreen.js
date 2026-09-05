@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Alert, RefreshControl, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchOnSalePackages, fetchMyEventPackages, purchaseEventPackage } from '../../store/slices/eventPackageSlice';
@@ -149,55 +149,65 @@ const EventPackagesScreen = ({ navigation }) => {
                 transparent={true}
                 onRequestClose={() => setSelectedPackage(null)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Event Pass Checkout</Text>
-                            <TouchableOpacity onPress={() => setSelectedPackage(null)}>
-                                <Ionicons name="close" size={22} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
-
-                        <Text style={styles.modalSub}>{selectedPackage?.name}</Text>
-                        <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.md }}>
-                            🏟️ {selectedPackage?.venueName} - {selectedPackage?.eventName}
-                        </Text>
-
-                        <View style={{ gap: spacing.sm, marginBottom: spacing.md }}>
-                            <Card style={{ backgroundColor: colors.background, padding: spacing.sm }}>
-                                <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: 2 }}>Vehicle License Plate (Optional)</Text>
-                                <TextInput
-                                    style={styles.textInput}
-                                    value={licensePlate}
-                                    onChangeText={setLicensePlate}
-                                    placeholder="e.g. MH01CD5678"
-                                    placeholderTextColor={colors.textTertiary}
-                                />
-                            </Card>
-
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xs }}>
-                                <Text style={typography.label}>Price per pass:</Text>
-                                <Text style={[typography.h3, { color: colors.primary }]}>{formatCurrency(selectedPackage?.price || 0)}</Text>
+                        <ScrollView
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ paddingBottom: spacing.sm }}
+                        >
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Event Pass Checkout</Text>
+                                <TouchableOpacity onPress={() => setSelectedPackage(null)}>
+                                    <Ionicons name="close" size={22} color={colors.textSecondary} />
+                                </TouchableOpacity>
                             </View>
-                        </View>
 
-                        <View style={{ flexDirection: 'row', gap: spacing.md }}>
-                            <Button
-                                title="Cancel"
-                                onPress={() => setSelectedPackage(null)}
-                                variant="outline"
-                                style={{ flex: 1 }}
-                            />
-                            <Button
-                                title="Confirm & Pay"
-                                onPress={handlePurchase}
-                                loading={purchaseLoading}
-                                variant="primary"
-                                style={{ flex: 1 }}
-                            />
-                        </View>
+                            <Text style={styles.modalSub}>{selectedPackage?.name}</Text>
+                            <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.md }}>
+                                🏟️ {selectedPackage?.venueName} - {selectedPackage?.eventName}
+                            </Text>
+
+                            <View style={{ gap: spacing.sm, marginBottom: spacing.md }}>
+                                <Card style={{ backgroundColor: colors.background, padding: spacing.sm }}>
+                                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: 2 }}>Vehicle License Plate (Optional)</Text>
+                                    <TextInput
+                                        style={styles.textInput}
+                                        value={licensePlate}
+                                        onChangeText={setLicensePlate}
+                                        placeholder="e.g. MH01CD5678"
+                                        placeholderTextColor={colors.textTertiary}
+                                    />
+                                </Card>
+
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xs }}>
+                                    <Text style={typography.label}>Price per pass:</Text>
+                                    <Text style={[typography.h3, { color: colors.primary }]}>{formatCurrency(selectedPackage?.price || 0)}</Text>
+                                </View>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                                <Button
+                                    title="Cancel"
+                                    onPress={() => setSelectedPackage(null)}
+                                    variant="outline"
+                                    style={{ flex: 1 }}
+                                />
+                                <Button
+                                    title="Confirm & Pay"
+                                    onPress={handlePurchase}
+                                    loading={purchaseLoading}
+                                    variant="primary"
+                                    style={{ flex: 1 }}
+                                />
+                            </View>
+                        </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );

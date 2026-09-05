@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useSelector } from 'react-redux';
 import corporateService from '../../services/api/corporateService';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
@@ -138,8 +138,16 @@ const CorporateMembersScreen = () => {
             </View>
 
             {/* Invite Modal */}
-            <Modal visible={isInviteModalVisible} animationType="slide" presentationStyle="pageSheet">
-                <View style={styles.modalContainer}>
+            <Modal
+                visible={isInviteModalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setInviteModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalContainer}
+                >
                     <View style={styles.modalHeader}>
                         <Text style={typography.h2}>Invite Member</Text>
                         <TouchableOpacity onPress={() => setInviteModalVisible(false)}>
@@ -147,7 +155,12 @@ const CorporateMembersScreen = () => {
                         </TouchableOpacity>
                     </View>
                     
-                    <View style={styles.modalBody}>
+                    <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode="on-drag"
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={[styles.modalBody, { flexGrow: 1, paddingBottom: 40 }]}
+                    >
                         <Input 
                             label="Email Address" 
                             value={inviteEmail} 
@@ -159,11 +172,11 @@ const CorporateMembersScreen = () => {
                         <Button 
                             title="Send Invitation" 
                             onPress={handleInvite} 
-                            loading={isInviting}
+                            loading={isInviting} 
                             style={{ marginTop: spacing.md }}
                         />
-                    </View>
-                </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSelector } from 'react-redux';
 import corporateService from '../../services/api/corporateService';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
@@ -148,8 +148,16 @@ const CorporateBookingsScreen = () => {
             </View>
 
             {/* Booking Modal */}
-            <Modal visible={isBookingModalVisible} animationType="slide" presentationStyle="pageSheet">
-                <View style={styles.modalContainer}>
+            <Modal
+                visible={isBookingModalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setBookingModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalContainer}
+                >
                     <View style={styles.modalHeader}>
                         <Text style={typography.h2}>Book Employee Slot</Text>
                         <TouchableOpacity onPress={() => setBookingModalVisible(false)}>
@@ -157,7 +165,12 @@ const CorporateBookingsScreen = () => {
                         </TouchableOpacity>
                     </View>
                     
-                    <ScrollView contentContainerStyle={styles.modalBody}>
+                    <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode="on-drag"
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={[styles.modalBody, { flexGrow: 1, paddingBottom: 40 }]}
+                    >
                         <Text style={[typography.caption, { marginBottom: spacing.md }]}>
                             For this demo, time is hardcoded to today 09:00 - 18:00.
                         </Text>
@@ -181,7 +194,7 @@ const CorporateBookingsScreen = () => {
                             style={{ marginTop: spacing.md }}
                         />
                     </ScrollView>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );

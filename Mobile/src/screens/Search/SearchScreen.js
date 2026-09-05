@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Modal, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { searchParkingThunk, clearSearch } from '../../store/slices/parkingSlice';
@@ -299,6 +299,8 @@ const SearchScreen = ({ navigation }) => {
                         </Text>
                     }
                     showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
                     contentContainerStyle={{ paddingBottom: spacing['2xl'] }}
                 />
             ) : hasSearched ? (
@@ -320,7 +322,10 @@ const SearchScreen = ({ navigation }) => {
                 transparent={true}
                 onRequestClose={() => setFilterModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Filters & Sort</Text>
@@ -329,7 +334,13 @@ const SearchScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            style={{ maxHeight: 460 }}
+                            contentContainerStyle={{ paddingBottom: spacing.lg }}
+                        >
                             {/* Sort By */}
                             <Text style={styles.sectionHeading}>Sort By</Text>
                             <View style={styles.sortOptionsRow}>
@@ -476,7 +487,7 @@ const SearchScreen = ({ navigation }) => {
                             />
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { createParkingThunk, updateParkingThunk, deleteParkingThunk } from '../../store/slices/parkingSlice';
@@ -212,16 +212,26 @@ const CreateParkingScreen = ({ navigation, route }) => {
     };
 
     return (
-        <ScreenLayout>
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{isEditing ? 'Edit Parking Space' : 'New Parking Space'}</Text>
-                    <View style={{ width: 40 }} />
-                </View>
+        <ScreenLayout keyboardAvoiding={false}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+                style={{ flex: 1 }}
+            >
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 120 }}
+                >
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>{isEditing ? 'Edit Parking Space' : 'New Parking Space'}</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
 
                 <View style={styles.content}>
                     {/* Basic Info */}
@@ -488,7 +498,8 @@ const CreateParkingScreen = ({ navigation, route }) => {
                     )}
                 </View>
             </ScrollView>
-        </ScreenLayout>
+        </KeyboardAvoidingView>
+    </ScreenLayout>
     );
 };
 
