@@ -7,6 +7,10 @@ import Input from '../../components/Common/Input';
 import Button from '../../components/Common/Button';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import { updateProfileThunk } from '../../store/slices/authSlice';
+import authService from '../../services/auth/authService';
+import googleAuthService from '../../services/auth/googleAuthService';
+import { getExternalAuthErrorMessage } from '../../utils/externalAuthErrors';
+
 
 const EditProfileScreen = ({ navigation }) => {
     const dispatch = useDispatch();
@@ -15,6 +19,7 @@ const EditProfileScreen = ({ navigation }) => {
     const [firstName, setFirstName] = useState(user?.firstName || '');
     const [lastName, setLastName] = useState(user?.lastName || '');
     const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
+    const [linkingGoogle, setLinkingGoogle] = useState(false);
 
     const handleSave = async () => {
         if (!firstName || !lastName) {
@@ -40,6 +45,35 @@ const EditProfileScreen = ({ navigation }) => {
             Alert.alert('Error', 'An unexpected error occurred');
         }
     };
+
+    const handleLinkGoogle = async () => {
+        try {
+            setLinkingGoogle(true);
+            const authResult = await googleAuthService.signIn();
+            if (authResult?.cancelled || authResult?.inProgress) {
+                return;
+            }
+            if (!authResult?.idToken) {
+                throw new Error('No identity token received from Google');
+            }
+
+            const res = await authService.linkExternal({
+                provider: 'google',
+                idToken: authResult.idToken,
+            });
+
+            if (res?.success) {
+                Alert.alert('Success', 'Your Google account has been linked successfully!');
+            } else {
+                Alert.alert('Link Failed', getExternalAuthErrorMessage(res));
+            }
+        } catch (error) {
+            Alert.alert('Link Failed', getExternalAuthErrorMessage(error));
+        } finally {
+            setLinkingGoogle(false);
+        }
+    };
+
 
     return (
         <ScreenLayout style={styles.container}>
@@ -93,11 +127,27 @@ const EditProfileScreen = ({ navigation }) => {
                         loading={loading}
                         style={styles.submitButton}
                     />
+
+                    <View style={styles.socialSection}>
+                        <Text style={styles.sectionTitle}>Linked Accounts</Text>
+                        <Text style={styles.socialSubtext}>Link your Google account for faster one-tap sign-in.</Text>
+                        <TouchableOpacity
+                            style={styles.linkGoogleButton}
+                            onPress={handleLinkGoogle}
+                            disabled={linkingGoogle}
+                        >
+                            <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                            <Text style={styles.linkGoogleText}>
+                                {linkingGoogle ? 'Connecting Google...' : 'Link Google Account'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </ScreenLayout>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {
@@ -166,6 +216,39 @@ const styles = StyleSheet.create({
     submitButton: {
         marginTop: 20,
     },
+    socialSection: {
+        marginTop: 32,
+        paddingTop: 24,
+        borderTopWidth: 1,
+        borderTopColor: colors.borderLight,
+    },
+    sectionTitle: {
+        ...typography.h3,
+        color: colors.text,
+        marginBottom: 6,
+    },
+    socialSubtext: {
+        ...typography.body2,
+        color: colors.textSecondary,
+        marginBottom: 16,
+    },
+    linkGoogleButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+    },
+    linkGoogleText: {
+        ...typography.button,
+        color: colors.text,
+        marginLeft: 10,
+    },
 });
 
 export default EditProfileScreen;
+

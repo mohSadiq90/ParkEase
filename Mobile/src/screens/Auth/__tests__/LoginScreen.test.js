@@ -1,16 +1,30 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { fireEvent, renderWithProviders, waitFor } from '../../../utils/test-utils';
 import LoginScreen from '../LoginScreen';
 import authService from '../../../services/auth/authService';
+import googleAuthService from '../../../services/auth/googleAuthService';
+
+// Mock Alert.alert
+jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
 // Mock the navigation prop
 const mockNavigation = {
   navigate: jest.fn(),
 };
 
-// Mock the auth service to prevent actual network calls
+// Mock the auth services
 jest.mock('../../../services/auth/authService', () => ({
   login: jest.fn(),
+  loginCorporate: jest.fn(),
+  loginExternal: jest.fn(),
+}));
+
+jest.mock('../../../services/auth/googleAuthService', () => ({
+  signIn: jest.fn(),
+  configure: jest.fn(),
+  signOut: jest.fn(),
+  checkPlayServices: jest.fn(),
 }));
 
 describe('LoginScreen', () => {
@@ -24,6 +38,7 @@ describe('LoginScreen', () => {
     expect(getByText('Welcome Back')).toBeTruthy();
     expect(getByPlaceholderText('Enter your email')).toBeTruthy();
     expect(getByPlaceholderText('Enter your password')).toBeTruthy();
+    expect(getByText('Continue with Google')).toBeTruthy();
   });
 
   it('shows validation errors when fields are empty', async () => {
@@ -70,4 +85,67 @@ describe('LoginScreen', () => {
     
     expect(mockNavigation.navigate).toHaveBeenCalledWith('Signup');
   });
+
+  it('calls googleAuthService and loginExternal when Continue with Google is pressed', async () => {
+    googleAuthService.signIn.mockResolvedValueOnce({
+      idToken: 'real-google-jwt-token-12345',
+      user: { email: 'googleuser@example.com', name: 'Google User' },
+      cancelled: false,
+    });
+
+    authService.loginExternal.mockResolvedValueOnce({
+      success: true,
+      data: {
+        tokens: { accessToken: 'access-jwt', refreshToken: 'refresh-jwt' },
+        user: { id: 'guid-123', email: 'googleuser@example.com', role: 1 },
+      },
+    });
+
+    const { getByText } = renderWithProviders(<LoginScreen navigation={mockNavigation} />);
+    fireEvent.press(getByText('Continue with Google'));
+
+    await waitFor(() => {
+      expect(googleAuthService.signIn).toHaveBeenCalled();
+      expect(authService.loginExternal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: 'google',
+          idToken: 'real-google-jwt-token-12345',
+          userConsentGiven: true,
+        })
+      );
+    });
+  });
+
+  it('handles Google Sign-in cancellation gracefully without error', async () => {
+    googleAuthService.signIn.mockResolvedValueOnce({
+      cancelled: true,
+    });
+
+    const { getByText } = renderWithProviders(<LoginScreen navigation={mockNavigation} />);
+    fireEvent.press(getByText('Continue with Google'));
+
+    await waitFor(() => {
+      expect(googleAuthService.signIn).toHaveBeenCalled();
+      expect(authService.loginExternal).not.toHaveBeenCalled();
+      expect(Alert.alert).not.toHaveBeenCalled();
+    });
+  });
+
+  it('shows friendly alert when Google Sign-in fails with invalid token', async () => {
+    googleAuthService.signIn.mockRejectedValueOnce(
+      new Error('Google identity token expired or invalid. Please sign in again.')
+    );
+
+    const { getByText } = renderWithProviders(<LoginScreen navigation={mockNavigation} />);
+    fireEvent.press(getByText('Continue with Google'));
+
+    await waitFor(() => {
+      expect(googleAuthService.signIn).toHaveBeenCalled();
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Google Sign-In Failed',
+        expect.stringContaining('Google identity token expired or invalid')
+      );
+    });
+  });
 });
+

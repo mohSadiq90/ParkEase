@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/globalStyles';
 import Input from '../../components/Common/Input';
@@ -8,14 +9,21 @@ import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import authService from '../../services/auth/authService';
 
 const ChangePasswordScreen = ({ navigation }) => {
+    const { user } = useSelector(state => state.auth);
+    const isSocialOnly = user?.hasPassword === false;
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSave = async () => {
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            Alert.alert('Error', 'Please fill in all fields');
+        if (!isSocialOnly && !currentPassword) {
+            Alert.alert('Error', 'Please enter your current password');
+            return;
+        }
+
+        if (!newPassword || !confirmPassword) {
+            Alert.alert('Error', 'Please fill in all password fields');
             return;
         }
 
@@ -31,20 +39,62 @@ const ChangePasswordScreen = ({ navigation }) => {
 
         try {
             setLoading(true);
-            const response = await authService.changePassword({
-                currentPassword,
-                newPassword,
-            });
-
-            if (response.success) {
-                Alert.alert('Success', 'Your password has been updated successfully', [
-                    { text: 'OK', onPress: () => navigation.goBack() }
-                ]);
+            if (isSocialOnly) {
+                const response = await authService.setPassword({ newPassword });
+                if (response.success) {
+                    Alert.alert('Success', 'Your password has been set successfully', [
+                        { text: 'OK', onPress: () => navigation.goBack() }
+                    ]);
+                } else {
+                    Alert.alert('Error', response.message || 'Failed to set password');
+                }
             } else {
-                Alert.alert('Error', response.message || 'Failed to update password');
+                const response = await authService.changePassword({
+                    currentPassword,
+                    newPassword,
+                });
+
+                if (response.success) {
+                    Alert.alert('Success', 'Your password has been updated successfully', [
+                        { text: 'OK', onPress: () => navigation.goBack() }
+                    ]);
+                } else {
+                    Alert.alert('Error', response.message || 'Failed to update password');
+                }
             }
         } catch (error) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to update password');
+            const code = error.response?.data?.code;
+            if (code === 'password_not_set') {
+                Alert.alert(
+                    'No Password Set',
+                    'Your account was created with Google and has no password set yet. Would you like to set this as your password?',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                            text: 'Set Password',
+                            onPress: async () => {
+                                try {
+                                    setLoading(true);
+                                    const setRes = await authService.setPassword({ newPassword });
+                                    if (setRes.success) {
+                                        Alert.alert('Success', 'Your password has been set successfully', [
+                                            { text: 'OK', onPress: () => navigation.goBack() }
+                                        ]);
+                                    } else {
+                                        Alert.alert('Error', setRes.message || 'Failed to set password');
+                                    }
+                                } catch (e) {
+                                    Alert.alert('Error', e.response?.data?.message || 'Failed to set password');
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }
+                        }
+                    ]
+                );
+            } else {
+                Alert.alert('Error', error.response?.data?.message || 'Failed to update password');
+            }
         } finally {
             setLoading(false);
         }
@@ -56,7 +106,7 @@ const ChangePasswordScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Change Password</Text>
+                <Text style={styles.headerTitle}>{isSocialOnly ? 'Set Password' : 'Change Password'}</Text>
                 <View style={{ width: 34 }} />
             </View>
 
@@ -66,16 +116,20 @@ const ChangePasswordScreen = ({ navigation }) => {
             >
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <Text style={styles.description}>
-                        Your password must be at least 8 characters and should include a combination of numbers, letters, and special characters.
+                        {isSocialOnly 
+                            ? 'Set a secure password for your account to enable standard email and password login.' 
+                            : 'Your password must be at least 8 characters and should include a combination of numbers, letters, and special characters.'}
                     </Text>
 
-                    <Input
-                        label="Current Password"
-                        placeholder="Enter current password"
-                        value={currentPassword}
-                        onChangeText={setCurrentPassword}
-                        secureTextEntry
-                    />
+                    {!isSocialOnly && (
+                        <Input
+                            label="Current Password"
+                            placeholder="Enter current password"
+                            value={currentPassword}
+                            onChangeText={setCurrentPassword}
+                            secureTextEntry
+                        />
+                    )}
 
                     <Input
                         label="New Password"
@@ -94,7 +148,7 @@ const ChangePasswordScreen = ({ navigation }) => {
                     />
 
                     <Button
-                        title="Update Password"
+                        title={isSocialOnly ? 'Set Password' : 'Update Password'}
                         onPress={handleSave}
                         loading={loading}
                         style={styles.submitButton}
@@ -104,6 +158,7 @@ const ChangePasswordScreen = ({ navigation }) => {
         </ScreenLayout>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {

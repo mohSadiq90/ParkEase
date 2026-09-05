@@ -67,3 +67,27 @@ jest.mock('react-native-maps', () => {
       PROVIDER_DEFAULT: 'default'
   };
 });
+
+// Mock Google Sign-In
+jest.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: {
+    configure: jest.fn(),
+    hasPlayServices: jest.fn().mockResolvedValue(true),
+    signIn: jest.fn().mockResolvedValue({
+      data: {
+        idToken: 'mock-google-id-token',
+        user: { email: 'test@example.com', name: 'Test User' },
+      },
+    }),
+    signOut: jest.fn().mockResolvedValue(null),
+    isSignedIn: jest.fn().mockResolvedValue(true),
+    getTokens: jest.fn().mockResolvedValue({ idToken: 'mock-google-id-token' }),
+    getCurrentUser: jest.fn().mockResolvedValue({ email: 'test@example.com' }),
+  },
+  statusCodes: {
+    SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE',
+  },
+}));
+

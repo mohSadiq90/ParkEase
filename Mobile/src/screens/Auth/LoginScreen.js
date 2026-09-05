@@ -14,6 +14,9 @@ import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
 import { colors, spacing, typography } from '../../styles/globalStyles';
 import authService from '../../services/auth/authService';
+import googleAuthService from '../../services/auth/googleAuthService';
+import NotificationService from '../../services/notifications/NotificationService';
+import { getExternalAuthErrorMessage } from '../../utils/externalAuthErrors';
 
 const LoginScreen = ({ navigation }) => {
     const { login, loginCorporate, loginExternal, loading, error, dismissError } = useAuth();
@@ -49,16 +52,36 @@ const LoginScreen = ({ navigation }) => {
     const handleGoogleLogin = useCallback(async () => {
         dismissError();
         try {
-            // Mock native Google auth token exchange with POST /api/auth/external
-            await loginExternal({
+            // 1. Authenticate with Google native SDK to obtain real Google ID token
+            const authResult = await googleAuthService.signIn();
+
+            // Silently ignore user cancel or in-progress status
+            if (authResult?.cancelled || authResult?.inProgress) {
+                return;
+            }
+
+            if (!authResult?.idToken) {
+                throw new Error('No identity token received from Google');
+            }
+
+            // 2. Exchange real Google ID token with ParkEase API POST /api/auth/external
+            const res = await loginExternal({
                 provider: 'google',
-                idToken: `google-mock-token-${Date.now()}`,
+                idToken: authResult.idToken,
+                userConsentGiven: true,
                 deviceClientType: Platform.OS === 'ios' ? 'ios' : 'android',
             });
+
+            // 3. If login was successful, register FCM device token for push notifications
+            if (res && !res.error) {
+                NotificationService.registerCurrentDevice().catch(() => {});
+            }
         } catch (err) {
-            Alert.alert('Social Login Failed', err.message || 'Unable to sign in with Google');
+            const friendly = getExternalAuthErrorMessage(err);
+            Alert.alert('Google Sign-In Failed', friendly);
         }
     }, [loginExternal, dismissError]);
+
 
     const handleSsoDiscovery = useCallback(async () => {
         if (!formData.email || !formData.email.includes('@')) {

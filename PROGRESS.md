@@ -9,7 +9,40 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-05] - Mobile Google Sign-In Native SDK Integration & Error Resolution (MOBILE_GOOGLE_SIGNIN_IMPLEMENTATION_GUIDE.md)
+- **Features & Enhancements**:
+  - **Native Google Sign-In Integration**: Integrated `@react-native-google-signin/google-signin` configured with target backend web audience (`webClientId: 202763663198-vfa9arg479q2chtvg8l0i7bb459hk1vc.apps.googleusercontent.com`) as specified in the implementation guide.
+  - **Google Auth Service (`googleAuthService.js`)**: Created dedicated service managing Google SDK lifecycle, Play Services verification, sign-in prompt, genuine ID token acquisition, and sign-out.
+  - **Error Code Translation & Friendly Messaging (`externalAuthErrors.js`)**: Implemented robust mapping for all backend external auth codes (`invalid_id_token`, `account_exists`, `account_disabled`, `admin_social_forbidden`, `provider_disabled`, `idp_unavailable`, `rate_limited`, `play_services_missing`).
+  - **Account Linking & Set Password Support**:
+    - Enabled Google account linking in `EditProfileScreen.js` (`POST /api/auth/external/link`).
+    - Added social password initialization support in `ChangePasswordScreen.js` (`POST /api/auth/set-password` when `hasPassword === false` or on `password_not_set`).
+    - Added automatic FCM device push token registration upon successful Google login.
+  - **Configuration Alignment (`app.json`)**: Configured `scheme: "parkease"`, `android.googleServicesFile: "./google-services.json"`, `ios.googleServicesFile: "./GoogleService-Info.plist"`, and `@react-native-google-signin/google-signin` Expo config plugin.
+- **Bug Fixes & Refactoring**:
+  - **Resolved `Invalid or expired identity token`**: Replaced hardcoded dummy stub (`google-mock-token-...`) in `LoginScreen.js` with genuine token exchange via `googleAuthService.signIn()`.
+  - **Graceful Cancellation**: Handled `SIGN_IN_CANCELLED` and `IN_PROGRESS` statuses cleanly without throwing spurious error alerts or error banners.
+- **Key Files Modified**:
+  - `Mobile/package.json` & `Mobile/package-lock.json`
+  - `Mobile/app.json`
+  - `Mobile/jest.setup.js`
+  - `Mobile/src/config/environment.js`
+  - `Mobile/src/services/auth/googleAuthService.js` (new)
+  - `Mobile/src/utils/externalAuthErrors.js` (new)
+  - `Mobile/src/screens/Auth/LoginScreen.js`
+  - `Mobile/src/store/slices/authSlice.js`
+  - `Mobile/src/screens/Profile/ChangePasswordScreen.js`
+  - `Mobile/src/screens/Profile/EditProfileScreen.js`
+  - `Mobile/src/screens/Auth/__tests__/LoginScreen.test.js`
+  - `Mobile/src/services/auth/__tests__/googleAuthService.test.js` (new)
+  - `Mobile/src/utils/__tests__/externalAuthErrors.test.js` (new)
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - 100% test pass rate achieved across all 30 Jest test suites (112/112 tests passing).
+  - Ready for release build and verification on Android device.
+
 ### [2026-09-05] - Backend API Parity & Mobile Module Implementation (API_ENDPOINTS_MOBILE.md)
+
 - **Features & Enhancements**:
   - **Comprehensive Backend Route & Enum Alignment**: Synchronized `endpoints.js` and `constants.js` with all 25 sections of `API_ENDPOINTS_MOBILE.md` (Authentication, Users, Parking Spaces, Bookings, Payments, Reviews, Favorites, Vehicles, Passes, Ancillary, Events, IoT, LPR, Corporate, Platform Admin `/api/admin/*`, Health). Configured with remote backend `https://parkeaseapp.runasp.net`.
   - **Auth, Channels & Enterprise SSO**: Implemented corporate login (`loginCorporate`), external OAuth (`loginExternal`), account linking, password reset/set endpoints, channel context inspection & switching (`switchChannel`), and enterprise SSO domain auto-discovery and authentication flow.

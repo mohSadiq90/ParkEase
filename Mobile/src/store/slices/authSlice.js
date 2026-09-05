@@ -6,6 +6,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/auth/authService';
 import { getErrorMessage } from '../../utils/errorHandler';
+import { getExternalAuthErrorMessage } from '../../utils/externalAuthErrors';
 
 /**
  * Login thunk
@@ -52,14 +53,15 @@ export const loginExternalThunk = createAsyncThunk(
         try {
             const result = await authService.loginExternal(payload);
             if (!result.success) {
-                return rejectWithValue(result.message || 'Social login failed');
+                return rejectWithValue(getExternalAuthErrorMessage(result));
             }
             return result.data;
         } catch (error) {
-            return rejectWithValue(getErrorMessage(error));
+            return rejectWithValue(getExternalAuthErrorMessage(error));
         }
     }
 );
+
 
 /**
  * Switch channel thunk
