@@ -9,6 +9,31 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-05] - Mobile App Icon Resolution & Branded Adaptive Icon Overhaul
+- **Features & Enhancements**:
+  - **High-Resolution Branded ParkEase Icon Suite**: Designed and generated high-resolution vector and bitmap assets matching ParkEase's royal blue (`#1E3A8A` / `#2563EB`) and golden amber (`#F59E0B`) brand identity.
+  - **Android Adaptive Icon Safe Zone Optimization**: Created `Mobile/assets/adaptive-icon.png` and density-specific `ic_launcher_foreground.webp` layers with transparent backgrounds, perfectly scaling the bold "P", aerodynamic sports car, and location beacon within Android's 66% safe-zone to guarantee zero clipping across circular, squircle, teardrop, and rounded-rectangle OEM launchers.
+  - **High-DPI Mipmap Coverage**: Built full suites across all Android density buckets (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`) for standard squircle icons (`ic_launcher.webp`), round icons (`ic_launcher_round.webp`), and adaptive foregrounds (`ic_launcher_foreground.webp`).
+  - **Splash & Web Favicon Refresh**: Updated `Mobile/assets/splash-icon.png`, `Mobile/assets/favicon.png`, and Android native `splashscreen_logo.png` drawables with branded graphics.
+- **Bug Fixes & Refactoring**:
+  - **Resolved App Icon Not Displaying**: Identified and resolved the root causes that rendered the app icon blank/invisible on devices:
+    1. **Faint Expo Template Placeholders**: The default placeholder assets were faint grey (`#DCDCE1`) on pure white (`#FFFFFF`), appearing completely washed out and unrendered.
+    2. **Corrupted / Fake WebP Files**: Replaced all 15 previously committed `.webp` files in `Mobile/assets/android-icons/` which were actually raw PNGs with `.webp` extensions (causing Android AAPT/launcher decoding failures) with genuine, lossless RIFF WebP binaries.
+    3. **CI Overwrite Fixed**: Ensured `Mobile/assets/android-icons/` contains true WebP files so that the CI step `cp -a ../assets/android-icons/. app/src/main/res/` distributes valid, high-contrast assets into the final release APK.
+    4. **Adaptive Icon Background Alignment**: Configured `android.adaptiveIcon.backgroundColor` in `app.json` and `@color/iconBackground` in `colors.xml` to ParkEase royal blue (`#1E3A8A`).
+- **Key Files Modified**:
+  - `Mobile/app.json`
+  - `Mobile/assets/icon.png`
+  - `Mobile/assets/adaptive-icon.png`
+  - `Mobile/assets/splash-icon.png`
+  - `Mobile/assets/favicon.png`
+  - `Mobile/assets/android-icons/mipmap-*/*.webp`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 30 Jest test suites passing (112/112 tests).
+  - Expo prebuild runs cleanly with 0 errors.
+  - Ready for CI automated build (#45) and verification on QA devices.
+
 ### [2026-09-05] - Mobile Google Sign-In Native SDK Integration & Error Resolution (MOBILE_GOOGLE_SIGNIN_IMPLEMENTATION_GUIDE.md)
 - **Features & Enhancements**:
   - **Native Google Sign-In Integration**: Integrated `@react-native-google-signin/google-signin` configured with target backend web audience (`webClientId: 202763663198-vfa9arg479q2chtvg8l0i7bb459hk1vc.apps.googleusercontent.com`) as specified in the implementation guide.
