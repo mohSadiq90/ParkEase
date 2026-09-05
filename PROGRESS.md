@@ -22,7 +22,10 @@
 - **Bug Fixes & Refactoring**:
   - **Resolved `Invalid or expired identity token`**: Replaced hardcoded dummy stub (`google-mock-token-...`) in `LoginScreen.js` with genuine token exchange via `googleAuthService.signIn()`.
   - **Graceful Cancellation**: Handled `SIGN_IN_CANCELLED` and `IN_PROGRESS` statuses cleanly without throwing spurious error alerts or error banners.
+  - **Fixed CI Android Prebuild Failure (Build #44)**: Un-ignored and tracked `Mobile/google-services.json` in git (removed from root `.gitignore` and `Mobile/.gitignore`), resolving `Cannot copy google-services.json from Mobile/google-services.json to Mobile/android/app/google-services.json` during Expo prebuild on GitHub Actions runner.
 - **Key Files Modified**:
+  - `.gitignore` & `Mobile/.gitignore`
+  - `Mobile/google-services.json`
   - `Mobile/package.json` & `Mobile/package-lock.json`
   - `Mobile/app.json`
   - `Mobile/jest.setup.js`
@@ -39,7 +42,9 @@
   - `PROGRESS.md`
 - **Current Status & Next Steps**:
   - 100% test pass rate achieved across all 30 Jest test suites (112/112 tests passing).
+  - Local `expo prebuild --platform android --clean --no-install` verified successfully.
   - Ready for release build and verification on Android device.
+
 
 ### [2026-09-05] - Backend API Parity & Mobile Module Implementation (API_ENDPOINTS_MOBILE.md)
 

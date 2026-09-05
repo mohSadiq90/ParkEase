@@ -468,8 +468,8 @@ CheckDB.cs
 **/CheckDB.cs
 deploy-mobile.sh
 Mobile/parkease-*.json
-Mobile/google-services.json
 gh_login.*
+
 /backend/src/ParkingApp.API/appsettings.Production.json
 /backend/src/ParkingApp.API/appsettings.Staging.json
 /frontend/.env.production.example

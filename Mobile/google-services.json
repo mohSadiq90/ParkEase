@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "422771999600",
+    "project_id": "parkease-e15ad",
+    "storage_bucket": "parkease-e15ad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:422771999600:android:3d23fc1d587d77f91a05b5",
+        "android_client_info": {
+          "package_name": "com.parkease.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBYZWAT9ObXnE4cEhh9auoakYwStho3GGY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
