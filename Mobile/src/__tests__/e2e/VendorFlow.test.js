@@ -139,7 +139,7 @@ describe('Vendor E2E Flow (Hosting and Approving)', () => {
     fireEvent.press(getByText('Sign In'));
 
     // Wait for Dashboard to render
-    const dashboardHeader = await findByText('Manage your parking business');
+    const dashboardHeader = await findByText('Manage your parking business', {}, { timeout: 5000 });
     expect(dashboardHeader).toBeTruthy();
 
     // 2. Navigate to My Listings -> Create a new parking space

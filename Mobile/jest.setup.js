@@ -91,3 +91,44 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   },
 }));
 
+// Mock PostHog React Native
+const mockPostHogInstance = {
+  capture: jest.fn(),
+  screen: jest.fn(),
+  identify: jest.fn(),
+  reset: jest.fn(),
+  flush: jest.fn().mockResolvedValue(true),
+  register: jest.fn(),
+  unregister: jest.fn(),
+  isFeatureEnabled: jest.fn().mockReturnValue(true),
+  getFeatureFlag: jest.fn().mockReturnValue('control'),
+  getFeatureFlagPayload: jest.fn(),
+  reloadFeatureFlags: jest.fn(),
+  optIn: jest.fn(),
+  optOut: jest.fn(),
+  debug: jest.fn(),
+  ready: jest.fn().mockResolvedValue(true),
+  getDistinctId: jest.fn().mockReturnValue('mock-distinct-id'),
+  getDeviceId: jest.fn().mockReturnValue('mock-device-id'),
+};
+
+jest.mock('posthog-react-native', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const PostHogProvider = ({ children }) => React.createElement(View, { testID: 'posthog-provider' }, children);
+  const usePostHog = () => mockPostHogInstance;
+
+  return {
+    __esModule: true,
+    default: jest.fn(() => mockPostHogInstance),
+    PostHog: jest.fn(() => mockPostHogInstance),
+    PostHogProvider,
+    usePostHog,
+    PostHogErrorBoundary: ({ children }) => children,
+    useNavigationTracker: jest.fn(),
+    useFeatureFlags: () => ({}),
+    useFeatureFlag: () => false,
+  };
+});
+

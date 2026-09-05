@@ -8,6 +8,7 @@ import apiClient from '../api/apiClient';
 import ENDPOINTS from '../api/endpoints';
 import { storageService } from '../storage/secureStorage';
 import logger from '../../utils/logger';
+import posthogService, { AnalyticsEvents } from '../analytics/posthogService';
 
 const TAG = 'AuthService';
 
@@ -21,7 +22,11 @@ export const authService = {
             const refreshToken = tokenData.refreshToken;
             const user = tokenData.user;
             if (accessToken) await storageService.setTokens(accessToken, refreshToken);
-            if (user) await storageService.setUser(user);
+            if (user) {
+                await storageService.setUser(user);
+                posthogService.identifyUser(user);
+                posthogService.trackEvent(AnalyticsEvents.AUTH_LOGIN, { method: 'email', role: user.role });
+            }
         }
         return response.data;
     },
@@ -35,7 +40,11 @@ export const authService = {
             const refreshToken = tokenData.refreshToken;
             const user = tokenData.user;
             if (accessToken) await storageService.setTokens(accessToken, refreshToken);
-            if (user) await storageService.setUser(user);
+            if (user) {
+                await storageService.setUser(user);
+                posthogService.identifyUser(user);
+                posthogService.trackEvent(AnalyticsEvents.AUTH_REGISTER, { role: user.role });
+            }
         }
         return response.data;
     },
@@ -49,7 +58,11 @@ export const authService = {
             const refreshToken = session.refreshToken;
             const user = session.user;
             if (accessToken) await storageService.setTokens(accessToken, refreshToken);
-            if (user) await storageService.setUser(user);
+            if (user) {
+                await storageService.setUser(user);
+                posthogService.identifyUser(user);
+                posthogService.trackEvent(AnalyticsEvents.AUTH_LOGIN, { method: 'corporate', companyId: credentials.companyId });
+            }
         }
         return response.data;
     },
@@ -75,7 +88,11 @@ export const authService = {
                 user.linkedProviders = sessionData.linkedProviders;
             }
             if (accessToken) await storageService.setTokens(accessToken, refreshToken);
-            if (user) await storageService.setUser(user);
+            if (user) {
+                await storageService.setUser(user);
+                posthogService.identifyUser(user);
+                posthogService.trackEvent(AnalyticsEvents.AUTH_EXTERNAL_LOGIN, { provider: payload.provider || 'google' });
+            }
         }
         return response.data;
     },
@@ -90,6 +107,7 @@ export const authService = {
                 currentUser.linkedProviders = linkedProviders;
                 await storageService.setUser(currentUser);
             }
+            posthogService.trackEvent(AnalyticsEvents.AUTH_EXTERNAL_LINK, { provider: data.provider });
         }
         return response.data;
     },
@@ -114,7 +132,11 @@ export const authService = {
             const refreshToken = tokenData.refreshToken;
             const user = tokenData.user;
             if (accessToken) await storageService.setTokens(accessToken, refreshToken);
-            if (user) await storageService.setUser(user);
+            if (user) {
+                await storageService.setUser(user);
+                posthogService.identifyUser(user);
+                posthogService.trackEvent(AnalyticsEvents.AUTH_CHANNEL_SWITCHED, { channel: channelData.channel });
+            }
         }
         return response.data;
     },
@@ -144,7 +166,11 @@ export const authService = {
             const refreshToken = session.refreshToken;
             const user = session.user;
             if (accessToken) await storageService.setTokens(accessToken, refreshToken);
-            if (user) await storageService.setUser(user);
+            if (user) {
+                await storageService.setUser(user);
+                posthogService.identifyUser(user);
+                posthogService.trackEvent(AnalyticsEvents.AUTH_LOGIN, { method: 'sso' });
+            }
         }
         return response.data;
     },
@@ -155,6 +181,8 @@ export const authService = {
         } catch (error) {
             logger.warn(TAG, 'Logout API call failed', error);
         }
+        posthogService.trackEvent(AnalyticsEvents.AUTH_LOGOUT);
+        posthogService.resetUser();
         await storageService.clearAll();
     },
 
@@ -190,6 +218,8 @@ export const authService = {
 
     async deleteAccount() {
         const response = await apiClient.delete(ENDPOINTS.USERS.ME);
+        posthogService.trackEvent('user_account_deleted');
+        posthogService.resetUser();
         await storageService.clearAll();
         return response.data;
     },
@@ -202,7 +232,10 @@ export const authService = {
         try {
             const response = await apiClient.get(ENDPOINTS.USERS.ME);
             if (response.data?.success && response.data?.data) {
-                return response.data.data;
+                const user = response.data.data;
+                posthogService.identifyUser(user);
+                posthogService.trackEvent(AnalyticsEvents.AUTH_SESSION_RESTORED);
+                return user;
             }
         } catch (error) {
             logger.warn(TAG, 'Session restore failed', error);
