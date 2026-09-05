@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/globalStyles';
 import Input from '../../components/Common/Input';
 import Button from '../../components/Common/Button';
+import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import authService from '../../services/auth/authService';
 
 const ChangePasswordScreen = ({ navigation }) => {
@@ -50,7 +51,7 @@ const ChangePasswordScreen = ({ navigation }) => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenLayout style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -74,10 +75,7 @@ const ChangePasswordScreen = ({ navigation }) => {
                         value={currentPassword}
                         onChangeText={setCurrentPassword}
                         secureTextEntry
-                        icon="lock-closed-outline"
                     />
-
-                    <View style={styles.divider} />
 
                     <Input
                         label="New Password"
@@ -85,16 +83,14 @@ const ChangePasswordScreen = ({ navigation }) => {
                         value={newPassword}
                         onChangeText={setNewPassword}
                         secureTextEntry
-                        icon="lock-closed-outline"
                     />
 
                     <Input
                         label="Confirm New Password"
-                        placeholder="Re-enter new password"
+                        placeholder="Confirm new password"
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
                         secureTextEntry
-                        icon="lock-closed-outline"
                     />
 
                     <Button
@@ -105,7 +101,7 @@ const ChangePasswordScreen = ({ navigation }) => {
                     />
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </ScreenLayout>
     );
 };
 

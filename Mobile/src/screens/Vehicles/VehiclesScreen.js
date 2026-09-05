@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, SafeAreaView, Alert, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../../styles/globalStyles';
+import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import { vehicleService } from '../../services/api/vehicleService';
 import { VehicleType, VehicleTypeLabels } from '../../utils/constants';
 
@@ -154,7 +155,7 @@ const VehiclesScreen = ({ navigation }) => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenLayout style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary || colors.text} />
@@ -259,7 +260,7 @@ const VehiclesScreen = ({ navigation }) => {
                     )
                 }
             />
-        </SafeAreaView>
+        </ScreenLayout>
     );
 };
 

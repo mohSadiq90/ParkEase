@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/globalStyles';
 import Input from '../../components/Common/Input';
 import Button from '../../components/Common/Button';
+import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import { updateProfileThunk } from '../../store/slices/authSlice';
 
 const EditProfileScreen = ({ navigation }) => {
@@ -41,7 +42,7 @@ const EditProfileScreen = ({ navigation }) => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenLayout style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -59,39 +60,32 @@ const EditProfileScreen = ({ navigation }) => {
                     <View style={styles.avatarSection}>
                         <View style={styles.avatarPlaceholder}>
                             <Text style={styles.avatarText}>
-                                {firstName ? firstName.charAt(0).toUpperCase() : 'U'}
+                                {firstName?.charAt(0) || 'U'}
                             </Text>
-                            <TouchableOpacity style={styles.editAvatarButton}>
-                                <Ionicons name="camera" size={16} color="#FFF" />
-                            </TouchableOpacity>
                         </View>
-                        <Text style={styles.emailText}>{user?.email}</Text>
                     </View>
 
-                    <Input
-                        label="First Name"
-                        placeholder="Enter your first name"
-                        value={firstName}
-                        onChangeText={setFirstName}
-                        icon="person-outline"
-                    />
-
-                    <Input
-                        label="Last Name"
-                        placeholder="Enter your last name"
-                        value={lastName}
-                        onChangeText={setLastName}
-                        icon="person-outline"
-                    />
-
-                    <Input
-                        label="Phone Number"
-                        placeholder="Enter your phone number"
-                        value={phoneNumber}
-                        onChangeText={setPhoneNumber}
-                        icon="call-outline"
-                        keyboardType="phone-pad"
-                    />
+                    <View style={styles.form}>
+                        <Input
+                            label="First Name"
+                            value={firstName}
+                            onChangeText={setFirstName}
+                            placeholder="Enter first name"
+                        />
+                        <Input
+                            label="Last Name"
+                            value={lastName}
+                            onChangeText={setLastName}
+                            placeholder="Enter last name"
+                        />
+                        <Input
+                            label="Phone Number"
+                            value={phoneNumber}
+                            onChangeText={setPhoneNumber}
+                            placeholder="Enter phone number"
+                            keyboardType="phone-pad"
+                        />
+                    </View>
 
                     <Button
                         title="Save Changes"
@@ -101,7 +95,7 @@ const EditProfileScreen = ({ navigation }) => {
                     />
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </ScreenLayout>
     );
 };
 

@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../../styles/globalStyles';
+import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import { getReviewsThunk, clearReviews } from '../../store/slices/reviewSlice';
 import StarRating from '../../components/Common/StarRating';
 import Button from '../../components/Common/Button';
@@ -113,7 +114,7 @@ const ReviewsListScreen = ({ route, navigation }) => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenLayout style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary || colors.text} />
@@ -186,7 +187,7 @@ const ReviewsListScreen = ({ route, navigation }) => {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </ScreenLayout>
     );
 };
 

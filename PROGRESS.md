@@ -64,6 +64,7 @@
   - All new implementations covered with dedicated unit test suites (`AccessPassScannerScreen`, `ReviewsListScreen`, `VehiclesScreen`, `adminSlice`).
   - Added deterministic build number configuration to `app.json`, Android release Gradle build, and GitHub Actions CI workflow (`${{ github.run_number }}`).
   - Added in-app version & build number indicator in `ProfileScreen.js` via `version.js`.
+  - Fixed edge-to-edge status bar overlapping across Profile, Corporate, and child screens: added `SafeAreaProvider` to `App.js`, upgraded `ScreenLayout.js` with `useSafeAreaInsets` and Android `StatusBar.currentHeight` padding, and migrated `EditProfileScreen`, `ChangePasswordScreen`, `VehiclesScreen`, `FavoritesScreen`, and `ReviewsListScreen` to `ScreenLayout`.
   - Broadcasted completed feature parity release summary to Slack `#qa-builds-android`.
 
 ### [2026-08-19] - Repository Rules & Workflow Standardization

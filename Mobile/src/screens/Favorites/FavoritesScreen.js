@@ -1,8 +1,9 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, SafeAreaView, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/globalStyles';
+import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import { fetchFavoritesThunk, toggleFavoriteThunk } from '../../store/slices/favoriteSlice';
 
 const FavoritesScreen = ({ navigation }) => {
@@ -54,7 +55,7 @@ const FavoritesScreen = ({ navigation }) => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenLayout style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -85,7 +86,7 @@ const FavoritesScreen = ({ navigation }) => {
                     </View>
                 }
             />
-        </SafeAreaView>
+        </ScreenLayout>
     );
 };
 
