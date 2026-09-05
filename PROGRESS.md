@@ -9,6 +9,26 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-05] - Fix Google Sign-In Session Ingestion, User Data Restoration & Account Linking Flow
+- **Features & Enhancements**:
+  - **Google Account Linked Status Indicator**: Enhanced `EditProfileScreen.js` to dynamically detect whether Google is linked (`user?.linkedProviders`), rendering an immediate green "Linked" badge with confirmation rather than continuing to show the link button.
+  - **Real-Time Redux Linked Providers Synchronization**: Added `updateLinkedProviders` action to `authSlice.js` and wired `linkExternal` to update both Redux state and local secure storage instantly upon successful account linking.
+- **Bug Fixes & Refactoring**:
+  - **External Auth Session DTO Ingestion Gap**: Resolved critical schema mismatch between backend `POST /api/auth/external` (which responds with `ExternalAuthSessionDto` containing `Session: TokenDto`) and mobile client.
+    - Previously, `authService.loginExternal` and `authSlice.js` attempted to extract `tokens` and `user` directly from the root of `data`, causing `accessToken`, `refreshToken`, and `user` to resolve as `undefined`.
+    - As a consequence, `storageService.setTokens` was bypassed, `state.user` in Redux was set to `undefined`, and `apiClient` never had an access token for authorization headers.
+    - Updated `authService.js` and `authSlice.js` to correctly unpack `action.payload.session` (as well as legacy payload formats), ensuring user profile details (First Name, Last Name, Email) and access tokens are properly stored.
+  - **Authenticated API Calls & Bookings Visibility**: Because the bearer token is now properly saved to `storageService`, all authenticated API requests (including `getMyBookingsThunk`) now receive the valid `Authorization: Bearer <token>` header, immediately restoring user bookings and profile details.
+  - **Unit Testing**: Added test coverage in `authSlice.test.js` validating the `ExternalAuthSessionDto` response structure, legacy shapes, and `updateLinkedProviders` state management.
+- **Key Files Modified**:
+  - `Mobile/src/services/auth/authService.js`
+  - `Mobile/src/store/slices/authSlice.js`
+  - `Mobile/src/screens/Profile/EditProfileScreen.js`
+  - `Mobile/src/store/slices/__tests__/authSlice.test.js`
+- **Current Status & Next Steps**:
+  - All 30 unit test suites passing (118/118 tests).
+  - Ready for commit, push to remote, and verification in mobile app.
+
 ### [2026-09-05] - Comprehensive Keyboard Avoidance & Active Field Auto-Scrolling Overhaul
 - **Features & Enhancements**:
   - **ScreenLayout Keyboard-Aware Container**: Upgraded `ScreenLayout.js` with integrated `KeyboardAvoidingView` wrapper, safe area vertical offset calculations, `keyboardShouldPersistTaps="handled"`, `keyboardDismissMode="on-drag"`, and generous default bottom scroll clearance so that all scrollable screens dynamically elevate content above virtual keyboards.

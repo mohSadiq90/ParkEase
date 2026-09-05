@@ -67,10 +67,13 @@ export const authService = {
         const response = await apiClient.post(ENDPOINTS.AUTH.EXTERNAL, body);
         if (response.data?.success && response.data?.data) {
             const sessionData = response.data.data;
-            const tokens = sessionData.tokens || sessionData;
-            const accessToken = tokens.accessToken || tokens.token;
-            const refreshToken = tokens.refreshToken;
-            const user = sessionData.user;
+            const session = sessionData.session || sessionData.tokens || sessionData;
+            const accessToken = session.accessToken || session.token || sessionData.accessToken;
+            const refreshToken = session.refreshToken || sessionData.refreshToken;
+            const user = session.user || sessionData.user;
+            if (user && sessionData.linkedProviders && (!user.linkedProviders || user.linkedProviders.length === 0)) {
+                user.linkedProviders = sessionData.linkedProviders;
+            }
             if (accessToken) await storageService.setTokens(accessToken, refreshToken);
             if (user) await storageService.setUser(user);
         }
@@ -80,6 +83,14 @@ export const authService = {
     async linkExternal(data) {
         logger.info(TAG, 'Link external account', { provider: data.provider });
         const response = await apiClient.post(ENDPOINTS.AUTH.EXTERNAL_LINK, data);
+        if (response.data?.success && response.data?.data) {
+            const currentUser = await storageService.getUser();
+            if (currentUser) {
+                const linkedProviders = response.data.data.linkedProviders || [];
+                currentUser.linkedProviders = linkedProviders;
+                await storageService.setUser(currentUser);
+            }
+        }
         return response.data;
     },
 

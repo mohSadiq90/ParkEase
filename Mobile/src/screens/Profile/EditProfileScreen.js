@@ -6,7 +6,7 @@ import { colors, typography } from '../../styles/globalStyles';
 import Input from '../../components/Common/Input';
 import Button from '../../components/Common/Button';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
-import { updateProfileThunk } from '../../store/slices/authSlice';
+import { updateProfileThunk, updateLinkedProviders } from '../../store/slices/authSlice';
 import authService from '../../services/auth/authService';
 import googleAuthService from '../../services/auth/googleAuthService';
 import { getExternalAuthErrorMessage } from '../../utils/externalAuthErrors';
@@ -20,6 +20,10 @@ const EditProfileScreen = ({ navigation }) => {
     const [lastName, setLastName] = useState(user?.lastName || '');
     const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
     const [linkingGoogle, setLinkingGoogle] = useState(false);
+
+    const isGoogleLinked = user?.linkedProviders?.some(
+        (p) => typeof p === 'string' && p.toLowerCase() === 'google'
+    );
 
     const handleSave = async () => {
         if (!firstName || !lastName) {
@@ -63,7 +67,9 @@ const EditProfileScreen = ({ navigation }) => {
             });
 
             if (res?.success) {
-                Alert.alert('Success', 'Your Google account has been linked successfully!');
+                const linkedProviders = res.data?.linkedProviders || ['Google'];
+                dispatch(updateLinkedProviders(linkedProviders));
+                Alert.alert('Success', 'Your Google account has been linked successfully! You can now sign in using Google or your password.');
             } else {
                 Alert.alert('Link Failed', getExternalAuthErrorMessage(res));
             }
@@ -136,17 +142,35 @@ const EditProfileScreen = ({ navigation }) => {
 
                     <View style={styles.socialSection}>
                         <Text style={styles.sectionTitle}>Linked Accounts</Text>
-                        <Text style={styles.socialSubtext}>Link your Google account for faster one-tap sign-in.</Text>
-                        <TouchableOpacity
-                            style={styles.linkGoogleButton}
-                            onPress={handleLinkGoogle}
-                            disabled={linkingGoogle}
-                        >
-                            <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-                            <Text style={styles.linkGoogleText}>
-                                {linkingGoogle ? 'Connecting Google...' : 'Link Google Account'}
-                            </Text>
-                        </TouchableOpacity>
+                        {isGoogleLinked ? (
+                            <View style={styles.linkedBadge}>
+                                <View style={styles.linkedBadgeLeft}>
+                                    <Ionicons name="logo-google" size={22} color={colors.primary} />
+                                    <View style={styles.linkedBadgeTextContainer}>
+                                        <Text style={styles.linkedBadgeTitle}>Google Account</Text>
+                                        <Text style={styles.linkedBadgeSubtext}>Connected for one-tap sign-in</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.connectedPill}>
+                                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                                    <Text style={styles.connectedPillText}>Linked</Text>
+                                </View>
+                            </View>
+                        ) : (
+                            <>
+                                <Text style={styles.socialSubtext}>Link your Google account for faster one-tap sign-in.</Text>
+                                <TouchableOpacity
+                                    style={styles.linkGoogleButton}
+                                    onPress={handleLinkGoogle}
+                                    disabled={linkingGoogle}
+                                >
+                                    <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                                    <Text style={styles.linkGoogleText}>
+                                        {linkingGoogle ? 'Connecting Google...' : 'Link Google Account'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -253,6 +277,50 @@ const styles = StyleSheet.create({
         ...typography.button,
         color: colors.text,
         marginLeft: 10,
+    },
+    linkedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        borderRadius: 12,
+        padding: 14,
+        marginTop: 6,
+    },
+    linkedBadgeLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    linkedBadgeTextContainer: {
+        flex: 1,
+    },
+    linkedBadgeTitle: {
+        ...typography.body,
+        fontWeight: '600',
+        color: colors.textPrimary,
+    },
+    linkedBadgeSubtext: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    connectedPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 12,
+    },
+    connectedPillText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: colors.success,
     },
 });
 

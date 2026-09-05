@@ -236,6 +236,14 @@ const authSlice = createSlice({
             state.error = null;
         },
         resetAuth: () => initialState,
+        updateLinkedProviders: (state, action) => {
+            if (state.user) {
+                state.user = {
+                    ...state.user,
+                    linkedProviders: action.payload,
+                };
+            }
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -289,10 +297,16 @@ const authSlice = createSlice({
             })
             .addCase(loginExternalThunk.fulfilled, (state, action) => {
                 state.loading = false;
-                const session = action.payload.tokens || action.payload;
-                state.user = action.payload.user || session.user;
-                state.token = session.accessToken || session.token;
-                state.channel = 'Marketplace';
+                const session = action.payload?.session || action.payload?.tokens || action.payload || {};
+                const user = session.user || action.payload?.user;
+                if (user && action.payload?.linkedProviders && (!user.linkedProviders || user.linkedProviders.length === 0)) {
+                    user.linkedProviders = action.payload.linkedProviders;
+                }
+                state.user = user;
+                state.token = session.accessToken || session.token || action.payload?.accessToken;
+                state.channel = session.channel || action.payload?.channel || 'Marketplace';
+                state.companyId = session.companyId || action.payload?.companyId || null;
+                state.companyRole = session.companyRole || action.payload?.companyRole || null;
                 state.isAuthenticated = true;
                 state.isSessionChecked = true;
             })
@@ -371,5 +385,5 @@ const authSlice = createSlice({
     },
 });
 
-export const { clearError, resetAuth } = authSlice.actions;
+export const { clearError, resetAuth, updateLinkedProviders } = authSlice.actions;
 export default authSlice.reducer;

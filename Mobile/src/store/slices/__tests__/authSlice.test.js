@@ -2,6 +2,8 @@ import reducer, {
   loginThunk,
   registerThunk,
   restoreSessionThunk,
+  loginExternalThunk,
+  updateLinkedProviders,
   clearError,
   resetAuth,
 } from '../authSlice';
@@ -46,6 +48,14 @@ describe('authSlice', () => {
         isAuthenticated: true,
       };
       expect(reducer(loggedInState, resetAuth())).toEqual(initialState);
+    });
+    it('should handle updateLinkedProviders', () => {
+      const stateWithUser = {
+        ...initialState,
+        user: { id: 1, firstName: 'John', lastName: 'Doe', linkedProviders: [] },
+      };
+      const state = reducer(stateWithUser, updateLinkedProviders(['Google']));
+      expect(state.user.linkedProviders).toEqual(['Google']);
     });
   });
 
@@ -122,6 +132,68 @@ describe('authSlice', () => {
       expect(state.loading).toBe(false);
       expect(state.isAuthenticated).toBe(false);
       expect(state.isSessionChecked).toBe(true); // Always true after check completes
+    });
+  });
+
+  describe('loginExternalThunk', () => {
+    it('should handle fulfilled state with backend ExternalAuthSessionDto shape', () => {
+      const backendPayload = {
+        session: {
+          accessToken: 'ext-access-token',
+          refreshToken: 'ext-refresh-token',
+          user: {
+            id: 'uuid-456',
+            firstName: 'Jane',
+            lastName: 'Doe',
+            email: 'jane@example.com',
+          },
+          channel: 'Marketplace',
+        },
+        isNewUser: false,
+        requiresPhone: false,
+        linkedProviders: ['Google'],
+      };
+
+      const action = { type: loginExternalThunk.fulfilled.type, payload: backendPayload };
+      const state = reducer(initialState, action);
+
+      expect(state.loading).toBe(false);
+      expect(state.user).toEqual({
+        id: 'uuid-456',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'jane@example.com',
+        linkedProviders: ['Google'],
+      });
+      expect(state.token).toBe('ext-access-token');
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.isSessionChecked).toBe(true);
+      expect(state.channel).toBe('Marketplace');
+    });
+
+    it('should handle fulfilled state with legacy tokens/user payload shape', () => {
+      const legacyPayload = {
+        tokens: { accessToken: 'legacy-token', refreshToken: 'legacy-refresh' },
+        user: { id: 789, firstName: 'Legacy', lastName: 'User', email: 'legacy@example.com' },
+      };
+
+      const action = { type: loginExternalThunk.fulfilled.type, payload: legacyPayload };
+      const state = reducer(initialState, action);
+
+      expect(state.loading).toBe(false);
+      expect(state.user).toEqual(legacyPayload.user);
+      expect(state.token).toBe('legacy-token');
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.isSessionChecked).toBe(true);
+    });
+
+    it('should handle rejected state', () => {
+      const action = { type: loginExternalThunk.rejected.type, payload: 'Account exists with password' };
+      const state = reducer(initialState, action);
+
+      expect(state.loading).toBe(false);
+      expect(state.error).toBe('Account exists with password');
+      expect(state.isAuthenticated).toBe(false);
     });
   });
 });
