@@ -9,6 +9,27 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-05] - Google Sign-In DEVELOPER_ERROR Root Cause Diagnosis & SHA-1 Registration
+- **Features & Enhancements**:
+  - **Firebase Android App SHA-1 & SHA-256 Fingerprint Registration**: Used Firebase CLI to register all release and debug certificate hashes into Firebase Android App `1:422771999600:android:3d23fc1d587d77f91a05b5` (`com.parkease.app`):
+    - `Mobile/debug.keystore` SHA-1: `59:E1:77:99:1A:CB:28:C5:B7:15:6E:7E:89:C0:7A:08:56:BC:1F:3D`
+    - `Mobile/debug.keystore` SHA-256: `6D:B8:85:8D:EC:62:29:2E:48:BF:D7:7A:D1:58:CA:5B:03:0E:79:09:BB:9A:0C:EB:ED:F4:17:CF:98:E4:76:07`
+    - Local `~/.android/debug.keystore` SHA-1: `44:45:E5:91:68:F9:FA:78:B8:F0:EB:14:72:DA:5E:21:48:4D:4B:6F`
+    - Local `~/.android/debug.keystore` SHA-256: `E7:77:1B:29:A7:F4:24:2A:28:B4:5D:29:3D:48:07:DD:1F:FD:3A:0D:50:F6:5E:7E:6D:BE:1A:28:1A:B9:62:9C`
+  - **Friendly Developer Error Handling**: Extended `googleAuthService.js` and `externalAuthErrors.js` to catch Google Play Services status code 10 (`DEVELOPER_ERROR`), logging contextual diagnostic details and providing actionable developer guidance instead of exposing cryptic library troubleshooting URLs.
+- **Bug Fixes & Refactoring**:
+  - **Resolved Root Cause of DEVELOPER_ERROR**: Identified that Google Play Services returns code 10 when the calling Android application package name (`com.parkease.app`) and its signing key SHA-1 fingerprint are not registered under an authorized OAuth 2.0 Android Client ID in the Google Cloud Project (`202763663198`) that owns the configured `webClientId`.
+- **Key Files Modified**:
+  - `Mobile/src/services/auth/googleAuthService.js`
+  - `Mobile/src/utils/externalAuthErrors.js`
+  - `Mobile/src/services/auth/__tests__/googleAuthService.test.js`
+  - `Mobile/src/utils/__tests__/externalAuthErrors.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - 100% test pass rate achieved across all 30 Jest test suites (114/114 tests passing).
+  - SHA fingerprints registered on Firebase.
+  - Provided exact SHA-1 fingerprints and instructions for registering the Android OAuth Client in Google Cloud Project `202763663198`.
+
 ### [2026-09-05] - Mobile App Icon Resolution & Branded Adaptive Icon Overhaul
 - **Features & Enhancements**:
   - **High-Resolution Branded ParkEase Icon Suite**: Designed and generated high-resolution vector and bitmap assets matching ParkEase's royal blue (`#1E3A8A` / `#2563EB`) and golden amber (`#F59E0B`) brand identity.

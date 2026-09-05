@@ -54,6 +54,16 @@ describe('googleAuthService', () => {
         );
     });
 
+    it('handles DEVELOPER_ERROR code with clear error message', async () => {
+        const devError = new Error('DEVELOPER_ERROR: Follow troubleshooting instructions');
+        devError.code = '10';
+        GoogleSignin.signIn.mockRejectedValueOnce(devError);
+
+        await expect(googleAuthService.signIn()).rejects.toThrow(
+            'Google Sign-In configuration error (DEVELOPER_ERROR)'
+        );
+    });
+
     it('calls signOut and isSignedIn', async () => {
         await googleAuthService.signOut();
         expect(GoogleSignin.signOut).toHaveBeenCalled();

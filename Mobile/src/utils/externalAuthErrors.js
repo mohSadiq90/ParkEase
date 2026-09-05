@@ -20,6 +20,7 @@ export const FRIENDLY_MESSAGES = {
     email_required: 'Your Google account did not provide a verified email address.',
     email_not_verified: 'Please verify your email with Google, then try again.',
     play_services_missing: 'Google Play Services is not available or outdated on this device.',
+    developer_error: 'Google Sign-In configuration error (DEVELOPER_ERROR): The Android SHA-1 certificate fingerprint for com.parkease.app must be added to Google Cloud Console for project 202763663198.',
 };
 
 /**
@@ -81,12 +82,26 @@ export function getExternalAuthErrorMessage(error) {
         return FRIENDLY_MESSAGES[code];
     }
 
+    // Check if error message mentions DEVELOPER_ERROR or code 10
+    const rawMsg = error?.message || (typeof error === 'string' ? error : '');
+    if (
+        (typeof rawMsg === 'string' && rawMsg.includes('DEVELOPER_ERROR')) ||
+        error?.code === 'DEVELOPER_ERROR' ||
+        error?.code === '10' ||
+        error?.code === 10
+    ) {
+        return FRIENDLY_MESSAGES.developer_error;
+    }
+
     // Try backend message if friendly
     const backendMessage = error?.response?.data?.message || error?.message;
     if (backendMessage && typeof backendMessage === 'string') {
         // Map common raw backend message
         if (backendMessage.toLowerCase().includes('invalid or expired identity token')) {
             return FRIENDLY_MESSAGES.invalid_id_token;
+        }
+        if (backendMessage.includes('DEVELOPER_ERROR')) {
+            return FRIENDLY_MESSAGES.developer_error;
         }
         if (!/^[a-z][a-z0-9_]*$/.test(backendMessage)) {
             return backendMessage;

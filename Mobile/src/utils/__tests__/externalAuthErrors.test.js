@@ -54,6 +54,15 @@ describe('externalAuthErrors', () => {
             expect(getExternalAuthErrorMessage(error)).toBe(FRIENDLY_MESSAGES.invalid_id_token);
         });
 
+        it('maps DEVELOPER_ERROR string and code to developer_error message', () => {
+            const errString = 'DEVELOPER_ERROR: Follow troubleshooting instructions at https://react-native-google-signin.github.io/docs/troubleshooting';
+            expect(getExternalAuthErrorMessage(errString)).toBe(FRIENDLY_MESSAGES.developer_error);
+
+            const errObj = new Error('DEVELOPER_ERROR');
+            errObj.code = '10';
+            expect(getExternalAuthErrorMessage(errObj)).toBe(FRIENDLY_MESSAGES.developer_error);
+        });
+
         it('falls back to default friendly message when error is unrecognized', () => {
             expect(getExternalAuthErrorMessage({})).toBe('Google Sign-In failed. Please try again.');
         });

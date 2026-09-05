@@ -103,6 +103,17 @@ export const googleAuthService = {
                 throw err;
             }
 
+            if (error.code === '10' || error.code === 10 || error.message?.includes('DEVELOPER_ERROR')) {
+                logger.error(TAG, 'Google Sign-In DEVELOPER_ERROR: Missing Android SHA-1 in Google Cloud Console', {
+                    packageName: 'com.parkease.app',
+                    sha1: '59:E1:77:99:1A:CB:28:C5:B7:15:6E:7E:89:C0:7A:08:56:BC:1F:3D',
+                    webClientId: environment.googleWebClientId,
+                });
+                const devErr = new Error('Google Sign-In configuration error (DEVELOPER_ERROR): The Android SHA-1 certificate fingerprint for com.parkease.app must be added to Google Cloud Console for project 202763663198.');
+                devErr.code = 'developer_error';
+                throw devErr;
+            }
+
             logger.error(TAG, 'Google Sign-In failed', error);
             throw error;
         }
