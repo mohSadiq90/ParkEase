@@ -15,6 +15,7 @@ import Input from '../../components/Common/Input';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { ParkingType, ParkingTypeLabels, AMENITIES, ListingCategory, ListingCategoryLabels, EvPricingMode } from '../../utils/constants';
 import { fileUploadService } from '../../services/api/fileUploadService';
+import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
 
 const CreateParkingScreen = ({ navigation, route }) => {
     const editData = route?.params?.editData;
@@ -168,6 +169,10 @@ const CreateParkingScreen = ({ navigation, route }) => {
         if (isEditing) {
             const result = await dispatch(updateParkingThunk({ id: editData.id, data: payload }));
             if (!result.error) {
+                posthogService.trackEvent(AnalyticsEvents.LISTING_UPDATED, {
+                    id: editData.id,
+                    title: payload.title,
+                });
                 Alert.alert('Success', 'Parking space updated!', [
                     { text: 'OK', onPress: () => navigation.goBack() },
                 ]);
@@ -177,6 +182,15 @@ const CreateParkingScreen = ({ navigation, route }) => {
         } else {
             const result = await dispatch(createParkingThunk(payload));
             if (!result.error) {
+                posthogService.trackEvent(AnalyticsEvents.LISTING_CREATED, {
+                    title: payload.title,
+                    city: payload.city,
+                    totalSpots: payload.totalSpots,
+                    hourlyRate: payload.hourlyRate,
+                    hasEvCharging: Boolean(payload.hasEvCharging),
+                    instantBook: Boolean(payload.instantBook),
+                    isLprEnabled: Boolean(payload.isLprEnabled),
+                });
                 Alert.alert('Success', 'Parking space created!', [
                     { text: 'OK', onPress: () => navigation.goBack() },
                 ]);

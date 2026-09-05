@@ -18,6 +18,7 @@ import MapViewComponent from './MapViewComponent';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency } from '../../utils/formatters';
 import { VehicleTypeLabels, AMENITIES, ListingCategory, ListingCategoryLabels } from '../../utils/constants';
+import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
 
 const ParkingCard = ({ parking, onPress }) => {
     const displayRate = parking.effectiveHourlyRate ?? parking.hourlyRate;
@@ -128,6 +129,14 @@ const SearchScreen = ({ navigation }) => {
 
     const loadParkings = useCallback((city, vehicleType, maxRate, evOnly = hasEvOnly, instantOnly = instantBookOnly, cat = selectedCategory) => {
         setHasSearched(true);
+        posthogService.trackEvent(AnalyticsEvents.SEARCH_PERFORMED, {
+            city: city || 'all',
+            vehicleType,
+            hasEvCharging: Boolean(evOnly),
+            instantBook: Boolean(instantOnly),
+            category: cat,
+            maxHourlyRate: maxRate ? parseFloat(maxRate) : undefined,
+        });
         dispatch(searchParkingThunk({
             city: city || undefined,
             vehicleType: vehicleType ?? undefined,

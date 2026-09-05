@@ -7,6 +7,7 @@ import axios from 'axios';
 import environment from '../../config/environment';
 import { storageService } from '../storage/secureStorage';
 import logger from '../../utils/logger';
+import posthogService from '../analytics/posthogService';
 
 const TAG = 'ApiClient';
 
@@ -100,6 +101,16 @@ apiClient.interceptors.response.use(
             } finally {
                 isRefreshing = false;
             }
+        }
+
+        // Capture 5xx server errors and network connection failures to PostHog
+        if ((error.response && error.response.status >= 500) || !error.response) {
+            posthogService.captureException(error, {
+                endpoint: originalRequest?.url,
+                method: originalRequest?.method,
+                statusCode: error.response?.status,
+                isNetworkError: !error.response,
+            });
         }
 
         return Promise.reject(error);

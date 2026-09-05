@@ -21,6 +21,7 @@ const RootNavigator = () => {
     const { isAuthenticated, isSessionChecked } = useAuth();
     const navigationRef = useRef(null);
     const routeNameRef = useRef(null);
+    const screenStartTimeRef = useRef(Date.now());
 
     useEffect(() => {
         dispatch(restoreSessionThunk());
@@ -37,7 +38,8 @@ const RootNavigator = () => {
                 const initialRoute = navigationRef.current?.getCurrentRoute();
                 if (initialRoute?.name) {
                     routeNameRef.current = initialRoute.name;
-                    posthogService.trackScreen(initialRoute.name, initialRoute.params);
+                    screenStartTimeRef.current = Date.now();
+                    posthogService.trackScreen(initialRoute.name, initialRoute.params, null, 0);
                 }
             }}
             onStateChange={() => {
@@ -46,9 +48,18 @@ const RootNavigator = () => {
                 const currentRouteName = currentRoute?.name;
 
                 if (currentRouteName && previousRouteName !== currentRouteName) {
-                    posthogService.trackScreen(currentRouteName, currentRoute?.params);
+                    const now = Date.now();
+                    const dwellTimeMs = now - (screenStartTimeRef.current || now);
+                    screenStartTimeRef.current = now;
+                    routeNameRef.current = currentRouteName;
+
+                    posthogService.trackScreen(
+                        currentRouteName,
+                        currentRoute.params,
+                        previousRouteName,
+                        dwellTimeMs
+                    );
                 }
-                routeNameRef.current = currentRouteName;
             }}
         >
             <Stack.Navigator screenOptions={{ headerShown: false }}>

@@ -110,6 +110,9 @@ const mockPostHogInstance = {
   ready: jest.fn().mockResolvedValue(true),
   getDistinctId: jest.fn().mockReturnValue('mock-distinct-id'),
   getDeviceId: jest.fn().mockReturnValue('mock-device-id'),
+  group: jest.fn(),
+  captureException: jest.fn(),
+  getSurveys: jest.fn().mockResolvedValue([]),
 };
 
 jest.mock('posthog-react-native', () => {

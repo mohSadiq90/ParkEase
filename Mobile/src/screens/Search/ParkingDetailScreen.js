@@ -23,6 +23,7 @@ import { colors, spacing, typography, shadows } from '../../styles/globalStyles'
 import { formatCurrency, formatDate, formatTime, getParkingImageUrls } from '../../utils/formatters';
 import { ParkingTypeLabels, PricingTypeLabels } from '../../utils/constants';
 import chatService from '../../services/chat/chatService';
+import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
 
 const { width } = Dimensions.get('window');
 const HERO_HEIGHT = 300;
@@ -90,6 +91,17 @@ const ParkingDetailScreen = ({ navigation, route }) => {
 
     useEffect(() => {
         setActiveImageIndex(0);
+        if (parking?.id) {
+            posthogService.trackEvent(AnalyticsEvents.VIEW_PARKING_DETAIL, {
+                parkingSpaceId: parking.id,
+                title: parking.title,
+                city: parking.city,
+                hourlyRate: parking.hourlyRate,
+                effectiveRate: parking.effectiveHourlyRate ?? parking.hourlyRate,
+                hasEvCharging: Boolean(parking.hasEvCharging),
+                instantBook: Boolean(parking.instantBook),
+            });
+        }
     }, [parking?.id]);
 
     useEffect(() => {
@@ -117,7 +129,12 @@ const ParkingDetailScreen = ({ navigation, route }) => {
         setFavLoading(true);
         try {
             const result = await dispatch(toggleFavoriteThunk(parkingId)).unwrap();
-            setIsFavorited(result.isFavorited ?? !isFavorited);
+            const nextFav = result.isFavorited ?? !isFavorited;
+            setIsFavorited(nextFav);
+            posthogService.trackEvent(AnalyticsEvents.TOGGLE_FAVORITE, {
+                parkingSpaceId: parkingId,
+                isFavorited: nextFav,
+            });
         } catch {
             EventBus.emit('SHOW_ERROR_BANNER', { title: 'Error', message: 'Could not update favorite.' });
         } finally {

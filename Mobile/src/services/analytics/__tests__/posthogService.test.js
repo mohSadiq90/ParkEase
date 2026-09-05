@@ -1,4 +1,4 @@
-import posthogService, { posthog, AnalyticsEvents } from '../posthogService';
+import posthogService, { posthog, AnalyticsEvents, getScreenModule, sanitizeRouteParams } from '../posthogService';
 import environment from '../../../config/environment';
 
 describe('PostHog Analytics Service', () => {
@@ -28,10 +28,13 @@ describe('PostHog Analytics Service', () => {
             expect(AnalyticsEvents.BOOKING_CREATED).toBe('booking_created');
             expect(AnalyticsEvents.PAYMENT_COMPLETED).toBe('payment_completed');
             expect(AnalyticsEvents.LISTING_CREATED).toBe('listing_created');
+            expect(AnalyticsEvents.ACCESS_PASS_VERIFIED).toBe('access_pass_verified');
+            expect(AnalyticsEvents.VEHICLE_ADDED).toBe('vehicle_added');
+            expect(AnalyticsEvents.API_ERROR_OCCURRED).toBe('api_error_occurred');
         });
     });
 
-    describe('identifyUser', () => {
+    describe('identifyUser and B2B Group Binding', () => {
         it('calls posthog.identify with formatted distinctId and person properties', () => {
             const mockUser = {
                 id: 'usr-12345',
@@ -61,6 +64,30 @@ describe('PostHog Analytics Service', () => {
                     companyId: null,
                     companyRole: null,
                     linkedProviders: ['google'],
+                })
+            );
+        });
+
+        it('automatically binds corporate user to company group when companyId is present', () => {
+            const corporateUser = {
+                id: 'usr-corp-99',
+                email: 'manager@acmecorp.com',
+                firstName: 'Morgan',
+                companyId: 'company-55',
+                companyRole: 'Admin',
+                channel: 'Corporate',
+            };
+
+            posthogService.identifyUser(corporateUser);
+
+            expect(posthog.identify).toHaveBeenCalledWith('usr-corp-99', expect.any(Object));
+            expect(posthog.group).toHaveBeenCalledWith(
+                'company',
+                'company-55',
+                expect.objectContaining({
+                    companyId: 'company-55',
+                    companyRole: 'Admin',
+                    channel: 'Corporate',
                 })
             );
         });
@@ -97,6 +124,27 @@ describe('PostHog Analytics Service', () => {
             expect(() => {
                 posthogService.identifyUser({ id: 'err-1', email: 'fail@test.com' });
             }).not.toThrow();
+        });
+    });
+
+    describe('groupCompany (B2B Analytics)', () => {
+        it('calls posthog.group with company key and properties', () => {
+            posthogService.groupCompany('comp-101', { name: 'Acme Fleet', tier: 'Enterprise' });
+
+            expect(posthog.group).toHaveBeenCalledWith(
+                'company',
+                'comp-101',
+                expect.objectContaining({
+                    companyId: 'comp-101',
+                    name: 'Acme Fleet',
+                    tier: 'Enterprise',
+                })
+            );
+        });
+
+        it('handles null companyId gracefully', () => {
+            posthogService.groupCompany(null);
+            expect(posthog.group).not.toHaveBeenCalled();
         });
     });
 
@@ -145,13 +193,51 @@ describe('PostHog Analytics Service', () => {
         });
     });
 
-    describe('trackScreen', () => {
-        it('calls posthog.screen with screen name and route parameters', () => {
-            posthogService.trackScreen('ParkingDetailScreen', { parkingSpaceId: 'spot-99' });
+    describe('trackScreen with Dwell Time & Transition Context', () => {
+        it('enriches screen event with module, previous_screen, and dwell time', () => {
+            posthogService.trackScreen(
+                'BookingDetailScreen',
+                { bookingId: 'bk-555', status: 'Confirmed' },
+                'BookingScreen',
+                45200
+            );
 
-            expect(posthog.screen).toHaveBeenCalledWith('ParkingDetailScreen', {
-                parkingSpaceId: 'spot-99',
-            });
+            expect(posthog.screen).toHaveBeenCalledWith(
+                'BookingDetailScreen',
+                expect.objectContaining({
+                    screen_module: 'Booking & Checkout',
+                    previous_screen: 'BookingScreen',
+                    dwell_time_ms: 45200,
+                    dwell_time_seconds: 45,
+                    bookingId: 'bk-555',
+                    status: 'Confirmed',
+                })
+            );
+        });
+
+        it('maps module categorization accurately across domains', () => {
+            expect(getScreenModule('Login')).toBe('Auth');
+            expect(getScreenModule('SearchScreen')).toBe('Search & Discovery');
+            expect(getScreenModule('CreateParkingScreen')).toBe('Host & Vendor');
+            expect(getScreenModule('CorporateDashboard')).toBe('Corporate Suite');
+            expect(getScreenModule('UnknownScreen')).toBe('General');
+        });
+
+        it('sanitizes route params to strip non-whitelisted or sensitive data', () => {
+            const rawParams = {
+                parkingSpaceId: 'spot-10',
+                city: 'Austin',
+                password: 'secretPassword123',
+                creditCard: '4111222233334444',
+                token: 'bearerToken',
+            };
+
+            const sanitized = sanitizeRouteParams(rawParams);
+            expect(sanitized.parkingSpaceId).toBe('spot-10');
+            expect(sanitized.city).toBe('Austin');
+            expect(sanitized.password).toBeUndefined();
+            expect(sanitized.creditCard).toBeUndefined();
+            expect(sanitized.token).toBeUndefined();
         });
 
         it('ignores null or empty screen names', () => {
@@ -171,6 +257,45 @@ describe('PostHog Analytics Service', () => {
         });
     });
 
+    describe('captureException (Observability & Error Tracking)', () => {
+        it('calls posthog.captureException and records API_ERROR_OCCURRED event', () => {
+            const error = new Error('500 Internal Server Error');
+            posthogService.captureException(error, {
+                endpoint: '/api/bookings',
+                method: 'POST',
+                statusCode: 500,
+                isNetworkError: false,
+            });
+
+            expect(posthog.captureException).toHaveBeenCalledWith(
+                error,
+                expect.objectContaining({
+                    endpoint: '/api/bookings',
+                    statusCode: 500,
+                })
+            );
+
+            expect(posthog.capture).toHaveBeenCalledWith(
+                AnalyticsEvents.API_ERROR_OCCURRED,
+                expect.objectContaining({
+                    errorMessage: '500 Internal Server Error',
+                    endpoint: '/api/bookings',
+                    statusCode: 500,
+                })
+            );
+        });
+
+        it('handles captureException errors gracefully without crashing', () => {
+            posthog.captureException.mockImplementationOnce(() => {
+                throw new Error('Capture exception failure');
+            });
+
+            expect(() => {
+                posthogService.captureException(new Error('Network drop'));
+            }).not.toThrow();
+        });
+    });
+
     describe('registerSuperProperties', () => {
         it('registers properties across all events', () => {
             posthogService.registerSuperProperties({ platform: 'mobile', appVersion: '1.0.0' });
@@ -178,7 +303,7 @@ describe('PostHog Analytics Service', () => {
         });
     });
 
-    describe('Feature Flags & Flush', () => {
+    describe('Feature Flags, Surveys & Flush', () => {
         it('evaluates isFeatureEnabled', () => {
             posthog.isFeatureEnabled.mockReturnValueOnce(true);
             expect(posthogService.isFeatureEnabled('new-checkout-flow')).toBe(true);
@@ -198,6 +323,12 @@ describe('PostHog Analytics Service', () => {
         it('gets feature flag payload', () => {
             posthog.getFeatureFlag.mockReturnValueOnce('variant-b');
             expect(posthogService.getFeatureFlag('banner-test')).toBe('variant-b');
+        });
+
+        it('fetches active surveys', async () => {
+            posthog.getSurveys.mockResolvedValueOnce([{ id: 'survey-nps-1', name: 'Post Booking NPS' }]);
+            const surveys = await posthogService.getSurveys();
+            expect(surveys).toEqual([{ id: 'survey-nps-1', name: 'Post Booking NPS' }]);
         });
 
         it('flushes event queue', async () => {

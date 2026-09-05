@@ -18,6 +18,7 @@ import Input from '../../components/Common/Input';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
 import { PricingType, PricingTypeLabels, VehicleType, VehicleTypeLabels } from '../../utils/constants';
+import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
 
 const BookingScreen = ({ navigation, route }) => {
     const { parkingId } = route.params;
@@ -185,6 +186,14 @@ const BookingScreen = ({ navigation, route }) => {
             ancillaryServiceIds: selectedAncillaryIds.length > 0 ? selectedAncillaryIds : undefined,
         }));
         if (!result.error) {
+            posthogService.trackEvent(AnalyticsEvents.BOOKING_CREATED, {
+                parkingSpaceId: parkingId,
+                bookingId: result.payload?.id || result.payload?.bookingId,
+                vehicleType,
+                pricingType,
+                hasAncillaries: selectedAncillaryIds.length > 0,
+                ancillariesCount: selectedAncillaryIds.length,
+            });
             navigation.goBack();
         } else {
             Alert.alert('Booking Failed', result.payload || 'A network error occurred. Please try again.');

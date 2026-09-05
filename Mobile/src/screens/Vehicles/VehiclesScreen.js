@@ -5,6 +5,7 @@ import { colors, typography, spacing } from '../../styles/globalStyles';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import { vehicleService } from '../../services/api/vehicleService';
 import { VehicleType, VehicleTypeLabels } from '../../utils/constants';
+import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
 
 const VehiclesScreen = ({ navigation }) => {
     const [vehicles, setVehicles] = useState([]);
@@ -56,6 +57,12 @@ const VehiclesScreen = ({ navigation }) => {
             });
             
             if (response.success) {
+                posthogService.trackEvent(AnalyticsEvents.VEHICLE_ADDED, {
+                    make: newMake.trim(),
+                    model: newModel.trim(),
+                    type: Number(newType),
+                    isDefault: Boolean(isDefault || vehicles.length === 0),
+                });
                 setIsAdding(false);
                 setNewMake('');
                 setNewModel('');

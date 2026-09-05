@@ -9,40 +9,47 @@
 
 ## 📅 Daily Work & Progress Log
 
-### [2026-09-05] - PostHog Analytics SDK Integration & Full User Lifecycle Instrumentation
+### [2026-09-05] - PostHog Analytics SDK Integration, Enriched Screen Tracking & Funnel Instrumentation
 - **Features & Enhancements**:
   - **PostHog React Native SDK Integration**: Installed and configured `posthog-react-native` (^4.67.0) alongside required Expo SDK 54 modules (`expo-application`, `expo-device`, `expo-file-system`, `expo-localization`).
   - **Project Configuration**: Configured US Cloud PostHog project token `phc_ocMXR9NeuG667HK2Gr48eRN9mDrmugaUFWXUDm8M534W` and ingestion endpoint `https://us.i.posthog.com` in `environment.js` with fallback support for `EXPO_PUBLIC_POSTHOG_API_KEY` and `EXPO_PUBLIC_POSTHOG_HOST` (Project settings: `https://us.posthog.com/project/595344/settings/project-details#variables`).
-  - **Centralized Analytics Service (`posthogService.js`)**: Created a dedicated, resilient analytics service providing singleton `posthog` client access, comprehensive `AnalyticsEvents` catalog (auth, navigation, bookings, payments, passes, spaces, vehicles), `identifyUser(user)`, `resetUser()`, `trackEvent(name, properties)`, `trackScreen(screenName, properties)`, `registerSuperProperties()`, feature flags evaluation (`isFeatureEnabled`, `getFeatureFlag`), and queue flushing.
-  - **Global PostHog Provider Wrapper**: Wrapped the root application component tree in `App.js` with `<PostHogProvider client={posthog} autocapture={{ captureTouches: true, captureScreens: false }}>`, enabling automatic touch autocapture while managing screen views deterministically.
-  - **Automated Navigation Screen View Tracking**: Wired `NavigationContainer` in `RootNavigator.js` via `onReady` and `onStateChange` listeners to automatically capture screen views (`$screen`) across all stacks and tabs.
-  - **Full Auth Lifecycle & Identity Tracking**: Integrated automatic user identification (`identifyUser`) and event tracking across all authentication entry points in `authService.js`:
-    - Email/password login (`user_login`, `method: 'email'`)
-    - Registration (`user_register`)
-    - Corporate company login (`user_login`, `method: 'corporate'`)
-    - External social login (`user_external_login`, `provider: 'google'`)
-    - Corporate SSO login (`user_login`, `method: 'sso'`)
-    - Channel switching (`user_channel_switched`)
-    - Session restoration (`user_session_restored`)
-    - External account linking (`user_external_link`)
-    - User identity reset and event tracking on logout (`user_logout`, `posthog.reset()`) and account deletion.
+  - **Centralized Analytics Service (`posthogService.js`)**: Created a dedicated, resilient analytics service providing singleton `posthog` client access, comprehensive `AnalyticsEvents` catalog (auth, navigation, bookings, payments, passes, spaces, vehicles, error observability), `identifyUser(user)`, `resetUser()`, `trackEvent(name, properties)`, `trackScreen(screenName, properties, previousScreen, dwellTimeMs)`, `groupCompany(companyId, props)`, `captureException(error, context)`, `getSurveys()`, `registerSuperProperties()`, feature flags evaluation (`isFeatureEnabled`, `getFeatureFlag`), and queue flushing.
+  - **Dwell Time & Screen Transition Tracking (`RootNavigator.js`)**: Enhanced `NavigationContainer`'s `onReady` and `onStateChange` listeners with a high-resolution timestamp ref to automatically compute and forward `dwell_time_ms`, `dwell_time_seconds`, and `previous_screen` across route transitions on all 39 screens.
+  - **Domain & Module Categorization**: Built automatic screen classification mapping into `getScreenModule(screenName)` (Auth, Home & Dashboards, Search & Discovery, Booking & Checkout, Host & Vendor, Corporate Suite, User Profile & Garage, Passes & Events, Communication, Social & Reviews) and non-PII route parameter sanitization (`sanitizeRouteParams`).
+  - **B2B Group Analytics**: Wired `identifyUser` and corporate authentication flows to automatically bind enterprise users to their respective company group via `posthog.group('company', companyId)`.
+  - **Automated API Error & Network Failure Observability (`apiClient.js`)**: Augmented the Axios response interceptor to automatically capture 5xx server errors and network connection drops to PostHog via `posthogService.captureException()` without disrupting standard application error handling.
+  - **End-to-End Business Action & Funnel Tracking**:
+    - **Search & Discovery**: Tracked `search_performed` with filters in `SearchScreen.js`, and `view_parking_detail` & `toggle_favorite` in `ParkingDetailScreen.js`.
+    - **Booking & Checkout**: Tracked `booking_created` in `BookingScreen.js`, and `payment_initiated`, `payment_completed`, and `payment_failed` in `PaymentScreen.js`.
+    - **Host / Vendor Space Lifecycle**: Tracked `listing_created` and `listing_updated` in `CreateParkingScreen.js`.
+    - **Gate Access Verification**: Tracked `access_pass_verified` with scanner mode and access decision in `AccessPassScannerScreen.js`.
+    - **Garage Management**: Tracked `vehicle_added` with make, model, type, and default status in `VehiclesScreen.js`.
+  - **Full Auth Lifecycle & Identity Tracking**: Integrated automatic user identification (`identifyUser`) and event tracking across all authentication entry points in `authService.js` (email login, signup, corporate login, external social Google OAuth, SSO, channel switching, session restoration, and logout/account deletion cleanup).
 - **Bug Fixes & Refactoring**:
   - **E2E Test Concurrency Stability**: Extended `findByText` timeout in `VendorFlow.test.js` to prevent intermittent timeout flakes during parallel test runs across 31 suites.
-  - **Comprehensive Jest Mocking**: Implemented complete mock for `posthog-react-native` in `jest.setup.js` covering `PostHog`, `PostHogProvider`, `usePostHog`, and all analytics methods.
-  - **Unit Testing Suite**: Added 18 unit tests in `posthogService.test.js` verifying client initialization, user identification with fallbacks, session reset, custom event capture, screen tracking, super properties, feature flag evaluation, and exception resilience.
+  - **Comprehensive Jest Mocking**: Implemented complete mock for `posthog-react-native` in `jest.setup.js` covering `PostHog`, `PostHogProvider`, `usePostHog`, `group`, `captureException`, `getSurveys`, and all analytics methods.
+  - **Unit Testing Suite Expansion**: Expanded unit test coverage in `posthogService.test.js` to 26 unit tests verifying client initialization, user identification with fallbacks, B2B group binding, session reset, custom event capture, screen transition tracking with dwell time, route parameter sanitization, error capture, and survey fetching.
 - **Key Files Modified**:
   - `Mobile/package.json` & `Mobile/package-lock.json`
   - `Mobile/src/config/environment.js`
-  - `Mobile/src/services/analytics/posthogService.js` (new)
-  - `Mobile/src/services/analytics/__tests__/posthogService.test.js` (new)
+  - `Mobile/src/services/analytics/posthogService.js`
+  - `Mobile/src/services/analytics/__tests__/posthogService.test.js`
   - `Mobile/App.js`
   - `Mobile/src/navigation/RootNavigator.js`
+  - `Mobile/src/services/api/apiClient.js`
   - `Mobile/src/services/auth/authService.js`
+  - `Mobile/src/screens/Search/SearchScreen.js`
+  - `Mobile/src/screens/Search/ParkingDetailScreen.js`
+  - `Mobile/src/screens/Booking/BookingScreen.js`
+  - `Mobile/src/screens/Payment/PaymentScreen.js`
+  - `Mobile/src/screens/Vendor/CreateParkingScreen.js`
+  - `Mobile/src/screens/Vendor/AccessPassScannerScreen.js`
+  - `Mobile/src/screens/Vehicles/VehiclesScreen.js`
   - `Mobile/jest.setup.js`
   - `Mobile/src/__tests__/e2e/VendorFlow.test.js`
   - `PROGRESS.md`
 - **Current Status & Next Steps**:
-  - 100% test pass rate achieved across all 31 Jest test suites (136/136 tests passing).
+  - 100% test pass rate achieved across all 31 Jest test suites (144/144 tests passing).
   - Ready for commit and push to remote.
 
 ### [2026-09-05] - Fix Google Sign-In Session Ingestion, User Data Restoration & Account Linking Flow

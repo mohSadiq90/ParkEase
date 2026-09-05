@@ -15,6 +15,7 @@ import Button from '../../components/Common/Button';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency } from '../../utils/formatters';
 import { PaymentMethodLabels, PaymentMethod } from '../../utils/constants';
+import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
 
 const InfoRow = ({ label, value, bold }) => (
     <View style={rowStyles.row}>
@@ -47,15 +48,31 @@ const PaymentScreen = ({ navigation, route }) => {
             EventBus.emit('SHOW_ERROR_BANNER', { title: 'Error', message: 'Missing booking information' });
             return;
         }
+        posthogService.trackEvent(AnalyticsEvents.PAYMENT_INITIATED, {
+            bookingId,
+            amount,
+            paymentMethod: selectedMethod,
+        });
         const result = await dispatch(processPaymentThunk({
             bookingId,
             amount,
             paymentMethod: selectedMethod,
         }));
         if (!result.error) {
+            posthogService.trackEvent(AnalyticsEvents.PAYMENT_COMPLETED, {
+                bookingId,
+                amount,
+                paymentMethod: selectedMethod,
+            });
             EventBus.emit('SHOW_BANNER', { title: 'Payment Successful', message: 'Your payment has been processed.', type: 'success' });
             navigation.goBack();
         } else {
+            posthogService.trackEvent(AnalyticsEvents.PAYMENT_FAILED, {
+                bookingId,
+                amount,
+                paymentMethod: selectedMethod,
+                error: result.payload,
+            });
             EventBus.emit('SHOW_ERROR_BANNER', { title: 'Payment Failed', message: result.payload || 'Please try again.' });
         }
     }, [dispatch, bookingId, amount, selectedMethod, navigation]);

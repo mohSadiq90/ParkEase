@@ -14,6 +14,7 @@ import apiClient from '../../services/api/apiClient';
 import ENDPOINTS from '../../services/api/endpoints';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatDateTime } from '../../utils/formatters';
+import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
 
 const AccessPassScannerScreen = ({ navigation }) => {
     const [tokenInput, setTokenInput] = useState('');
@@ -34,6 +35,11 @@ const AccessPassScannerScreen = ({ navigation }) => {
             const res = await apiClient.post(ENDPOINTS.BOOKINGS.ACCESS_PASS_VERIFY, { token });
             const data = res.data?.data || res.data || {};
             setVerifyResult(data);
+            posthogService.trackEvent(AnalyticsEvents.ACCESS_PASS_VERIFIED, {
+                granted: Boolean(data.accessGranted ?? data.isSuccess ?? false),
+                decision: data.decision || (data.accessGranted ? 'Granted' : 'Denied'),
+                scannerMode: tokenToVerify ? 'camera' : 'manual',
+            });
             setHistory((prev) => [
                 {
                     token,
