@@ -60,8 +60,10 @@
   - `Mobile/src/utils/test-utils.js`
   - `API_ENDPOINTS_MOBILE.md`
 - **Current Status & Next Steps**:
-  - 100% test pass rate achieved across all 24 Jest test suites (83/83 tests passing).
-  - All missing endpoints and modules from `API_ENDPOINTS_MOBILE.md` implemented.
+  - 100% test pass rate achieved across all 28 Jest test suites (97/97 tests passing).
+  - All new implementations covered with dedicated unit test suites (`AccessPassScannerScreen`, `ReviewsListScreen`, `VehiclesScreen`, `adminSlice`).
+  - Added deterministic build number configuration to `app.json`, Android release Gradle build, and GitHub Actions CI workflow (`${{ github.run_number }}`).
+  - Added in-app version & build number indicator in `ProfileScreen.js` via `version.js`.
   - Broadcasted completed feature parity release summary to Slack `#qa-builds-android`.
 
 ### [2026-08-19] - Repository Rules & Workflow Standardization

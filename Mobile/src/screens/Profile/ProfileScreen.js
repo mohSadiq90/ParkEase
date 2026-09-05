@@ -16,6 +16,7 @@ import Card from '../../components/Common/Card';
 import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
+import { APP_VERSION_STRING } from '../../config/version';
 
 
 const MenuItem = ({ icon, label, value, onPress, danger = false, badge = 0 }) => (
@@ -204,6 +205,10 @@ const ProfileScreen = ({ navigation }) => {
                     style={styles.logoutBtn}
                     icon={!isLoggingOut ? <Ionicons name="log-out-outline" size={20} color={colors.white} /> : undefined}
                 />
+
+                <View style={styles.versionContainer}>
+                    <Text style={styles.versionText}>{APP_VERSION_STRING}</Text>
+                </View>
             </View>
         </ScreenLayout>
     );
@@ -223,6 +228,8 @@ const styles = StyleSheet.create({
     sectionTitle: { ...typography.label, color: colors.textPrimary, marginBottom: spacing.md },
     editActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
     logoutBtn: { marginTop: spacing.xl, marginHorizontal: spacing.screenHorizontal },
+    versionContainer: { alignItems: 'center', marginTop: spacing.lg, paddingBottom: spacing.md },
+    versionText: { ...typography.caption, color: colors.textMuted },
 });
 
 export default ProfileScreen;

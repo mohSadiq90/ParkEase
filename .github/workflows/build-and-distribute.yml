@@ -40,8 +40,11 @@ jobs:
 
       - name: Expo Prebuild Android
         working-directory: Mobile
+        env:
+          VERSION_CODE: ${{ github.run_number }}
         run: |
           set -o pipefail
+          node -e "const fs = require('fs'); const a = JSON.parse(fs.readFileSync('app.json')); a.expo.android = a.expo.android || {}; a.expo.android.versionCode = parseInt(process.env.VERSION_CODE || '1', 10); fs.writeFileSync('app.json', JSON.stringify(a, null, 2));"
           npx expo prebuild --platform android --clean --no-install 2>&1 | tee prebuild.log
 
       - name: Configure Deterministic Debug Keystore
@@ -59,10 +62,13 @@ jobs:
 
       - name: Build Release APK
         working-directory: Mobile/android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.0-b${{ github.run_number }}
         run: |
           set -o pipefail
           cp -a ../assets/android-icons/. app/src/main/res/
-          ./gradlew assembleRelease --no-daemon 2>&1 | tee gradle_build.log
+          ./gradlew assembleRelease -PversionCode=${{ github.run_number }} -PversionName="1.0.0-b${{ github.run_number }}" --no-daemon 2>&1 | tee gradle_build.log
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

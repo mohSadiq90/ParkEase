@@ -338,7 +338,7 @@ const SearchScreen = ({ navigation }) => {
                                     { id: 'priceAsc', label: 'Price: Low to High' },
                                     { id: 'priceDesc', label: 'Price: High to Low' },
                                     { id: 'rating', label: 'Highest Rated' },
-                                ]).map((item) => (
+                                ].map((item) => (
                                     <TouchableOpacity
                                         key={item.id}
                                         onPress={() => setSortBy(item.id)}

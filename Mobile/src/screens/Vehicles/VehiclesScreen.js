@@ -160,7 +160,7 @@ const VehiclesScreen = ({ navigation }) => {
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary || colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>My Vehicles</Text>
-                <TouchableOpacity onPress={() => setIsAdding(!isAdding)} style={styles.addButton}>
+                <TouchableOpacity onPress={() => setIsAdding(!isAdding)} style={styles.addButton} testID="toggle-add-vehicle-btn">
                     <Ionicons name={isAdding ? "close" : "add"} size={24} color={colors.primary} />
                 </TouchableOpacity>
             </View>

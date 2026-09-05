@@ -14,10 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.parkease.app"
+      "bundleIdentifier": "com.parkease.app",
+      "buildNumber": "1"
     },
     "android": {
       "package": "com.parkease.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
