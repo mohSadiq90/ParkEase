@@ -45,6 +45,10 @@ const BookingScreen = ({ navigation, route }) => {
     const [vehicleType, setVehicleType] = useState(VehicleType.Car);
     const [discountCode, setDiscountCode] = useState('');
 
+    // Ancillary Add-on Services (API_ENDPOINTS_MOBILE Section 12)
+    const [ancillaryServices, setAncillaryServices] = useState([]);
+    const [selectedAncillaryIds, setSelectedAncillaryIds] = useState([]);
+
     // Garage vehicles
     const [garageVehicles, setGarageVehicles] = useState([]);
     const [selectedVehicleId, setSelectedVehicleId] = useState(null);
@@ -73,10 +77,24 @@ const BookingScreen = ({ navigation, route }) => {
                 // Ignore fallback
             }
         };
-        loadVehicles();
-    }, []);
 
-    // Calculate price whenever dates or pricing type change
+        const loadAncillary = async () => {
+            try {
+                const res = await apiClient.get(ENDPOINTS.ANCILLARY_SERVICES.BY_PARKING(parkingId));
+                const items = res.data?.data || res.data || [];
+                if (Array.isArray(items)) {
+                    setAncillaryServices(items.filter((item) => item.isActive !== false));
+                }
+            } catch (e) {
+                // Ignore fallback
+            }
+        };
+
+        loadVehicles();
+        loadAncillary();
+    }, [parkingId]);
+
+    // Calculate price whenever dates, pricing type, discount or ancillary add-ons change
     useEffect(() => {
         if (startDate < endDate) {
             dispatch(calculatePriceThunk({
@@ -85,13 +103,20 @@ const BookingScreen = ({ navigation, route }) => {
                 endDateTime: endDate.toISOString(),
                 pricingType,
                 discountCode: discountCode || undefined,
+                ancillaryServiceIds: selectedAncillaryIds.length > 0 ? selectedAncillaryIds : undefined,
             }));
         }
-    }, [startDate, endDate, pricingType]);
+    }, [startDate, endDate, pricingType, selectedAncillaryIds, discountCode]);
 
     useEffect(() => {
         return () => { dispatch(clearPriceBreakdown()); };
     }, []);
+
+    const toggleAncillaryService = (serviceId) => {
+        setSelectedAncillaryIds((prev) =>
+            prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId]
+        );
+    };
 
     const handleSelectVehicle = (v) => {
         if (v === 'custom') {
@@ -157,6 +182,7 @@ const BookingScreen = ({ navigation, route }) => {
             vehicleColor: vehicleColor || undefined,
             slotNumber: slotNumber ? parseInt(slotNumber, 10) : undefined,
             discountCode: discountCode || undefined,
+            ancillaryServiceIds: selectedAncillaryIds.length > 0 ? selectedAncillaryIds : undefined,
         }));
         if (!result.error) {
             navigation.goBack();
@@ -262,6 +288,23 @@ const BookingScreen = ({ navigation, route }) => {
                             <Text style={styles.parkingAddress}>{parking?.address}</Text>
                         </View>
                     </Card>
+
+                    {/* Instant Confirmation Banner */}
+                    {parking?.instantBook && (
+                        <Card style={{ backgroundColor: `${colors.success}15`, borderColor: colors.success, borderWidth: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Ionicons name="flash" size={20} color={colors.successDark || '#059669'} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ ...typography.bodySmall, fontWeight: '700', color: colors.successDark || '#059669' }}>
+                                        Instant Confirmation
+                                    </Text>
+                                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
+                                        Your spot will be confirmed immediately without waiting for host review.
+                                    </Text>
+                                </View>
+                            </View>
+                        </Card>
+                    )}
 
                     {/* Date & Time Selection */}
                     <Card>
@@ -410,6 +453,59 @@ const BookingScreen = ({ navigation, route }) => {
                             ))}
                         </View>
                     </Card>
+
+                    {/* Add-on Services (Ancillary Catalog) */}
+                    {ancillaryServices.length > 0 && (
+                        <Card>
+                            <Text style={styles.sectionTitle}>Add-on Services</Text>
+                            <Text style={[typography.caption, { color: colors.textTertiary, marginBottom: spacing.sm }]}>
+                                Enhance your booking with host-provided services
+                            </Text>
+                            {ancillaryServices.map((service) => {
+                                const isSelected = selectedAncillaryIds.includes(service.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={service.id}
+                                        onPress={() => toggleAncillaryService(service.id)}
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            paddingVertical: spacing.sm,
+                                            borderBottomWidth: 1,
+                                            borderBottomColor: colors.borderLight,
+                                        }}
+                                    >
+                                        <View style={{ flex: 1, marginRight: spacing.sm }}>
+                                            <Text style={[typography.bodySmall, { fontWeight: '600', color: colors.textPrimary }]}>
+                                                {service.name}
+                                            </Text>
+                                            {service.description ? (
+                                                <Text style={[typography.caption, { color: colors.textTertiary, marginTop: 2 }]}>
+                                                    {service.description}
+                                                </Text>
+                                            ) : null}
+                                            {service.durationMinutes ? (
+                                                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                                                    ⏱️ ~{service.durationMinutes} mins
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                                            <Text style={[typography.bodySmall, { fontWeight: '700', color: colors.primary }]}>
+                                                +{formatCurrency(service.price)}
+                                            </Text>
+                                            <Ionicons
+                                                name={isSelected ? 'checkbox' : 'square-outline'}
+                                                size={20}
+                                                color={isSelected ? colors.primary : colors.textTertiary}
+                                            />
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </Card>
+                    )}
 
                     {/* Discount */}
                     <Card>

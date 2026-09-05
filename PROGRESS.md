@@ -14,6 +14,12 @@
   - **Comprehensive Backend Route & Enum Alignment**: Synchronized `endpoints.js` and `constants.js` with all 25 sections of `API_ENDPOINTS_MOBILE.md` (Authentication, Users, Parking Spaces, Bookings, Payments, Reviews, Favorites, Vehicles, Passes, Ancillary, Events, IoT, LPR, Corporate, Platform Admin `/api/admin/*`, Health). Configured with remote backend `https://parkeaseapp.runasp.net`.
   - **Auth, Channels & Enterprise SSO**: Implemented corporate login (`loginCorporate`), external OAuth (`loginExternal`), account linking, password reset/set endpoints, channel context inspection & switching (`switchChannel`), and enterprise SSO domain auto-discovery and authentication flow.
   - **Booking, Overstay Fee & Digital Wallet Passes**: Added outstanding overstay fee card with instant in-app settlement (`POST /api/payments/create-order` with `{ bookingId, payOverstayFee: true }`), Apple Wallet (`.pkpass`) & Google Wallet pass integration (`GET /api/passes/{id}/google-wallet`), and live EV charging session tracker.
+  - **Search & Detail Parity**: Added EV-charging, Category (Commercial/Residential/Airport/Event), and Instant-Book filters to `SearchScreen.js`; added dynamic pricing indicators and feature badges to `ParkingCard`; added EV charger specs, Indoor Bay guidance notes, and Valet service information cards to `ParkingDetailScreen.js`.
+  - **Vendor Listing Creation Parity**: Added full Section 4 listing configuration controls to `CreateParkingScreen.js` (`listingCategory`, `instantBook`, `isLprEnabled`, EV charging power/rates/modes, dynamic smart pricing multipliers, and indoor bay/valet guidance).
+  - **Booking Add-ons & Instant Confirmation**: Connected host ancillary catalog (`GET /api/ancillary-services/by-parking/{id}`) directly to `BookingScreen.js` for checkout add-on selection, dynamic price updates, and instant confirmation banner.
+  - **Gate Access Pass Verification**: Implemented `AccessPassScannerScreen.js` for gate attendants and hosts to scan and verify QR access passes (`POST /api/bookings/access-pass/verify`); wired into navigation stacks and `VendorDashboardScreen`.
+  - **Host Review Replies**: Added owner response display and reply submission modal in `ReviewsListScreen.js` (`POST /api/reviews/{id}/owner-response`).
+  - **Vehicle Details & Garage Expansion**: Added category type selection, custom color input, primary vehicle switcher, and LPR gate hints in `VehiclesScreen.js`.
   - **File Upload Service**: Added multipart file upload (`POST /api/files/upload`), pre-signed S3 upload flows (`POST /api/files/upload/sign`), upload confirmation (`POST /api/files/upload/confirm`), and parking space file management (`GET /api/files/parking/{id}`).
   - **Corporate Platform Suite**: Extended `corporateService.js` with analytics dashboard export (`/export`), corporate bookings CSV export (`/bookings/export`), invoice PDF export (`/invoices/{id}/export`), allocation contract updates, owned allocation management, and full enterprise SSO config management (CRUD domains, test connection, kill-switch, SSO audit log, unlink user).
   - **Platform Admin Operations**: Added `adminService.js`, `adminSlice.js`, and `AdminDashboardScreen.js` for system oversight, listing verification (`POST /api/admin/listings/{id}/verify`), outbox batch processing (`POST /api/admin/outbox/process`), audit logging, and platform management; integrated into `AppTabNavigator` and `ProfileScreen`.
@@ -42,6 +48,14 @@
   - `Mobile/src/screens/Admin/__tests__/AdminDashboardScreen.test.js`
   - `Mobile/src/navigation/AppTabNavigator.js`
   - `Mobile/src/screens/Profile/ProfileScreen.js`
+  - `Mobile/src/screens/Search/SearchScreen.js`
+  - `Mobile/src/screens/Search/ParkingDetailScreen.js`
+  - `Mobile/src/screens/Vendor/CreateParkingScreen.js`
+  - `Mobile/src/screens/Vendor/VendorDashboardScreen.js`
+  - `Mobile/src/screens/Vendor/AccessPassScannerScreen.js`
+  - `Mobile/src/screens/Booking/BookingScreen.js`
+  - `Mobile/src/screens/Review/ReviewsListScreen.js`
+  - `Mobile/src/screens/Vehicles/VehiclesScreen.js`
   - `Mobile/src/store/index.js`
   - `Mobile/src/utils/test-utils.js`
   - `API_ENDPOINTS_MOBILE.md`

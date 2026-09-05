@@ -13,7 +13,8 @@ import Card from '../../components/Common/Card';
 import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
-import { ParkingType, ParkingTypeLabels, AMENITIES } from '../../utils/constants';
+import { ParkingType, ParkingTypeLabels, AMENITIES, ListingCategory, ListingCategoryLabels, EvPricingMode } from '../../utils/constants';
+import { fileUploadService } from '../../services/api/fileUploadService';
 
 const CreateParkingScreen = ({ navigation, route }) => {
     const editData = route?.params?.editData;
@@ -33,11 +34,32 @@ const CreateParkingScreen = ({ navigation, route }) => {
         longitude: 0,
         totalSpots: '',
         parkingType: ParkingType.Open,
+        listingCategory: ListingCategory.Commercial,
         hourlyRate: '',
         dailyRate: '',
         weeklyRate: '',
         monthlyRate: '',
         is24Hours: true,
+        instantBook: false,
+        isLprEnabled: false,
+        hasEvCharging: false,
+        evChargerCount: '1',
+        evPricingMode: EvPricingMode.PerHour,
+        evRatePerKwh: '18',
+        evChargingRatePerHour: '30',
+        evIdleRatePerHour: '0',
+        evIdleGraceMinutes: '15',
+        isDynamicPricingEnabled: false,
+        dynamicMinMultiplier: '0.8',
+        dynamicMaxMultiplier: '1.75',
+        peakHourMultiplier: '1.25',
+        weekendMultiplier: '1.15',
+        isBayGuidanceEnabled: false,
+        defaultFacilityLevel: '',
+        defaultFacilityZone: '',
+        indoorGuidanceNotes: '',
+        isValetEnabled: false,
+        valetFee: '',
         amenities: [],
         imageUrls: [],
     });
@@ -57,11 +79,32 @@ const CreateParkingScreen = ({ navigation, route }) => {
                 longitude: editData.longitude || 0,
                 totalSpots: editData.totalSpots ? editData.totalSpots.toString() : '',
                 parkingType: editData.parkingType ?? ParkingType.Open,
+                listingCategory: editData.listingCategory ?? ListingCategory.Commercial,
                 hourlyRate: editData.hourlyRate ? editData.hourlyRate.toString() : '',
                 dailyRate: editData.dailyRate ? editData.dailyRate.toString() : '',
                 weeklyRate: editData.weeklyRate ? editData.weeklyRate.toString() : '',
                 monthlyRate: editData.monthlyRate ? editData.monthlyRate.toString() : '',
                 is24Hours: editData.is24Hours ?? true,
+                instantBook: editData.instantBook ?? false,
+                isLprEnabled: editData.isLprEnabled ?? false,
+                hasEvCharging: editData.hasEvCharging ?? false,
+                evChargerCount: editData.evChargerCount ? editData.evChargerCount.toString() : '1',
+                evPricingMode: editData.evPricingMode ?? EvPricingMode.PerHour,
+                evRatePerKwh: editData.evRatePerKwh ? editData.evRatePerKwh.toString() : '18',
+                evChargingRatePerHour: editData.evChargingRatePerHour ? editData.evChargingRatePerHour.toString() : '30',
+                evIdleRatePerHour: editData.evIdleRatePerHour ? editData.evIdleRatePerHour.toString() : '0',
+                evIdleGraceMinutes: editData.evIdleGraceMinutes ? editData.evIdleGraceMinutes.toString() : '15',
+                isDynamicPricingEnabled: editData.isDynamicPricingEnabled ?? false,
+                dynamicMinMultiplier: editData.dynamicMinMultiplier ? editData.dynamicMinMultiplier.toString() : '0.8',
+                dynamicMaxMultiplier: editData.dynamicMaxMultiplier ? editData.dynamicMaxMultiplier.toString() : '1.75',
+                peakHourMultiplier: editData.peakHourMultiplier ? editData.peakHourMultiplier.toString() : '1.25',
+                weekendMultiplier: editData.weekendMultiplier ? editData.weekendMultiplier.toString() : '1.15',
+                isBayGuidanceEnabled: editData.isBayGuidanceEnabled ?? false,
+                defaultFacilityLevel: editData.defaultFacilityLevel || '',
+                defaultFacilityZone: editData.defaultFacilityZone || '',
+                indoorGuidanceNotes: editData.indoorGuidanceNotes || '',
+                isValetEnabled: editData.isValetEnabled ?? false,
+                valetFee: editData.valetFee ? editData.valetFee.toString() : '',
                 amenities: editData.amenities || [],
                 imageUrls: editData.imageUrls || (editData.imageUrl ? [editData.imageUrl] : []),
             });
@@ -110,6 +153,16 @@ const CreateParkingScreen = ({ navigation, route }) => {
             dailyRate: parseFloat(formData.dailyRate) || 0,
             weeklyRate: parseFloat(formData.weeklyRate) || 0,
             monthlyRate: parseFloat(formData.monthlyRate) || 0,
+            evChargerCount: formData.hasEvCharging ? parseInt(formData.evChargerCount, 10) || 1 : undefined,
+            evRatePerKwh: formData.hasEvCharging ? parseFloat(formData.evRatePerKwh) || 0 : undefined,
+            evChargingRatePerHour: formData.hasEvCharging ? parseFloat(formData.evChargingRatePerHour) || 0 : undefined,
+            evIdleRatePerHour: formData.hasEvCharging ? parseFloat(formData.evIdleRatePerHour) || 0 : undefined,
+            evIdleGraceMinutes: formData.hasEvCharging ? parseInt(formData.evIdleGraceMinutes, 10) || 15 : undefined,
+            dynamicMinMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.dynamicMinMultiplier) || 0.8 : undefined,
+            dynamicMaxMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.dynamicMaxMultiplier) || 1.75 : undefined,
+            peakHourMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.peakHourMultiplier) || 1.25 : undefined,
+            weekendMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.weekendMultiplier) || 1.15 : undefined,
+            valetFee: formData.isValetEnabled ? parseFloat(formData.valetFee) || 0 : undefined,
         };
 
         if (isEditing) {
@@ -204,6 +257,144 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                 </TouchableOpacity>
                             ))}
                         </View>
+                    </Card>
+
+                    {/* Category & Smart Access Policy */}
+                    <Card>
+                        <Text style={styles.sectionTitle}>Category & Smart Access</Text>
+                        <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: spacing.xs }]}>Listing Category</Text>
+                        <View style={styles.chipRow}>
+                            {Object.entries(ListingCategoryLabels).map(([value, label]) => (
+                                <TouchableOpacity
+                                    key={value}
+                                    onPress={() => setFormData((prev) => ({ ...prev, listingCategory: Number(value) }))}
+                                    style={[styles.chip, formData.listingCategory === Number(value) && styles.chipActive]}
+                                >
+                                    <Text style={[styles.chipText, formData.listingCategory === Number(value) && styles.chipTextActive]}>{label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+                            <TouchableOpacity
+                                style={styles.toggleRow}
+                                onPress={() => setFormData((prev) => ({ ...prev, instantBook: !prev.instantBook }))}
+                            >
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.toggleTitle}>⚡ Instant Booking</Text>
+                                    <Text style={styles.toggleSubtitle}>Drivers confirm reservations immediately without host approval</Text>
+                                </View>
+                                <Ionicons name={formData.instantBook ? 'checkbox' : 'square-outline'} size={24} color={formData.instantBook ? colors.primary : colors.textTertiary} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.toggleRow}
+                                onPress={() => setFormData((prev) => ({ ...prev, isLprEnabled: !prev.isLprEnabled }))}
+                            >
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.toggleTitle}>📷 Ticketless LPR Access</Text>
+                                    <Text style={styles.toggleSubtitle}>Barrier camera validates registered license plates automatically</Text>
+                                </View>
+                                <Ionicons name={formData.isLprEnabled ? 'checkbox' : 'square-outline'} size={24} color={formData.isLprEnabled ? colors.primary : colors.textTertiary} />
+                            </TouchableOpacity>
+                        </View>
+                    </Card>
+
+                    {/* EV Charging Station Configuration */}
+                    <Card>
+                        <TouchableOpacity
+                            style={styles.toggleRow}
+                            onPress={() => setFormData((prev) => ({ ...prev, hasEvCharging: !prev.hasEvCharging }))}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.sectionTitle}>⚡ Electric Vehicle (EV) Charging</Text>
+                                <Text style={styles.toggleSubtitle}>Enable fast charging equipment for EV motorists</Text>
+                            </View>
+                            <Ionicons name={formData.hasEvCharging ? 'checkbox' : 'square-outline'} size={24} color={formData.hasEvCharging ? colors.primary : colors.textTertiary} />
+                        </TouchableOpacity>
+
+                        {formData.hasEvCharging && (
+                            <View style={{ marginTop: spacing.md }}>
+                                <Input label="Charger Bays Count" value={formData.evChargerCount} onChangeText={updateField('evChargerCount')} keyboardType="numeric" placeholder="e.g. 2" />
+                                <View style={styles.row}>
+                                    <Input label="Rate / kWh (₹)" value={formData.evRatePerKwh} onChangeText={updateField('evRatePerKwh')} keyboardType="decimal-pad" containerStyle={styles.halfInput} />
+                                    <Input label="Rate / Hour (₹)" value={formData.evChargingRatePerHour} onChangeText={updateField('evChargingRatePerHour')} keyboardType="decimal-pad" containerStyle={styles.halfInput} />
+                                </View>
+                                <View style={styles.row}>
+                                    <Input label="Idle Fee / hr (₹)" value={formData.evIdleRatePerHour} onChangeText={updateField('evIdleRatePerHour')} keyboardType="decimal-pad" containerStyle={styles.halfInput} />
+                                    <Input label="Idle Grace (mins)" value={formData.evIdleGraceMinutes} onChangeText={updateField('evIdleGraceMinutes')} keyboardType="numeric" containerStyle={styles.halfInput} />
+                                </View>
+                            </View>
+                        )}
+                    </Card>
+
+                    {/* Dynamic Pricing Setup */}
+                    <Card>
+                        <TouchableOpacity
+                            style={styles.toggleRow}
+                            onPress={() => setFormData((prev) => ({ ...prev, isDynamicPricingEnabled: !prev.isDynamicPricingEnabled }))}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.sectionTitle}>📈 Dynamic Smart Pricing</Text>
+                                <Text style={styles.toggleSubtitle}>Automatically scale hourly price according to demand and peak hours</Text>
+                            </View>
+                            <Ionicons name={formData.isDynamicPricingEnabled ? 'checkbox' : 'square-outline'} size={24} color={formData.isDynamicPricingEnabled ? colors.primary : colors.textTertiary} />
+                        </TouchableOpacity>
+
+                        {formData.isDynamicPricingEnabled && (
+                            <View style={{ marginTop: spacing.md }}>
+                                <View style={styles.row}>
+                                    <Input label="Min Multiplier" value={formData.dynamicMinMultiplier} onChangeText={updateField('dynamicMinMultiplier')} keyboardType="decimal-pad" placeholder="0.8" containerStyle={styles.halfInput} />
+                                    <Input label="Max Multiplier" value={formData.dynamicMaxMultiplier} onChangeText={updateField('dynamicMaxMultiplier')} keyboardType="decimal-pad" placeholder="1.75" containerStyle={styles.halfInput} />
+                                </View>
+                                <View style={styles.row}>
+                                    <Input label="Peak Hour Multiplier" value={formData.peakHourMultiplier} onChangeText={updateField('peakHourMultiplier')} keyboardType="decimal-pad" placeholder="1.25" containerStyle={styles.halfInput} />
+                                    <Input label="Weekend Multiplier" value={formData.weekendMultiplier} onChangeText={updateField('weekendMultiplier')} keyboardType="decimal-pad" placeholder="1.15" containerStyle={styles.halfInput} />
+                                </View>
+                            </View>
+                        )}
+                    </Card>
+
+                    {/* Indoor Bay Guidance & Valet */}
+                    <Card>
+                        <Text style={styles.sectionTitle}>Facility Guidance & Valet</Text>
+                        <TouchableOpacity
+                            style={styles.toggleRow}
+                            onPress={() => setFormData((prev) => ({ ...prev, isBayGuidanceEnabled: !prev.isBayGuidanceEnabled }))}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.toggleTitle}>📍 Indoor Bay Guidance</Text>
+                                <Text style={styles.toggleSubtitle}>Provide drivers floor level and zone navigation</Text>
+                            </View>
+                            <Ionicons name={formData.isBayGuidanceEnabled ? 'checkbox' : 'square-outline'} size={24} color={formData.isBayGuidanceEnabled ? colors.primary : colors.textTertiary} />
+                        </TouchableOpacity>
+
+                        {formData.isBayGuidanceEnabled && (
+                            <View style={{ marginTop: spacing.md }}>
+                                <View style={styles.row}>
+                                    <Input label="Default Level" value={formData.defaultFacilityLevel} onChangeText={updateField('defaultFacilityLevel')} placeholder="e.g. B2" containerStyle={styles.halfInput} />
+                                    <Input label="Default Zone" value={formData.defaultFacilityZone} onChangeText={updateField('defaultFacilityZone')} placeholder="e.g. Blue" containerStyle={styles.halfInput} />
+                                </View>
+                                <Input label="Guidance Notes" value={formData.indoorGuidanceNotes} onChangeText={updateField('indoorGuidanceNotes')} placeholder="e.g. Enter ramp 2, follow blue signs" />
+                            </View>
+                        )}
+
+                        <TouchableOpacity
+                            style={[styles.toggleRow, { marginTop: spacing.md }]}
+                            onPress={() => setFormData((prev) => ({ ...prev, isValetEnabled: !prev.isValetEnabled }))}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.toggleTitle}>👔 Valet Service</Text>
+                                <Text style={styles.toggleSubtitle}>Provide attendant curbside vehicle retrieval</Text>
+                            </View>
+                            <Ionicons name={formData.isValetEnabled ? 'checkbox' : 'square-outline'} size={24} color={formData.isValetEnabled ? colors.primary : colors.textTertiary} />
+                        </TouchableOpacity>
+
+                        {formData.isValetEnabled && (
+                            <View style={{ marginTop: spacing.sm }}>
+                                <Input label="Valet Fee (₹)" value={formData.valetFee} onChangeText={updateField('valetFee')} keyboardType="decimal-pad" placeholder="0.00 for free" />
+                            </View>
+                        )}
                     </Card>
 
                     {/* Pricing */}
@@ -318,6 +509,9 @@ const styles = StyleSheet.create({
     photoThumb: { width: 80, height: 80, borderRadius: spacing.radius.md, backgroundColor: colors.borderLight },
     photoDeleteBtn: { position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.danger, justifyContent: 'center', alignItems: 'center' },
     submitBtn: { marginTop: spacing.base },
+    toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
+    toggleTitle: { ...typography.bodySmall, fontWeight: '600', color: colors.textPrimary },
+    toggleSubtitle: { ...typography.caption, color: colors.textTertiary, marginTop: 2 },
 });
 
 export default CreateParkingScreen;

@@ -52,6 +52,7 @@ import CorporateBookingsScreen from '../screens/Corporate/CorporateBookingsScree
 
 // Admin Screens
 import AdminDashboardScreen from '../screens/Admin/AdminDashboardScreen';
+import AccessPassScannerScreen from '../screens/Vendor/AccessPassScannerScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -95,6 +96,7 @@ const HomeStack = () => (
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
         <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
         <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+        <Stack.Screen name="AccessPassScanner" component={AccessPassScannerScreen} />
     </Stack.Navigator>
 );
 
@@ -122,6 +124,7 @@ const ListingsStack = () => (
         <Stack.Screen name="ReviewsList" component={ReviewsListScreen} />
         <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
+        <Stack.Screen name="AccessPassScanner" component={AccessPassScannerScreen} />
     </Stack.Navigator>
 );
 
@@ -136,6 +139,7 @@ const BookingsStack = () => (
         <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
+        <Stack.Screen name="AccessPassScanner" component={AccessPassScannerScreen} />
     </Stack.Navigator>
 );
 

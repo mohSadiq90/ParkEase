@@ -391,6 +391,54 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                         </View>
                     </View>
 
+                    {/* EV Charging Capabilities */}
+                    {parking.hasEvCharging && (
+                        <View style={[styles.section, { backgroundColor: colors.surface, padding: 14, borderRadius: 12, borderLeftWidth: 4, borderLeftColor: colors.primaryDark || '#059669', marginBottom: 16 }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                <Ionicons name="flash" size={18} color={colors.primary} />
+                                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>Electric Vehicle (EV) Charging Station</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                                <Text style={styles.description}>
+                                    ⚡ <Text style={{ fontWeight: '600' }}>Chargers:</Text> {parking.evChargerCount || 1} bays
+                                </Text>
+                                <Text style={styles.description}>
+                                    💰 <Text style={{ fontWeight: '600' }}>Rate:</Text> {parking.evPricingMode === 1 ? `${formatCurrency(parking.evRatePerKwh || 18)}/kWh` : `${formatCurrency(parking.evChargingRatePerHour || 30)}/hr`}
+                                </Text>
+                                {parking.evIdleRatePerHour > 0 && (
+                                    <Text style={styles.description}>
+                                        ⏱️ <Text style={{ fontWeight: '600' }}>Idle fee:</Text> {formatCurrency(parking.evIdleRatePerHour)}/hr (after {parking.evIdleGraceMinutes || 15}m grace)
+                                    </Text>
+                                )}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Indoor Bay Guidance & Valet */}
+                    {(parking.isBayGuidanceEnabled || parking.isValetEnabled || parking.isLprEnabled) && (
+                        <View style={[styles.section, { backgroundColor: colors.surface, padding: 14, borderRadius: 12, borderLeftWidth: 4, borderLeftColor: colors.primary, marginBottom: 16 }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                <Ionicons name="navigate-circle-outline" size={18} color={colors.primary} />
+                                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>Smart Facility & Access</Text>
+                            </View>
+                            {parking.isLprEnabled && (
+                                <Text style={[styles.description, { marginBottom: 4 }]}>
+                                    📷 <Text style={{ fontWeight: '600' }}>Ticketless LPR Entry:</Text> License plate camera recognition active at barrier.
+                                </Text>
+                            )}
+                            {parking.isBayGuidanceEnabled && (
+                                <Text style={[styles.description, { marginBottom: 4 }]}>
+                                    📍 <Text style={{ fontWeight: '600' }}>Indoor Bay Guidance:</Text> {parking.defaultFacilityLevel ? `Level ${parking.defaultFacilityLevel}` : ''} {parking.defaultFacilityZone ? `Zone ${parking.defaultFacilityZone}` : ''} {parking.indoorGuidanceNotes ? `— ${parking.indoorGuidanceNotes}` : ''}
+                                </Text>
+                            )}
+                            {parking.isValetEnabled && (
+                                <Text style={styles.description}>
+                                    👔 <Text style={{ fontWeight: '600' }}>Valet Service Available:</Text> {parking.valetFee ? `${formatCurrency(parking.valetFee)} service fee` : 'Complimentary upon arrival'}
+                                </Text>
+                            )}
+                        </View>
+                    )}
+
                     {/* Spot Availability Prediction & Forecast */}
                     {forecast && (forecast.currentAvailabilityBand || forecast.CurrentAvailabilityBand) && (
                         <View style={[styles.section, { backgroundColor: colors.surface, padding: 14, borderRadius: 12, borderLeftWidth: 4, borderLeftColor: colors.primary, marginBottom: 16 }]}>

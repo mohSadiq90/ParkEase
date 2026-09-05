@@ -17,46 +17,70 @@ import LoadingScreen from '../../components/Common/LoadingScreen';
 import MapViewComponent from './MapViewComponent';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency } from '../../utils/formatters';
-import { VehicleTypeLabels, AMENITIES } from '../../utils/constants';
+import { VehicleTypeLabels, AMENITIES, ListingCategory, ListingCategoryLabels } from '../../utils/constants';
 
-const ParkingCard = ({ parking, onPress }) => (
-    <Card onPress={onPress} style={cardStyles.card}>
-        <View style={cardStyles.imageContainer}>
-            <View style={cardStyles.imagePlaceholder}>
-                <Ionicons name="car" size={40} color={colors.lightGray} />
-            </View>
-            <View style={cardStyles.priceTag}>
-                <Text style={cardStyles.priceText}>{formatCurrency(parking.hourlyRate)}/hr</Text>
-            </View>
-            {parking.is24Hours && (
-                <View style={cardStyles.badge24h}>
-                    <Text style={cardStyles.badge24hText}>24h</Text>
-                </View>
-            )}
-        </View>
+const ParkingCard = ({ parking, onPress }) => {
+    const displayRate = parking.effectiveHourlyRate ?? parking.hourlyRate;
+    const isDynamic = parking.dynamicPricingApplied || (parking.effectiveHourlyRate && parking.effectiveHourlyRate !== parking.hourlyRate);
 
-        <View style={cardStyles.info}>
-            <Text style={cardStyles.title} numberOfLines={1}>{parking.title}</Text>
-            <View style={cardStyles.locationRow}>
-                <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
-                <Text style={cardStyles.address} numberOfLines={1}>{parking.address}, {parking.city}</Text>
-            </View>
-            <View style={cardStyles.metaRow}>
-                <View style={cardStyles.ratingRow}>
-                    <StarRating rating={parking.averageRating} size={14} />
-                    <Text style={cardStyles.ratingText}>{parking.averageRating?.toFixed(1) || '0.0'}</Text>
-                    <Text style={cardStyles.reviewCount}>({parking.totalReviews})</Text>
+    return (
+        <Card onPress={onPress} style={cardStyles.card}>
+            <View style={cardStyles.imageContainer}>
+                <View style={cardStyles.imagePlaceholder}>
+                    <Ionicons name="car" size={40} color={colors.lightGray} />
                 </View>
-                <View style={cardStyles.spotsRow}>
-                    <Ionicons name="car-outline" size={14} color={parking.availableSpots > 0 ? colors.success : colors.danger} />
-                    <Text style={[cardStyles.spotsText, { color: parking.availableSpots > 0 ? colors.success : colors.danger }]}>
-                        {parking.availableSpots} spots
+                <View style={[cardStyles.priceTag, isDynamic && { backgroundColor: colors.warningDark }]}>
+                    <Text style={cardStyles.priceText}>
+                        {isDynamic ? '⚡ ' : ''}{formatCurrency(displayRate)}/hr
                     </Text>
                 </View>
+                <View style={cardStyles.topBadgesRow}>
+                    {parking.is24Hours && (
+                        <View style={cardStyles.badgePill}>
+                            <Text style={cardStyles.badgeText}>24h</Text>
+                        </View>
+                    )}
+                    {parking.instantBook && (
+                        <View style={[cardStyles.badgePill, { backgroundColor: colors.successDark }]}>
+                            <Text style={cardStyles.badgeText}>Instant</Text>
+                        </View>
+                    )}
+                    {parking.hasEvCharging && (
+                        <View style={[cardStyles.badgePill, { backgroundColor: colors.primaryDark }]}>
+                            <Text style={cardStyles.badgeText}>EV</Text>
+                        </View>
+                    )}
+                    {parking.isLprEnabled && (
+                        <View style={[cardStyles.badgePill, { backgroundColor: colors.accentDark || '#4f46e5' }]}>
+                            <Text style={cardStyles.badgeText}>LPR</Text>
+                        </View>
+                    )}
+                </View>
             </View>
-        </View>
-    </Card>
-);
+
+            <View style={cardStyles.info}>
+                <Text style={cardStyles.title} numberOfLines={1}>{parking.title}</Text>
+                <View style={cardStyles.locationRow}>
+                    <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
+                    <Text style={cardStyles.address} numberOfLines={1}>{parking.address}, {parking.city}</Text>
+                </View>
+                <View style={cardStyles.metaRow}>
+                    <View style={cardStyles.ratingRow}>
+                        <StarRating rating={parking.averageRating} size={14} />
+                        <Text style={cardStyles.ratingText}>{parking.averageRating?.toFixed(1) || '0.0'}</Text>
+                        <Text style={cardStyles.reviewCount}>({parking.totalReviews})</Text>
+                    </View>
+                    <View style={cardStyles.spotsRow}>
+                        <Ionicons name="car-outline" size={14} color={parking.availableSpots > 0 ? colors.success : colors.danger} />
+                        <Text style={[cardStyles.spotsText, { color: parking.availableSpots > 0 ? colors.success : colors.danger }]}>
+                            {parking.availableSpots} spots
+                        </Text>
+                    </View>
+                </View>
+            </View>
+        </Card>
+    );
+};
 
 const cardStyles = StyleSheet.create({
     card: { marginHorizontal: spacing.screenHorizontal, overflow: 'hidden', padding: 0, marginBottom: spacing.md },
@@ -64,8 +88,9 @@ const cardStyles = StyleSheet.create({
     imagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     priceTag: { position: 'absolute', bottom: 8, right: 8, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: spacing.radius.full },
     priceText: { ...typography.caption, color: colors.white, fontWeight: '700' },
-    badge24h: { position: 'absolute', top: 8, left: 8, backgroundColor: colors.accent, paddingHorizontal: 8, paddingVertical: 2, borderRadius: spacing.radius.full },
-    badge24hText: { ...typography.caption, color: colors.white, fontWeight: '700', fontSize: 10 },
+    topBadgesRow: { position: 'absolute', top: 8, left: 8, flexDirection: 'row', gap: 4 },
+    badgePill: { backgroundColor: colors.accent, paddingHorizontal: 7, paddingVertical: 2, borderRadius: spacing.radius.full },
+    badgeText: { ...typography.caption, color: colors.white, fontWeight: '700', fontSize: 10 },
     info: { padding: spacing.cardPadding },
     title: { ...typography.h4, color: colors.textPrimary },
     locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
@@ -92,26 +117,32 @@ const SearchScreen = ({ navigation }) => {
     const [minRating, setMinRating] = useState(null);
     const [selectedAmenities, setSelectedAmenities] = useState([]);
     const [sortBy, setSortBy] = useState('recommended'); // 'recommended', 'priceAsc', 'priceDesc', 'rating'
+    const [hasEvOnly, setHasEvOnly] = useState(false);
+    const [instantBookOnly, setInstantBookOnly] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState(null);
 
     // Load all available parkings on mount
     useEffect(() => {
         loadParkings();
     }, []);
 
-    const loadParkings = useCallback((city, vehicleType, maxRate) => {
+    const loadParkings = useCallback((city, vehicleType, maxRate, evOnly = hasEvOnly, instantOnly = instantBookOnly, cat = selectedCategory) => {
         setHasSearched(true);
         dispatch(searchParkingThunk({
             city: city || undefined,
             vehicleType: vehicleType ?? undefined,
             maxHourlyRate: maxRate ? parseFloat(maxRate) : undefined,
+            hasEvCharging: evOnly ? true : undefined,
+            instantBook: instantOnly ? true : undefined,
+            listingCategory: cat != null ? cat : undefined,
             page: 1,
             pageSize: 30,
         }));
-    }, [dispatch]);
+    }, [dispatch, hasEvOnly, instantBookOnly, selectedCategory]);
 
     const handleSearch = useCallback(() => {
-        loadParkings(searchQuery.trim() || undefined, selectedVehicle, maxPrice);
-    }, [loadParkings, searchQuery, selectedVehicle, maxPrice]);
+        loadParkings(searchQuery.trim() || undefined, selectedVehicle, maxPrice, hasEvOnly, instantBookOnly, selectedCategory);
+    }, [loadParkings, searchQuery, selectedVehicle, maxPrice, hasEvOnly, instantBookOnly, selectedCategory]);
 
     const handleClearSearch = useCallback(() => {
         setSearchQuery('');
@@ -120,14 +151,17 @@ const SearchScreen = ({ navigation }) => {
         setMinRating(null);
         setSelectedAmenities([]);
         setSortBy('recommended');
-        loadParkings();
+        setHasEvOnly(false);
+        setInstantBookOnly(false);
+        setSelectedCategory(null);
+        loadParkings(undefined, null, '', false, false, null);
     }, [loadParkings]);
 
     const toggleVehicleFilter = useCallback((value) => {
         const newValue = selectedVehicle === value ? null : value;
         setSelectedVehicle(newValue);
-        loadParkings(searchQuery.trim() || undefined, newValue, maxPrice);
-    }, [selectedVehicle, searchQuery, maxPrice, loadParkings]);
+        loadParkings(searchQuery.trim() || undefined, newValue, maxPrice, hasEvOnly, instantBookOnly, selectedCategory);
+    }, [selectedVehicle, searchQuery, maxPrice, hasEvOnly, instantBookOnly, selectedCategory, loadParkings]);
 
     const toggleAmenity = (amenity) => {
         setSelectedAmenities(prev =>
@@ -141,8 +175,11 @@ const SearchScreen = ({ navigation }) => {
         if (minRating) count += 1;
         if (selectedAmenities.length > 0) count += selectedAmenities.length;
         if (sortBy !== 'recommended') count += 1;
+        if (hasEvOnly) count += 1;
+        if (instantBookOnly) count += 1;
+        if (selectedCategory != null) count += 1;
         return count;
-    }, [maxPrice, minRating, selectedAmenities, sortBy]);
+    }, [maxPrice, minRating, selectedAmenities, sortBy, hasEvOnly, instantBookOnly, selectedCategory]);
 
     // Client-side filtering & sorting for amenities, rating, and sort order
     const filteredResults = useMemo(() => {
@@ -301,7 +338,7 @@ const SearchScreen = ({ navigation }) => {
                                     { id: 'priceAsc', label: 'Price: Low to High' },
                                     { id: 'priceDesc', label: 'Price: High to Low' },
                                     { id: 'rating', label: 'Highest Rated' },
-                                ].map((item) => (
+                                ]).map((item) => (
                                     <TouchableOpacity
                                         key={item.id}
                                         onPress={() => setSortBy(item.id)}
@@ -312,6 +349,51 @@ const SearchScreen = ({ navigation }) => {
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
+                            </View>
+
+                            {/* Listing Category */}
+                            <Text style={styles.sectionHeading}>Parking Category</Text>
+                            <View style={styles.sortOptionsRow}>
+                                {[
+                                    { id: null, label: 'All Categories' },
+                                    { id: ListingCategory.Commercial, label: 'Commercial' },
+                                    { id: ListingCategory.Residential, label: 'Residential' },
+                                    { id: ListingCategory.Airport, label: 'Airport' },
+                                    { id: ListingCategory.Event, label: 'Event' },
+                                ].map((cat) => (
+                                    <TouchableOpacity
+                                        key={cat.label}
+                                        onPress={() => setSelectedCategory(cat.id)}
+                                        style={[styles.sortChip, selectedCategory === cat.id && styles.sortChipActive]}
+                                    >
+                                        <Text style={[styles.sortChipText, selectedCategory === cat.id && styles.sortChipTextActive]}>
+                                            {cat.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Smart Capabilities */}
+                            <Text style={styles.sectionHeading}>Special Features</Text>
+                            <View style={styles.sortOptionsRow}>
+                                <TouchableOpacity
+                                    onPress={() => setHasEvOnly(!hasEvOnly)}
+                                    style={[styles.sortChip, hasEvOnly && styles.sortChipActive]}
+                                >
+                                    <Ionicons name="flash-outline" size={14} color={hasEvOnly ? colors.white : colors.primary} style={{ marginRight: 4 }} />
+                                    <Text style={[styles.sortChipText, hasEvOnly && styles.sortChipTextActive]}>
+                                        EV Charging
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setInstantBookOnly(!instantBookOnly)}
+                                    style={[styles.sortChip, instantBookOnly && styles.sortChipActive]}
+                                >
+                                    <Ionicons name="flash" size={14} color={instantBookOnly ? colors.white : colors.success} style={{ marginRight: 4 }} />
+                                    <Text style={[styles.sortChipText, instantBookOnly && styles.sortChipTextActive]}>
+                                        Instant Book
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
 
                             {/* Max Hourly Rate */}
@@ -376,6 +458,9 @@ const SearchScreen = ({ navigation }) => {
                                     setMinRating(null);
                                     setSelectedAmenities([]);
                                     setSortBy('recommended');
+                                    setHasEvOnly(false);
+                                    setInstantBookOnly(false);
+                                    setSelectedCategory(null);
                                 }}
                                 variant="outline"
                                 style={{ flex: 1 }}

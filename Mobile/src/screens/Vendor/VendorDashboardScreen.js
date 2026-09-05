@@ -5,7 +5,7 @@
 
 import React, { useEffect, useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -60,6 +60,7 @@ const VendorDashboardScreen = ({ navigation }) => {
         { type: 'header' },
         { type: 'stats' },
         { type: 'earnings' },
+        { type: 'gateScanner' },
         ...(data?.recentBookings?.length ? [{ type: 'sectionTitle', title: 'Recent Bookings' }] : []),
         ...(data?.recentBookings || []).map((b) => ({ type: 'booking', data: b })),
         ...(!data?.recentBookings?.length ? [{ type: 'empty' }] : []),
@@ -89,6 +90,36 @@ const VendorDashboardScreen = ({ navigation }) => {
                         <Text style={styles.earningsValue}>{formatCurrency(data?.monthlyEarnings || 0)}</Text>
                         <Text style={styles.earningsLabel}>Revenue</Text>
                     </Card>
+                );
+            case 'gateScanner':
+                return (
+                    <TouchableOpacity
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            backgroundColor: colors.surface,
+                            padding: spacing.md,
+                            borderRadius: spacing.cardRadius,
+                            marginHorizontal: spacing.screenHorizontal,
+                            marginBottom: spacing.md,
+                            borderWidth: 1,
+                            borderColor: colors.borderLight,
+                            ...shadows.sm,
+                        }}
+                        onPress={() => navigation.navigate('AccessPassScanner')}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, justifyContent: 'center', alignItems: 'center' }}>
+                                <Ionicons name="qr-code-outline" size={24} color={colors.primary} />
+                            </View>
+                            <View>
+                                <Text style={{ ...typography.body, fontWeight: '700', color: colors.textPrimary }}>Gate Access Scanner</Text>
+                                <Text style={{ ...typography.caption, color: colors.textTertiary }}>Verify driver QR passes at entrance</Text>
+                            </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+                    </TouchableOpacity>
                 );
             case 'sectionTitle':
                 return <Text style={styles.sectionHeader}>{item.title}</Text>;
