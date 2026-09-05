@@ -17,12 +17,14 @@ import authService from '../../services/auth/authService';
 import googleAuthService from '../../services/auth/googleAuthService';
 import NotificationService from '../../services/notifications/NotificationService';
 import { getExternalAuthErrorMessage } from '../../utils/externalAuthErrors';
+import { getCorporateSsoErrorMessage } from '../../utils/corporateSsoErrors';
 
 const LoginScreen = ({ navigation }) => {
-    const { login, loginCorporate, loginExternal, loading, error, dismissError } = useAuth();
+    const { login, loginCorporate, loginCorporateSso, loginExternal, loading, error, dismissError } = useAuth();
     const [loginMode, setLoginMode] = useState('personal'); // 'personal' | 'corporate'
     const [formData, setFormData] = useState({ email: '', password: '', companyId: '' });
     const [errors, setErrors] = useState({});
+    const [isSsoLoading, setIsSsoLoading] = useState(false);
     const passwordRef = React.useRef(null);
 
     const handleLogin = useCallback(async () => {
@@ -88,35 +90,54 @@ const LoginScreen = ({ navigation }) => {
             Alert.alert('Email Required', 'Please enter your corporate email address first to discover SSO settings.');
             return;
         }
+        setIsSsoLoading(true);
         try {
             const res = await authService.discoverSSO(formData.email);
-            if (res.data?.ssoEnabled) {
+            const data = res?.data;
+            const isAvailable = Boolean(data?.ssoAvailable ?? data?.ssoEnabled);
+
+            if (isAvailable) {
+                const companyName = data?.companyName || data?.companies?.[0]?.name || 'your organization';
                 Alert.alert(
                     'SSO Available',
-                    `Corporate SSO is enabled for ${res.data.companyName || 'your organization'}. Redirecting to IDP...`,
+                    `Corporate SSO is enabled for ${companyName}. Would you like to proceed with Enterprise Single Sign-On?`,
                     [
                         {
-                            text: 'Proceed to SSO',
+                            text: 'Sign In with SSO',
                             onPress: async () => {
-                                const startRes = await authService.startSSO({
-                                    email: formData.email,
-                                    returnUrl: 'parkease://sso-callback',
-                                });
-                                if (startRes.data?.authorizationUrl) {
-                                    Alert.alert('SSO Redirect', `Opening ${startRes.data.authorizationUrl}`);
+                                setIsSsoLoading(true);
+                                try {
+                                    const actionResult = await loginCorporateSso({ email: formData.email });
+                                    if (actionResult?.meta?.requestStatus === 'rejected') {
+                                        if (actionResult.payload !== 'user_cancelled') {
+                                            Alert.alert('SSO Failed', actionResult.payload || 'Failed to complete SSO login.');
+                                        }
+                                    }
+                                } catch (ssoErr) {
+                                    const friendly = getCorporateSsoErrorMessage(ssoErr);
+                                    Alert.alert('SSO Failed', friendly);
+                                } finally {
+                                    setIsSsoLoading(false);
                                 }
-                            }
+                            },
                         },
-                        { text: 'Cancel', style: 'cancel' }
+                        {
+                            text: 'Cancel',
+                            style: 'cancel',
+                            onPress: () => setIsSsoLoading(false),
+                        },
                     ]
                 );
             } else {
-                Alert.alert('SSO Not Configured', 'No enterprise SSO found for this domain. Please use password login.');
+                Alert.alert('SSO Not Configured', 'Corporate SSO is not configured for this domain. Please log in using password.');
             }
         } catch (err) {
-            Alert.alert('SSO Discovery Error', 'Unable to check SSO configuration.');
+            const friendly = getCorporateSsoErrorMessage(err);
+            Alert.alert('SSO Discovery Error', friendly);
+        } finally {
+            setIsSsoLoading(false);
         }
-    }, [formData.email]);
+    }, [formData.email, loginCorporateSso]);
 
     const updateField = (field) => (value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -224,11 +245,14 @@ const LoginScreen = ({ navigation }) => {
 
                         {loginMode === 'corporate' && (
                             <TouchableOpacity
-                                style={styles.ssoLink}
+                                style={[styles.ssoLink, isSsoLoading && styles.ssoLinkDisabled]}
                                 onPress={handleSsoDiscovery}
+                                disabled={loading || isSsoLoading}
                             >
-                                <Ionicons name="key-outline" size={14} color={colors.primary} />
-                                <Text style={styles.ssoLinkText}>Sign in with Company SSO (OIDC/SAML)</Text>
+                                <Ionicons name="key-outline" size={14} color={isSsoLoading ? colors.gray500 : colors.primary} />
+                                <Text style={[styles.ssoLinkText, isSsoLoading && styles.ssoLinkTextDisabled]}>
+                                    {isSsoLoading ? 'Connecting to Identity Provider...' : 'Sign in with Company SSO (OIDC/SAML)'}
+                                </Text>
                             </TouchableOpacity>
                         )}
 
@@ -384,10 +408,16 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md,
         alignSelf: 'flex-start',
     },
+    ssoLinkDisabled: {
+        opacity: 0.6,
+    },
     ssoLinkText: {
         ...typography.caption,
         color: colors.primary,
         fontWeight: '600',
+    },
+    ssoLinkTextDisabled: {
+        color: colors.gray500,
     },
     loginButton: {
         marginTop: spacing.sm,

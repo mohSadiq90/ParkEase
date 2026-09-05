@@ -135,3 +135,13 @@ jest.mock('posthog-react-native', () => {
   };
 });
 
+// Mock Expo Web Browser for Corporate SSO (ASWebAuthenticationSession / CustomTabs)
+jest.mock('expo-web-browser', () => ({
+  openAuthSessionAsync: jest.fn().mockResolvedValue({
+    type: 'success',
+    url: 'parkease://sso-callback?sso_code=mock-sso-exchange-code-123',
+  }),
+  dismissAuthSession: jest.fn(),
+  maybeCompleteAuthSession: jest.fn(),
+}));
+

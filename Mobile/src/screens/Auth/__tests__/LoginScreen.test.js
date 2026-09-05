@@ -18,6 +18,19 @@ jest.mock('../../../services/auth/authService', () => ({
   login: jest.fn(),
   loginCorporate: jest.fn(),
   loginExternal: jest.fn(),
+  discoverSSO: jest.fn(),
+  startSSO: jest.fn(),
+  completeSSO: jest.fn(),
+}));
+
+jest.mock('../../../services/auth/corporateSsoService', () => ({
+  __esModule: true,
+  default: {
+    performCorporateSSO: jest.fn(),
+    DEFAULT_SSO_RETURN_URL: 'parkease://sso-callback',
+  },
+  performCorporateSSO: jest.fn(),
+  DEFAULT_SSO_RETURN_URL: 'parkease://sso-callback',
 }));
 
 jest.mock('../../../services/auth/googleAuthService', () => ({
@@ -145,6 +158,76 @@ describe('LoginScreen', () => {
         'Google Sign-In Failed',
         expect.stringContaining('Google identity token expired or invalid')
       );
+    });
+  });
+
+  describe('Corporate SSO', () => {
+    it('renders SSO button when switched to corporate mode', async () => {
+      const { getByText } = renderWithProviders(<LoginScreen navigation={mockNavigation} />);
+      fireEvent.press(getByText('Corporate'));
+
+      expect(getByText('Sign in with Company SSO (OIDC/SAML)')).toBeTruthy();
+    });
+
+    it('requires email before initiating SSO discovery', async () => {
+      const { getByText } = renderWithProviders(<LoginScreen navigation={mockNavigation} />);
+      fireEvent.press(getByText('Corporate'));
+      fireEvent.press(getByText('Sign in with Company SSO (OIDC/SAML)'));
+
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Email Required',
+        expect.stringContaining('corporate email address')
+      );
+    });
+
+    it('prompts SSO authentication when domain has SSO enabled', async () => {
+      authService.discoverSSO.mockResolvedValueOnce({
+        success: true,
+        data: {
+          ssoAvailable: true,
+          companyName: 'Acme Corp',
+        },
+      });
+
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen navigation={mockNavigation} />
+      );
+      fireEvent.press(getByText('Corporate'));
+      fireEvent.changeText(getByPlaceholderText('Enter your email'), 'user@acme.com');
+      fireEvent.press(getByText('Sign in with Company SSO (OIDC/SAML)'));
+
+      await waitFor(() => {
+        expect(authService.discoverSSO).toHaveBeenCalledWith('user@acme.com');
+        expect(Alert.alert).toHaveBeenCalledWith(
+          'SSO Available',
+          expect.stringContaining('Corporate SSO is enabled for Acme Corp'),
+          expect.any(Array)
+        );
+      });
+    });
+
+    it('shows alert when domain does not have SSO configured', async () => {
+      authService.discoverSSO.mockResolvedValueOnce({
+        success: true,
+        data: {
+          ssoAvailable: false,
+        },
+      });
+
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen navigation={mockNavigation} />
+      );
+      fireEvent.press(getByText('Corporate'));
+      fireEvent.changeText(getByPlaceholderText('Enter your email'), 'user@unknown.com');
+      fireEvent.press(getByText('Sign in with Company SSO (OIDC/SAML)'));
+
+      await waitFor(() => {
+        expect(authService.discoverSSO).toHaveBeenCalledWith('user@unknown.com');
+        expect(Alert.alert).toHaveBeenCalledWith(
+          'SSO Not Configured',
+          expect.stringContaining('Corporate SSO is not configured for this domain')
+        );
+      });
     });
   });
 });

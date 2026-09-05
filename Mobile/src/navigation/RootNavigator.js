@@ -4,15 +4,18 @@
  */
 
 import React, { useEffect, useRef } from 'react';
+import { Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useDispatch } from 'react-redux';
 import { useAuth } from '../hooks/useAuth';
-import { restoreSessionThunk } from '../store/slices/authSlice';
+import { restoreSessionThunk, completeCorporateSsoThunk } from '../store/slices/authSlice';
+import { extractSsoCode } from '../services/auth/corporateSsoService';
 import LoadingScreen from '../components/Common/LoadingScreen';
 import AuthNavigator from './AuthNavigator';
 import AppTabNavigator from './AppTabNavigator';
 import posthogService from '../services/analytics/posthogService';
+import logger from '../utils/logger';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +28,34 @@ const RootNavigator = () => {
 
     useEffect(() => {
         dispatch(restoreSessionThunk());
+    }, [dispatch]);
+
+    // Listen for SSO callback deep links (parkease://sso-callback?sso_code=...)
+    useEffect(() => {
+        const handleDeepLink = async (event) => {
+            const url = event?.url || event;
+            if (url && typeof url === 'string' && url.includes('sso-callback')) {
+                try {
+                    const code = extractSsoCode(url);
+                    if (code) {
+                        await dispatch(completeCorporateSsoThunk(code));
+                    }
+                } catch (err) {
+                    logger.warn('RootNavigator', 'Failed to handle SSO deep link callback', err);
+                }
+            }
+        };
+
+        const subscription = Linking.addEventListener('url', handleDeepLink);
+        Linking.getInitialURL().then((initialUrl) => {
+            if (initialUrl) handleDeepLink(initialUrl);
+        }).catch((err) => {
+            logger.warn('RootNavigator', 'Failed to get initial URL', err);
+        });
+
+        return () => {
+            subscription.remove();
+        };
     }, [dispatch]);
 
     if (!isSessionChecked) {

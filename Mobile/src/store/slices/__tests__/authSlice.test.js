@@ -2,6 +2,9 @@ import reducer, {
   loginThunk,
   registerThunk,
   restoreSessionThunk,
+  loginCorporateThunk,
+  loginCorporateSsoThunk,
+  completeCorporateSsoThunk,
   loginExternalThunk,
   updateLinkedProviders,
   clearError,
@@ -193,6 +196,87 @@ describe('authSlice', () => {
 
       expect(state.loading).toBe(false);
       expect(state.error).toBe('Account exists with password');
+      expect(state.isAuthenticated).toBe(false);
+    });
+  });
+
+  describe('loginCorporateSsoThunk & completeCorporateSsoThunk', () => {
+    it('should handle fulfilled state with CorporateLoginResponseDto shape', () => {
+      const ssoPayload = {
+        token: 'sso-corporate-jwt',
+        refreshToken: 'sso-refresh-xyz',
+        user: {
+          id: 'sso-user-1',
+          email: 'jane@acme.com',
+          firstName: 'Jane',
+          lastName: 'Doe',
+        },
+        companyMembership: {
+          companyId: 'comp-acme-456',
+          companyName: 'Acme Corporation',
+          role: 'Employee',
+        },
+      };
+
+      const action = { type: loginCorporateSsoThunk.fulfilled.type, payload: ssoPayload };
+      const state = reducer(initialState, action);
+
+      expect(state.loading).toBe(false);
+      expect(state.user).toEqual(ssoPayload.user);
+      expect(state.token).toBe('sso-corporate-jwt');
+      expect(state.channel).toBe('Corporate');
+      expect(state.companyId).toBe('comp-acme-456');
+      expect(state.companyRole).toBe('Employee');
+      expect(state.corporateCompanies).toEqual([
+        { companyId: 'comp-acme-456', name: 'Acme Corporation', role: 'Employee' },
+      ]);
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.isSessionChecked).toBe(true);
+    });
+
+    it('should handle fulfilled state with nested session shape', () => {
+      const nestedPayload = {
+        session: {
+          accessToken: 'session-access-token',
+          refreshToken: 'session-refresh-token',
+          user: { id: 'sso-u2', email: 'director@beta.com' },
+          companyId: 'comp-beta-789',
+          companyRole: 'Admin',
+        },
+        companies: [{ companyId: 'comp-beta-789', name: 'Beta LLC', role: 'Admin' }],
+      };
+
+      const action = { type: completeCorporateSsoThunk.fulfilled.type, payload: nestedPayload };
+      const state = reducer(initialState, action);
+
+      expect(state.loading).toBe(false);
+      expect(state.user).toEqual(nestedPayload.session.user);
+      expect(state.token).toBe('session-access-token');
+      expect(state.channel).toBe('Corporate');
+      expect(state.companyId).toBe('comp-beta-789');
+      expect(state.companyRole).toBe('Admin');
+      expect(state.corporateCompanies).toEqual(nestedPayload.companies);
+      expect(state.isAuthenticated).toBe(true);
+    });
+
+    it('should ignore user_cancelled in error state on rejected', () => {
+      const action = { type: loginCorporateSsoThunk.rejected.type, payload: 'user_cancelled' };
+      const state = reducer(initialState, action);
+
+      expect(state.loading).toBe(false);
+      expect(state.error).toBeNull();
+      expect(state.isAuthenticated).toBe(false);
+    });
+
+    it('should set error on rejected for genuine errors', () => {
+      const action = {
+        type: loginCorporateSsoThunk.rejected.type,
+        payload: 'Corporate SSO is not configured for this domain. Please log in using password.',
+      };
+      const state = reducer(initialState, action);
+
+      expect(state.loading).toBe(false);
+      expect(state.error).toBe('Corporate SSO is not configured for this domain. Please log in using password.');
       expect(state.isAuthenticated).toBe(false);
     });
   });

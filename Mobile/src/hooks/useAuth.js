@@ -8,6 +8,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { 
     loginThunk, 
     loginCorporateThunk,
+    loginCorporateSsoThunk,
+    completeCorporateSsoThunk,
     loginExternalThunk,
     switchChannelThunk,
     registerThunk, 
@@ -39,6 +41,16 @@ export const useAuth = () => {
 
     const loginCorporate = useCallback(
         (credentials) => dispatch(loginCorporateThunk(credentials)),
+        [dispatch]
+    );
+
+    const loginCorporateSso = useCallback(
+        (options) => dispatch(loginCorporateSsoThunk(options)),
+        [dispatch]
+    );
+
+    const completeCorporateSso = useCallback(
+        (payload) => dispatch(completeCorporateSsoThunk(payload)),
         [dispatch]
     );
 
@@ -94,6 +106,8 @@ export const useAuth = () => {
         isCorporate,
         login,
         loginCorporate,
+        loginCorporateSso,
+        completeCorporateSso,
         loginExternal,
         switchChannel,
         register,

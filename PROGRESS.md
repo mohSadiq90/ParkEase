@@ -9,6 +9,39 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-05] - Enterprise Corporate Single Sign-On (OIDC / SSO) Implementation & Gap Resolution
+- **Features & Enhancements**:
+  - **End-to-End Enterprise Corporate SSO (OIDC) Implementation**: Implemented full corporate Single Sign-On workflow aligned with `MOBILE_CORPORATE_SSO_IMPLEMENTATION_GUIDE.md` and `API_ENDPOINTS_MOBILE.md`.
+  - **Centralized SSO Service (`corporateSsoService.js`)**: Built dedicated SSO orchestrator supporting discovery (`ssoAvailable`/`ssoEnabled`), mobile session start (`client: 'mobile'`), In-App Browser auth session with ephemeral session cookies via `expo-web-browser` (`ASWebAuthenticationSession` on iOS and `CustomTabsIntent` on Android), deep link callback URL parsing with query exchange code extraction (`extractSsoCode`), and code exchange completion.
+  - **Corporate SSO Error Code Translation (`corporateSsoErrors.js`)**: Implemented complete error resolution matrix for all Section 5 error codes (`sso_not_available`, `sso_disabled`, `no_membership`, `account_disabled`, `invalid_exchange_code`, `sso_identity_mismatch`, `sso_store_unavailable`, `user_cancelled`), mapping backend error envelopes and HTTP status codes (400, 403, 404, 409, 503) to user-friendly messages.
+  - **Redux State & Thunks (`authSlice.js`, `useAuth.js`)**: Added `loginCorporateSsoThunk` and `completeCorporateSsoThunk`, binding corporate session tokens (`token`, `refreshToken`), user profile, channel (`'Corporate'`), `companyId`, `companyRole`, and `corporateCompanies` to Redux state.
+  - **Deep Link Navigation Integration (`RootNavigator.js`)**: Implemented deep link event listener and initial URL resolver for `parkease://sso-callback?sso_code=...` to automatically complete SSO exchange upon return from external browser or cold start.
+  - **Backend Controller Implementation (`AuthCorporateSsoController.cs`)**: Added enterprise SSO controller under `/api/auth/corporate/sso/*` supporting `GET /discover`, `POST /start`, `GET /callback` (302 redirect to app deep link), and `POST /complete` returning `CorporateLoginResponseDto` and preserving strict channel isolation.
+- **Bug Fixes & Refactoring**:
+  - **SSO Gap Resolution in `LoginScreen.js`**: Replaced non-functional alert stub with real SSO discovery, domain checking (`ssoAvailable`/`ssoEnabled`), confirmation dialogue, active loading state feedback, and in-app browser launch.
+  - **Parameter & Schema Normalization in `authService.js`**: Supported both email and domain query parameters in `discoverSSO`, enforced `client: 'mobile'` and default return URL in `startSSO`, and supported both flat and nested `CorporateLoginResponseDto` payload formats in `completeSSO`.
+  - **B2B Group Analytics Wiring**: Automated B2B enterprise group association in PostHog upon SSO completion (`posthogService.groupCompany(companyId, ...)`).
+  - **Test Suite Expansion**: Added unit tests in `corporateSsoErrors.test.js` (10 tests), `corporateSsoService.test.js` (13 tests), `authSlice.test.js` (4 new tests), and `LoginScreen.test.js` (4 new tests), expanding total test coverage to 175 tests across 33 test suites with 100% pass rate.
+- **Key Files Modified**:
+  - `Mobile/package.json` & `Mobile/package-lock.json`
+  - `Mobile/jest.setup.js`
+  - `Mobile/src/services/auth/corporateSsoService.js` (new)
+  - `Mobile/src/services/auth/__tests__/corporateSsoService.test.js` (new)
+  - `Mobile/src/utils/corporateSsoErrors.js` (new)
+  - `Mobile/src/utils/__tests__/corporateSsoErrors.test.js` (new)
+  - `Mobile/src/services/auth/authService.js`
+  - `Mobile/src/store/slices/authSlice.js`
+  - `Mobile/src/store/slices/__tests__/authSlice.test.js`
+  - `Mobile/src/hooks/useAuth.js`
+  - `Mobile/src/screens/Auth/LoginScreen.js`
+  - `Mobile/src/screens/Auth/__tests__/LoginScreen.test.js`
+  - `Mobile/src/navigation/RootNavigator.js`
+  - `backend/src/ParkingApp.API/Controllers/AuthCorporateSsoController.cs` (new)
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - 100% test pass rate achieved across all 33 Jest test suites (175/175 tests passing).
+  - Ready for commit and remote push.
+
 ### [2026-09-05] - PostHog Analytics SDK Integration, Enriched Screen Tracking & Funnel Instrumentation
 - **Features & Enhancements**:
   - **PostHog React Native SDK Integration**: Installed and configured `posthog-react-native` (^4.67.0) alongside required Expo SDK 54 modules (`expo-application`, `expo-device`, `expo-file-system`, `expo-localization`).

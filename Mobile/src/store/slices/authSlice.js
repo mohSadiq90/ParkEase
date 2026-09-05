@@ -5,8 +5,10 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/auth/authService';
+import corporateSsoService from '../../services/auth/corporateSsoService';
 import { getErrorMessage } from '../../utils/errorHandler';
 import { getExternalAuthErrorMessage } from '../../utils/externalAuthErrors';
+import { getCorporateSsoErrorMessage } from '../../utils/corporateSsoErrors';
 
 /**
  * Login thunk
@@ -27,7 +29,7 @@ export const loginThunk = createAsyncThunk(
 );
 
 /**
- * Corporate login thunk
+ * Corporate login thunk (password)
  */
 export const loginCorporateThunk = createAsyncThunk(
     'auth/loginCorporate',
@@ -40,6 +42,47 @@ export const loginCorporateThunk = createAsyncThunk(
             return result.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
+        }
+    }
+);
+
+/**
+ * Corporate Enterprise SSO login thunk (OIDC / In-App Browser)
+ * Following MOBILE_CORPORATE_SSO_IMPLEMENTATION_GUIDE.md
+ */
+export const loginCorporateSsoThunk = createAsyncThunk(
+    'auth/loginCorporateSso',
+    async (ssoOptions, { rejectWithValue }) => {
+        try {
+            const options = typeof ssoOptions === 'string' ? { email: ssoOptions } : ssoOptions;
+            const result = await corporateSsoService.performCorporateSSO(options);
+            return result;
+        } catch (error) {
+            if (error.code === 'user_cancelled') {
+                return rejectWithValue('user_cancelled');
+            }
+            return rejectWithValue(getCorporateSsoErrorMessage(error));
+        }
+    }
+);
+
+/**
+ * Complete Corporate SSO exchange thunk (from direct deep link callback)
+ */
+export const completeCorporateSsoThunk = createAsyncThunk(
+    'auth/completeCorporateSso',
+    async (exchangeCodeOrPayload, { rejectWithValue }) => {
+        try {
+            const payload = typeof exchangeCodeOrPayload === 'string'
+                ? { exchangeCode: exchangeCodeOrPayload }
+                : exchangeCodeOrPayload;
+            const result = await authService.completeSSO(payload);
+            if (!result.success) {
+                return rejectWithValue(getCorporateSsoErrorMessage(result));
+            }
+            return result.data;
+        } catch (error) {
+            return rejectWithValue(getCorporateSsoErrorMessage(error));
         }
     }
 );
@@ -268,7 +311,7 @@ const authSlice = createSlice({
                 state.isAuthenticated = false;
             })
 
-            // Corporate Login
+            // Corporate Login (Password)
             .addCase(loginCorporateThunk.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -286,6 +329,64 @@ const authSlice = createSlice({
                 state.isSessionChecked = true;
             })
             .addCase(loginCorporateThunk.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+
+            // Corporate Enterprise SSO (OIDC)
+            .addCase(loginCorporateSsoThunk.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(loginCorporateSsoThunk.fulfilled, (state, action) => {
+                state.loading = false;
+                const payload = action.payload || {};
+                const session = payload.session || payload;
+                const user = session.user || payload.user;
+                const companyMembership = session.companyMembership || payload.companyMembership;
+                const companyId = session.companyId || companyMembership?.companyId || null;
+                const companyRole = session.companyRole || companyMembership?.role || null;
+
+                state.user = user;
+                state.token = session.accessToken || session.token || payload.token;
+                state.channel = 'Corporate';
+                state.companyId = companyId;
+                state.companyRole = companyRole;
+                state.corporateCompanies = payload.companies || (companyMembership ? [{ companyId, name: companyMembership.companyName, role: companyRole }] : []);
+                state.isAuthenticated = true;
+                state.isSessionChecked = true;
+            })
+            .addCase(loginCorporateSsoThunk.rejected, (state, action) => {
+                state.loading = false;
+                if (action.payload !== 'user_cancelled') {
+                    state.error = action.payload;
+                }
+            })
+
+            // Complete Corporate SSO
+            .addCase(completeCorporateSsoThunk.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(completeCorporateSsoThunk.fulfilled, (state, action) => {
+                state.loading = false;
+                const payload = action.payload || {};
+                const session = payload.session || payload;
+                const user = session.user || payload.user;
+                const companyMembership = session.companyMembership || payload.companyMembership;
+                const companyId = session.companyId || companyMembership?.companyId || null;
+                const companyRole = session.companyRole || companyMembership?.role || null;
+
+                state.user = user;
+                state.token = session.accessToken || session.token || payload.token;
+                state.channel = 'Corporate';
+                state.companyId = companyId;
+                state.companyRole = companyRole;
+                state.corporateCompanies = payload.companies || (companyMembership ? [{ companyId, name: companyMembership.companyName, role: companyRole }] : []);
+                state.isAuthenticated = true;
+                state.isSessionChecked = true;
+            })
+            .addCase(completeCorporateSsoThunk.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             })

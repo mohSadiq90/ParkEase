@@ -146,34 +146,64 @@ export const authService = {
         return response.data;
     },
 
-    async discoverSSO(email) {
+    async discoverSSO(emailOrParams) {
+        const params = typeof emailOrParams === 'string'
+            ? (emailOrParams.includes('@') ? { email: emailOrParams } : { domain: emailOrParams })
+            : emailOrParams;
         const response = await apiClient.get(ENDPOINTS.AUTH.CORPORATE_SSO_DISCOVER, {
-            params: { email },
+            params,
         });
         return response.data;
     },
 
     async startSSO(payload) {
-        const response = await apiClient.post(ENDPOINTS.AUTH.CORPORATE_SSO_START, payload);
+        const requestBody = {
+            client: 'mobile',
+            returnUrl: 'parkease://sso-callback',
+            ...payload,
+        };
+        const response = await apiClient.post(ENDPOINTS.AUTH.CORPORATE_SSO_START, requestBody);
         return response.data;
     },
 
     async completeSSO(payload) {
-        const response = await apiClient.post(ENDPOINTS.AUTH.CORPORATE_SSO_COMPLETE, payload);
+        const requestBody = typeof payload === 'string'
+            ? { exchangeCode: payload }
+            : {
+                exchangeCode: payload.exchangeCode || payload.ssoCode,
+                ssoCode: payload.ssoCode || payload.exchangeCode,
+                ...payload,
+            };
+        const response = await apiClient.post(ENDPOINTS.AUTH.CORPORATE_SSO_COMPLETE, requestBody);
         if (response.data?.success && response.data?.data) {
-            const session = response.data.data.session || response.data.data;
-            const accessToken = session.accessToken || session.token;
-            const refreshToken = session.refreshToken;
-            const user = session.user;
+            const data = response.data.data;
+            const session = data.session || data;
+            const accessToken = session.accessToken || session.token || data.token;
+            const refreshToken = session.refreshToken || data.refreshToken;
+            const user = session.user || data.user;
+            const companyMembership = session.companyMembership || data.companyMembership;
+            const companyId = session.companyId || companyMembership?.companyId;
+            const companyRole = session.companyRole || companyMembership?.role;
+
             if (accessToken) await storageService.setTokens(accessToken, refreshToken);
             if (user) {
                 await storageService.setUser(user);
                 posthogService.identifyUser(user);
-                posthogService.trackEvent(AnalyticsEvents.AUTH_LOGIN, { method: 'sso' });
+                if (companyId) {
+                    posthogService.groupCompany(companyId, {
+                        name: companyMembership?.companyName,
+                        role: companyRole,
+                    });
+                }
+                posthogService.trackEvent(AnalyticsEvents.AUTH_LOGIN, {
+                    method: 'sso',
+                    companyId: companyId || undefined,
+                });
             }
         }
         return response.data;
     },
+
 
     async logout() {
         try {
