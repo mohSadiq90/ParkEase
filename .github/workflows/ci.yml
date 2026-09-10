@@ -3,8 +3,14 @@ name: ParkEase Full-Stack CI
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
   workflow_dispatch:
 
 jobs:

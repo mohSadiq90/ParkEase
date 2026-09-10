@@ -44,3 +44,15 @@
    ```bash
    git push origin main
    ```
+
+---
+
+## 6. Exclusive Mobile Engineering & Android Build Scope (Strict Rule)
+- **Mobile-Only Scope**: All implementation tasks, features, UI/UX enhancements, bug fixes, and architectural changes are strictly scoped to the Mobile React Native application (`Mobile/`). Never modify, build, or touch `backend/` or `frontend/` unless explicitly requested by the user.
+- **Test Execution Scope**: Only run Mobile test suites:
+  ```bash
+  cd Mobile && npm test -- --watchAll=false
+  ```
+  Never run backend .NET tests (`dotnet test`) or web frontend tests (`vitest`).
+- **Build & CI Target**: The exclusive deployment pipeline is the **Android Release APK Build & Firebase App Distribution** (`.github/workflows/build-and-distribute.yml`). Pushes to `main` must only trigger the Android build and distribution pipeline for mobile changes.
+

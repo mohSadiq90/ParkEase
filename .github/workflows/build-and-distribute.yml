@@ -3,8 +3,14 @@ name: Build and Distribute ParkEase Mobile
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'Mobile/**'
+      - '.github/workflows/build-and-distribute.yml'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'Mobile/**'
+      - '.github/workflows/build-and-distribute.yml'
   workflow_dispatch:
 
 jobs:

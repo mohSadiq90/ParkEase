@@ -9,6 +9,33 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-10] - Architecture & CI/CD Governance: Enforce Exclusive Mobile Scope and Android APK Distribution
+- **Process & Guidelines Governance**:
+  - **Clarified & Enforced Exclusive Mobile Focus (`GEMINI.md`)**:
+    - Addressed feedback regarding unintended execution of backend unit tests during mobile builds.
+    - Updated repository guidelines ([`GEMINI.md`](file:///home/appdemo885/ParkEase/GEMINI.md)) with Section 6 explicitly confining all agent engineering, feature implementation, UI/UX refactoring, and automated testing strictly to the Mobile application (`Mobile/`).
+    - Explicitly prohibited running or touching backend .NET or web frontend code during mobile workflows.
+    - Specified that testing is strictly scoped to `Mobile/` (`npm test -- --watchAll=false`), and deployment is strictly scoped to Android Release APK build and Firebase App Distribution (`build-and-distribute.yml`).
+- **CI/CD Workflow Optimization (`.github/workflows/`)**:
+  - **Eliminated Unwanted Backend & Web CI Runs on Mobile Commits**:
+    - Configured `paths` filters in [`.github/workflows/unit-tests.yml`](file:///home/appdemo885/ParkEase/.github/workflows/unit-tests.yml) to strictly trigger on `backend/**` and `frontend/**`, preventing `.NET` unit test runs and confusing Slack failure notifications on mobile commits.
+    - Configured `paths` filters in [`.github/workflows/ci.yml`](file:///home/appdemo885/ParkEase/.github/workflows/ci.yml) to strictly trigger on `backend/**` and `frontend/**`.
+    - Configured `paths` filters in [`.github/workflows/build-and-distribute.yml`](file:///home/appdemo885/ParkEase/.github/workflows/build-and-distribute.yml) to trigger exclusively on `Mobile/**` changes and workflow updates.
+- **Slack Dispatcher Daemon Build Trigger Integration**:
+  - Upgraded [`slack_listener_daemon.py`](file:///home/appdemo885/slack_listener_daemon.py) to recognize build trigger commands (e.g. `trigger build`, `build android`, `deploy mobile`).
+  - Directly triggers `gh workflow run build-and-distribute.yml --ref main` and immediately responds to Slack with workflow link, target APK info, and Firebase channel details.
+- **Key Files Modified**:
+  - `.github/workflows/build-and-distribute.yml`
+  - `.github/workflows/ci.yml`
+  - `.github/workflows/unit-tests.yml`
+  - `GEMINI.md`
+  - `PROGRESS.md`
+  - `/home/appdemo885/slack_listener_daemon.py`
+- **Current Status & Next Steps**:
+  - Mobile test suite: 100% pass rate (36 suites, 183 tests).
+  - Pushed to `origin/main`. Only `Build and Distribute ParkEase Mobile` will trigger for future mobile changes.
+
+
 ### [2026-09-10] - Slack Feedback Resolution: Replace Startup Loading Spinner with Branded Splash / Launch Screen
 - **Features & Enhancements**:
   - **Identified Root Cause of Generic Startup Loader**:
