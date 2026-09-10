@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/globalStyles';
 import chatService from '../../services/chat/chatService';
+import ScreenLayout from '../../components/Layouts/ScreenLayout';
 
 const ConversationListScreen = ({ navigation }) => {
     const [conversations, setConversations] = useState([]);
@@ -103,7 +104,7 @@ const ConversationListScreen = ({ navigation }) => {
     }
 
     return (
-        <View style={styles.container}>
+        <ScreenLayout edges={['top', 'bottom']}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>💬 Messages</Text>
             </View>
@@ -129,7 +130,7 @@ const ConversationListScreen = ({ navigation }) => {
                     }
                 />
             )}
-        </View>
+        </ScreenLayout>
     );
 };
 
@@ -137,7 +138,8 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
     header: {
-        padding: 16, paddingTop: 50,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         backgroundColor: colors.surface,
         borderBottomWidth: 1, borderBottomColor: colors.borderLight,
     },

@@ -149,7 +149,7 @@ const MemberDashboardScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     heroGradient: {
-        paddingTop: 60,
+        paddingTop: spacing.md,
         paddingBottom: spacing['2xl'],
         paddingHorizontal: spacing.screenHorizontal,
         borderBottomLeftRadius: spacing.radius.xl,

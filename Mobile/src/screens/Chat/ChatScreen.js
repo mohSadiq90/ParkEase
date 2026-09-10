@@ -10,12 +10,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/globalStyles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import chatService from '../../services/chat/chatService';
 
 const ChatScreen = ({ route, navigation }) => {
     const { conversationId, parkingSpaceId, participantName, parkingTitle } = route.params;
     const { user } = useAuth();
+    const insets = useSafeAreaInsets();
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
@@ -113,7 +115,7 @@ const ChatScreen = ({ route, navigation }) => {
             keyboardVerticalOffset={0}
         >
             {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets?.top || 0, 12) + 4 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
@@ -177,7 +179,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: {
-        flexDirection: 'row', alignItems: 'center', padding: 12, paddingTop: 50,
+        flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 12,
         backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.borderLight,
     },
     backBtn: { marginRight: 12 },

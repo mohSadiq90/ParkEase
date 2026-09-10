@@ -76,7 +76,7 @@ const LprSettingsScreen = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
-    header: { padding: spacing.lg, paddingTop: 60, backgroundColor: colors.surface },
+    header: { padding: spacing.lg, paddingTop: spacing.sm, backgroundColor: colors.surface },
     headerTitle: { ...typography.h3, color: colors.textPrimary },
     content: { padding: spacing.lg },
     sectionTitle: { ...typography.h4, color: colors.textPrimary, marginBottom: spacing.sm },

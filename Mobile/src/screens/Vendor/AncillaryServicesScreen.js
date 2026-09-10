@@ -40,7 +40,7 @@ const AncillaryServicesScreen = () => {
 };
 
 const styles = StyleSheet.create({
-    header: { padding: spacing.lg, paddingTop: 60, backgroundColor: colors.surface },
+    header: { padding: spacing.lg, paddingTop: spacing.sm, backgroundColor: colors.surface },
     headerTitle: { ...typography.h3, color: colors.textPrimary },
     list: { padding: spacing.lg, gap: spacing.md },
     card: { gap: spacing.sm },

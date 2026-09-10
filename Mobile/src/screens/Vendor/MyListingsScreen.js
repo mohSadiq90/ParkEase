@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 60,
+        paddingTop: spacing.sm,
         paddingHorizontal: spacing.screenHorizontal,
         paddingBottom: spacing.md,
     },

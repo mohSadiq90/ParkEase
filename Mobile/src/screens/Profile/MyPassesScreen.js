@@ -113,7 +113,7 @@ const MyPassesScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     header: {
-        paddingTop: 60,
+        paddingTop: spacing.sm,
         paddingHorizontal: spacing.screenHorizontal,
         paddingBottom: spacing.md,
         flexDirection: 'row',

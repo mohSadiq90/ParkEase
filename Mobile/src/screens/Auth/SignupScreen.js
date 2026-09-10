@@ -7,6 +7,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import { validateForm, registerRules } from '../../utils/validators';
 import { UserRole } from '../../utils/constants';
@@ -15,6 +16,7 @@ import Input from '../../components/Common/Input';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 
 const SignupScreen = ({ navigation }) => {
+    const insets = useSafeAreaInsets();
     const { register, loading, error, dismissError } = useAuth();
     const [formData, setFormData] = useState({
         firstName: '',
@@ -54,7 +56,7 @@ const SignupScreen = ({ navigation }) => {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
-                    contentContainerStyle={styles.scrollContent}
+                    contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, spacing.base) + spacing.xs }]}
                 >
                     {/* Header */}
                     <View style={styles.header}>
@@ -128,7 +130,7 @@ const SignupScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     gradient: { flex: 1 },
     container: { flex: 1 },
-    scrollContent: { flexGrow: 1, paddingHorizontal: spacing.screenHorizontal, paddingTop: 60, paddingBottom: 100 },
+    scrollContent: { flexGrow: 1, paddingHorizontal: spacing.screenHorizontal, paddingBottom: 60 },
     header: { marginBottom: spacing.xl },
     backButton: { marginBottom: spacing.base },
     title: { fontSize: 32, fontWeight: '800', color: colors.white },
