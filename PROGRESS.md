@@ -9,6 +9,38 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-10] - Create Parking Space Form Overhaul: Apple HIG Progressive Wizard, Layout Bug Fixes & Usability Redesign
+- **Features & Enhancements**:
+  - **Apple Human Interface Guidelines (HIG) Form Redesign**:
+    - Transformed the massive 25+ field single-page vendor listing creation/edit form into a structured, progressive 4-step wizard:
+      - **Step 1: Property & Location**: Listing Title, Total Spots with Quick-Spot Pickers (`1`, `2`, `5`, `10`, `25`, `50`), Parking Type with icon cards, Description, Address, City & State, and Zip Code.
+      - **Step 2: Smart Access & Operations**: Category selection, Instant Booking, Ticketless LPR Access, EV Fast Charging configuration, Facility Bay Guidance, and Valet Service.
+      - **Step 3: Pricing & Revenue**: Base Parking Rates (Hourly, Daily, Weekly, Monthly) with ₹ currency indicators and helper tips, plus Dynamic Demand Smart Pricing multipliers.
+      - **Step 4: Photos, Amenities & Live Review**: Photo gallery with thumbnail preview cards and empty state guidance, Amenities picker with 10 custom icon badges, and a Live Listing Summary Preview card displaying a real-time card snapshot of the space.
+    - **Dual Navigation Modes (Interactive Stepper & Full Overview)**:
+      - Integrated top Apple HIG Segmented Bar with visual progress tracking bar (`25%`, `50%`, `75%`, `100%`) and step completion status checkmarks.
+      - Enabled seamless switching between `Step-by-Step Wizard` mode and `Full Overview` mode via a header pill toggle.
+      - Added smooth section jump navigation when tapping step pills in the segmented control.
+      - Built a sticky bottom action bar with Back and Next buttons in step mode, plus a full-width primary submit button.
+    - **Native iOS / Android Controls**:
+      - Replaced raw square checkboxes with native `Switch` controls featuring branded tint colors, custom icon badges, and descriptive subtitle copy for Instant Book, Ticketless LPR, EV Charging, Bay Guidance, and Valet.
+      - Designed segmented cards with iconography for all 5 Parking Types (Open, Covered, Garage, Street, Underground) and all 5 Listing Categories.
+      - Created custom icon badges for all 10 on-site Amenities (CCTV, Security Guard, EV Charging, Covered Parking, Wheelchair Accessible, Restroom, Lighting, Valet, Car Wash, Air Pump).
+- **Bug Fixes & Refactoring**:
+  - **Resolved Shrunk & Untapable Hourly / Daily Rates & City / State Inputs**:
+    - Root cause: `CreateParkingScreen.js` passed `containerStyle={styles.halfInput}` to row inputs, but `Input.js` did not destructure or apply `containerStyle` to the outer wrapper container, instead dumping it onto `TextInput`'s props. In `flexDirection: 'row'`, the outer container had no `flex: 1` or width constraints and collapsed horizontally to ~20-40px (cutting off text to "0." and shrinking City/State inputs into narrow vertical pills).
+    - Upgraded `Input.js` to accept `containerStyle` (merged alongside `style`), guaranteed Apple HIG minimum touch target `minHeight: 48` on `inputContainer` and `minHeight: 44` on `input`, added tap-to-focus on the entire container, and added support for `prefix` (e.g. `₹`), `suffix`, and `rightIcon`.
+    - Applied explicit `flex: 1` with `minWidth: 0` to all two-column row inputs across `CreateParkingScreen.js` (City & State, Hourly & Daily Rate, Weekly & Monthly Rate, EV Rates, Idle Fees, Dynamic Multipliers, Default Level & Zone).
+  - **Full Test Suite & E2E Verification**:
+    - Maintained 100% pass rate across all 33 Jest test suites (175/175 tests passing), including `CreateParkingScreen.test.js` and full E2E `VendorFlow.test.js`.
+- **Key Files Modified**:
+  - `Mobile/src/components/Common/Input.js`
+  - `Mobile/src/screens/Vendor/CreateParkingScreen.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - 100% test pass rate achieved across all 33 test suites.
+  - Ready for commit and push to `origin/main`.
+
 ### [2026-09-05] - Enterprise Corporate Single Sign-On (OIDC / SSO) Implementation & Gap Resolution
 - **Features & Enhancements**:
   - **End-to-End Enterprise Corporate SSO (OIDC) Implementation (Client-Side Mobile Only)**: Implemented full corporate Single Sign-On workflow aligned with `MOBILE_CORPORATE_SSO_IMPLEMENTATION_GUIDE.md` and `API_ENDPOINTS_MOBILE.md`, leaving backend code 100% untouched.

@@ -20,8 +20,12 @@ const Input = React.forwardRef(({
     multiline = false,
     numberOfLines = 1,
     leftIcon,
+    rightIcon,
+    prefix,
+    suffix,
     editable = true,
     style,
+    containerStyle,
     inputStyle,
     onFocus,
     onBlur,
@@ -29,6 +33,8 @@ const Input = React.forwardRef(({
 }, ref) => {
     const [focused, setFocused] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const internalRef = React.useRef(null);
+    const inputRef = ref || internalRef;
 
     const handleFocus = (e) => {
         setFocused(true);
@@ -44,16 +50,24 @@ const Input = React.forwardRef(({
         }
     };
 
+    const handleContainerPress = () => {
+        if (editable && inputRef.current) {
+            inputRef.current.focus();
+        }
+    };
+
     return (
-        <View style={[styles.container, style]}>
+        <View style={[styles.container, containerStyle, style]}>
             {label && <Text style={styles.label}>{label}</Text>}
-            <View
+            <TouchableOpacity
+                activeOpacity={1}
+                onPress={handleContainerPress}
                 style={[
                     styles.inputContainer,
                     focused && styles.inputFocused,
                     error && styles.inputError,
                     !editable && styles.inputDisabled,
-                    multiline && { height: numberOfLines * 40 },
+                    multiline && { height: Math.max(numberOfLines * 40, 80) },
                 ]}
             >
                 {leftIcon && (
@@ -64,8 +78,11 @@ const Input = React.forwardRef(({
                         style={styles.leftIcon}
                     />
                 )}
+                {prefix && (
+                    <Text style={styles.prefixText}>{prefix}</Text>
+                )}
                 <TextInput
-                    ref={ref}
+                    ref={inputRef}
                     value={value}
                     onChangeText={onChangeText}
                     placeholder={placeholder}
@@ -85,6 +102,17 @@ const Input = React.forwardRef(({
                         inputStyle,
                     ]}
                 />
+                {suffix && (
+                    <Text style={styles.suffixText}>{suffix}</Text>
+                )}
+                {rightIcon && !secureTextEntry && (
+                    <Ionicons
+                        name={rightIcon}
+                        size={20}
+                        color={colors.textTertiary}
+                        style={styles.rightIcon}
+                    />
+                )}
                 {secureTextEntry && (
                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
                         <Ionicons
@@ -94,7 +122,7 @@ const Input = React.forwardRef(({
                         />
                     </TouchableOpacity>
                 )}
-            </View>
+            </TouchableOpacity>
             {error && <Text style={styles.errorText}>{error}</Text>}
         </View>
     );
@@ -117,6 +145,7 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: colors.border,
         paddingHorizontal: spacing.inputPaddingH,
+        minHeight: 48,
         ...shadows.sm,
     },
     inputFocused: {
@@ -133,14 +162,30 @@ const styles = StyleSheet.create({
     leftIcon: {
         marginRight: spacing.sm,
     },
+    rightIcon: {
+        marginLeft: spacing.sm,
+    },
+    prefixText: {
+        ...typography.body,
+        fontWeight: '600',
+        color: colors.textSecondary,
+        marginRight: spacing.xs,
+    },
+    suffixText: {
+        ...typography.caption,
+        color: colors.textTertiary,
+        marginLeft: spacing.xs,
+    },
     input: {
         flex: 1,
         ...typography.body,
         color: colors.textPrimary,
         paddingVertical: spacing.inputPaddingV,
+        minHeight: 44,
     },
     multilineInput: {
         textAlignVertical: 'top',
+        minHeight: 80,
     },
     eyeIcon: {
         padding: spacing.xs,
