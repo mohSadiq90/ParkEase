@@ -96,13 +96,13 @@ const MenuScreen = ({ navigation }) => {
             </Card>
 
             {/* Business & Operations */}
-            <Text style={styles.sectionHeader}>Operations & Tools</Text>
+            <Text style={styles.sectionHeader}>Operations & Listings</Text>
             <Card style={styles.cardGroup}>
                 <MenuItem
-                    icon="qr-code-outline"
-                    label="Gate Access Scanner"
-                    subtitle="Scan driver entry QR passes"
-                    onPress={() => navigation.navigate('AccessPassScanner')}
+                    icon="list-outline"
+                    label="My Listings"
+                    subtitle="View, edit & manage parking spaces"
+                    onPress={() => navigation.navigate('MyListings')}
                 />
                 <MenuItem
                     icon="add-circle-outline"
@@ -111,10 +111,28 @@ const MenuScreen = ({ navigation }) => {
                     onPress={() => navigation.navigate('CreateParking')}
                 />
                 <MenuItem
+                    icon="qr-code-outline"
+                    label="Gate Access Scanner"
+                    subtitle="Scan driver entry QR passes"
+                    onPress={() => navigation.navigate('AccessPassScanner')}
+                />
+                <MenuItem
                     icon="search-outline"
                     label="Find Parking Spaces"
-                    subtitle="Explore public parking spots"
+                    subtitle="Explore & search public spots"
                     onPress={() => navigation.navigate('Search')}
+                />
+                <MenuItem
+                    icon="calendar-outline"
+                    label="My Reservations"
+                    subtitle="Personal driver parking bookings"
+                    onPress={() => navigation.navigate('MyBookings')}
+                />
+                <MenuItem
+                    icon="checkmark-done-circle-outline"
+                    label="Incoming Host Bookings"
+                    subtitle="Manage reservations for your spaces"
+                    onPress={() => navigation.navigate('IncomingBookings')}
                 />
                 {isAdmin && (
                     <MenuItem
@@ -124,6 +142,47 @@ const MenuScreen = ({ navigation }) => {
                         onPress={() => navigation.navigate('AdminDashboard')}
                     />
                 )}
+            </Card>
+
+            {/* Corporate & Fleet Hub */}
+            <Text style={styles.sectionHeader}>Corporate & Fleet</Text>
+            <Card style={styles.cardGroup}>
+                <MenuItem
+                    icon="business-outline"
+                    label="Corporate Dashboard"
+                    subtitle="Fleet management & company accounts"
+                    onPress={() => navigation.navigate('CorporateDashboard')}
+                />
+                <MenuItem
+                    icon="briefcase-outline"
+                    label="Company Management"
+                    subtitle="Manage corporate organizations"
+                    onPress={() => navigation.navigate('CompanyManagement')}
+                />
+                <MenuItem
+                    icon="people-outline"
+                    label="Corporate Members"
+                    subtitle="Employee directory & access roles"
+                    onPress={() => navigation.navigate('CorporateMembers')}
+                />
+                <MenuItem
+                    icon="calendar-number-outline"
+                    label="Corporate Bookings"
+                    subtitle="Company & team reservations"
+                    onPress={() => navigation.navigate('CorporateBookings')}
+                />
+                <MenuItem
+                    icon="pie-chart-outline"
+                    label="Department Allocations"
+                    subtitle="Quota distribution & dedicated bays"
+                    onPress={() => navigation.navigate('CorporateAllocations')}
+                />
+                <MenuItem
+                    icon="receipt-outline"
+                    label="Corporate Invoices"
+                    subtitle="Monthly statements & receipts"
+                    onPress={() => navigation.navigate('CorporateInvoices')}
+                />
             </Card>
 
             {/* Communication & Garage */}
@@ -171,6 +230,12 @@ const MenuScreen = ({ navigation }) => {
                     label="Profile Details"
                     subtitle="Name, email, phone number"
                     onPress={() => navigation.navigate('Profile')}
+                />
+                <MenuItem
+                    icon="create-outline"
+                    label="Edit Profile"
+                    subtitle="Update personal information"
+                    onPress={() => navigation.navigate('EditProfile')}
                 />
                 <MenuItem
                     icon="lock-closed-outline"

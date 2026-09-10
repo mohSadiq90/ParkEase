@@ -49,6 +49,7 @@ import CompanyManagementScreen from '../screens/Corporate/CompanyManagementScree
 import CorporateMembersScreen from '../screens/Corporate/CorporateMembersScreen';
 import CorporateAllocationsScreen from '../screens/Corporate/CorporateAllocationsScreen';
 import CorporateBookingsScreen from '../screens/Corporate/CorporateBookingsScreen';
+import CorporateInvoicesScreen from '../screens/Corporate/CorporateInvoicesScreen';
 
 import AdminDashboardScreen from '../screens/Admin/AdminDashboardScreen';
 import AccessPassScannerScreen from '../screens/Vendor/AccessPassScannerScreen';
@@ -73,6 +74,17 @@ const NOTIFICATION_ROUTE_TAB_MAP = {
     MyPasses: 'MenuTab',
     AdminDashboard: 'MenuTab',
     CorporateDashboard: 'MenuTab',
+    CompanyManagement: 'MenuTab',
+    CorporateMembers: 'MenuTab',
+    CorporateAllocations: 'MenuTab',
+    CorporateBookings: 'MenuTab',
+    CorporateInvoices: 'MenuTab',
+    MyListings: 'MenuTab',
+    MyBookings: 'MenuTab',
+    IncomingBookings: 'MenuTab',
+    Search: 'MenuTab',
+    CreateParking: 'MenuTab',
+    AccessPassScanner: 'MenuTab',
 };
 
 const DynamicDashboardScreen = (props) => {
@@ -190,12 +202,17 @@ const MenuStack = () => (
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
         <Stack.Screen name="MyListings" component={MyListingsScreen} />
+        <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
+        <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
+        <Stack.Screen name="IncomingBookings" component={VendorBookingsScreen} />
         <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
         <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
+        <Stack.Screen name="BookParking" component={BookingScreen} />
+        <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
+        <Stack.Screen name="ReviewsList" component={ReviewsListScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
         <Stack.Screen name="ConversationList" component={ConversationListScreen} />
         <Stack.Screen name="Search" component={SearchScreen} />
-        <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
         <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
         <Stack.Screen name="AccessPassScanner" component={AccessPassScannerScreen} />
         <Stack.Screen name="CorporateDashboard" component={CorporateDashboardScreen} />
@@ -203,6 +220,7 @@ const MenuStack = () => (
         <Stack.Screen name="CorporateMembers" component={CorporateMembersScreen} />
         <Stack.Screen name="CorporateAllocations" component={CorporateAllocationsScreen} />
         <Stack.Screen name="CorporateBookings" component={CorporateBookingsScreen} />
+        <Stack.Screen name="CorporateInvoices" component={CorporateInvoicesScreen} />
     </Stack.Navigator>
 );
 
