@@ -11,7 +11,7 @@ import { useDispatch } from 'react-redux';
 import { useAuth } from '../hooks/useAuth';
 import { restoreSessionThunk, completeCorporateSsoThunk } from '../store/slices/authSlice';
 import { extractSsoCode } from '../services/auth/corporateSsoService';
-import LoadingScreen from '../components/Common/LoadingScreen';
+import SplashScreen from '../screens/Splash/SplashScreen';
 import AuthNavigator from './AuthNavigator';
 import AppTabNavigator from './AppTabNavigator';
 import posthogService from '../services/analytics/posthogService';
@@ -59,7 +59,7 @@ const RootNavigator = () => {
     }, [dispatch]);
 
     if (!isSessionChecked) {
-        return <LoadingScreen message="Starting ParkEase..." />;
+        return <SplashScreen />;
     }
 
     return (

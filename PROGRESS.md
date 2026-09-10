@@ -9,6 +9,41 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-10] - Slack Feedback Resolution: Replace Startup Loading Spinner with Branded Splash / Launch Screen
+- **Features & Enhancements**:
+  - **Identified Root Cause of Generic Startup Loader**:
+    - Feedback received via Slack (`#lightplay` / `C0BR9GGMBR6`): *"when we open the application starting Park is is displayed along with the round animating loader can we replace it with splash screen or launch screen"*.
+    - Diagnosis revealed that during initial app boot, `RootNavigator.js` rendered `<LoadingScreen message="Starting ParkEase..." />` with a circular `ActivityIndicator` while the asynchronous session restoration (`restoreSessionThunk`) verified stored credentials.
+  - **Designed & Built Full-Screen Branded Splash / Launch Screen (`SplashScreen.js`)**:
+    - Replaced generic spinner and "Starting ParkEase..." label with an elegant, production-grade `SplashScreen` / `LaunchScreen` aligned with ParkEase's design tokens:
+      - **Background**: Full-screen hero gradient (`colors.gradients.hero`: `#1E3A8A` -> `#2563EB` -> `#3B82F6`) with ambient decorative concentric background rings.
+      - **Brand Emblem**: Elevated circular card (`#FFFFFF`, drop shadow, `elevation: 10`) featuring the branded `car-sport` icon in `#4F46E5` (`colors.primary`) with a smooth animated breathing glow halo.
+      - **Typography**: Prominent white brand title `"ParkEase"` (fontSize 38, weight 800, letterSpacing 1.5) and tagline `"Smart Parking Made Effortless"`.
+      - **Progress Indicator**: Replaced the circular spinner with a sleek, modern horizontal indeterminate progress bar (`Animated.loop` gliding across track) for an intentional native launch screen experience.
+      - **Footer**: Dynamic safe-area inset padded footer displaying `"Smart Parking Platform"` and app version (`v1.0.0`).
+  - **Architecture & Common Component Alignment**:
+    - Created `Mobile/src/screens/Splash/SplashScreen.js` and barrel export `Mobile/src/screens/Splash/index.js` exporting both `SplashScreen` and alias `LaunchScreen`.
+    - Created `Mobile/src/components/Common/SplashScreen.js` forwarding exports for modular access across the app.
+    - Updated `Mobile/src/navigation/RootNavigator.js` to render `<SplashScreen />` while `!isSessionChecked`.
+  - **Automated Testing Suite Expansion**:
+    - Added `Mobile/src/screens/Splash/__tests__/SplashScreen.test.js` covering brand elements, custom props (`tagline`, `version`), and `LaunchScreen` alias export.
+    - Added `Mobile/src/navigation/__tests__/RootNavigator.test.js` validating startup splash screen rendering, transition to `AuthNavigator`, and transition to `AppTabNavigator`.
+    - Extended `Mobile/jest.setup.js` to provide `SafeAreaInsetsContext` and `SafeAreaFrameContext` for seamless native-stack navigation compatibility in tests.
+    - Achieved 100% test pass rate across all 36 Jest test suites (183/183 tests passing).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Splash/SplashScreen.js` (new)
+  - `Mobile/src/screens/Splash/index.js` (new)
+  - `Mobile/src/screens/Splash/__tests__/SplashScreen.test.js` (new)
+  - `Mobile/src/components/Common/SplashScreen.js` (new)
+  - `Mobile/src/navigation/RootNavigator.js`
+  - `Mobile/src/navigation/__tests__/RootNavigator.test.js` (new)
+  - `Mobile/jest.setup.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - 100% test pass rate (36 suites, 183 tests).
+  - Pushed to `origin/main` for CI/CD Android APK build.
+  - Summary replied to Slack feedback thread in `#lightplay` (`C0BR9GGMBR6`).
+
 ### [2026-09-10] - Slack Feedback Resolution: Eliminate Redundant Screen Top Padding Across Mobile Screens
 - **Bug Fixes & Refactoring**:
   - **Identified Root Cause of Excessive Blank Whitespace at Top of Screens**:

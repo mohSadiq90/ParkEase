@@ -4,11 +4,18 @@ jest.setTimeout(30000);
 
 // Mock SafeAreaContext
 jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
   const inset = { top: 0, right: 0, bottom: 0, left: 0 };
+  const frame = { x: 0, y: 0, width: 390, height: 844 };
+  const SafeAreaInsetsContext = React.createContext(inset);
+  const SafeAreaFrameContext = React.createContext(frame);
   return {
     SafeAreaProvider: jest.fn().mockImplementation(({ children }) => children),
     SafeAreaConsumer: jest.fn().mockImplementation(({ children }) => children(inset)),
     useSafeAreaInsets: jest.fn().mockReturnValue(inset),
+    useSafeAreaFrame: jest.fn().mockReturnValue(frame),
+    SafeAreaInsetsContext,
+    SafeAreaFrameContext,
   };
 });
 
