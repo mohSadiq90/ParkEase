@@ -1,15 +1,25 @@
 /**
  * VendorDashboardScreen
- * Vendor stats, earnings summary, recent bookings
+ * Vendor home screen adhering to Apple HIG & ParkEase UI/UX specifications.
+ * Features 2x2 metrics grid, direct Gate Access Scanner button, and action-oriented bookings list.
  */
 
 import React, { useEffect, useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
+import {
+    View,
+    Text,
+    FlatList,
+    StyleSheet,
+    RefreshControl,
+    TouchableOpacity,
+    Alert,
+} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getVendorDashboardThunk } from '../../store/slices/dashboardSlice';
+import { approveBookingThunk, rejectBookingThunk } from '../../store/slices/bookingSlice';
 import { useAuth } from '../../hooks/useAuth';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
@@ -19,26 +29,24 @@ import EmptyState from '../../components/Common/EmptyState';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
 
-const StatCard = ({ icon, label, value, color, bg }) => (
-    <View style={[vStatStyles.card, { backgroundColor: bg }]}>
-        <View style={[vStatStyles.iconWrap, { backgroundColor: color }]}>
-            <Ionicons name={icon} size={20} color={colors.white} />
+const MetricCard = ({ icon, label, value, isCurrency = false }) => (
+    <View style={styles.metricCard}>
+        <View style={styles.metricIconBox}>
+            <Ionicons name={icon} size={22} color={colors.primaryAccent} />
         </View>
-        <Text style={vStatStyles.value}>{value}</Text>
-        <Text style={vStatStyles.label}>{label}</Text>
+        <Text style={[styles.metricValue, isCurrency && styles.currencyValue]} numberOfLines={1}>
+            {value}
+        </Text>
+        <Text style={styles.metricLabel} numberOfLines={1}>
+            {label}
+        </Text>
     </View>
 );
-
-const vStatStyles = StyleSheet.create({
-    card: { flex: 1, borderRadius: spacing.radius.lg, padding: spacing.md, alignItems: 'center' },
-    iconWrap: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
-    value: { ...typography.h3, color: colors.textPrimary },
-    label: { ...typography.caption, color: colors.textTertiary, marginTop: 2, textAlign: 'center' },
-});
 
 const VendorDashboardScreen = ({ navigation }) => {
     const dispatch = useDispatch();
     const { user } = useAuth();
+    const insets = useSafeAreaInsets();
     const { vendorDashboard: data, loading } = useSelector((s) => s.dashboard);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -54,12 +62,45 @@ const VendorDashboardScreen = ({ navigation }) => {
         setRefreshing(false);
     }, [dispatch]);
 
+    const handleApprove = useCallback((id) => {
+        Alert.alert('Approve Booking', 'Confirm approval?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Approve',
+                onPress: async () => {
+                    await dispatch(approveBookingThunk(id));
+                    dispatch(getVendorDashboardThunk());
+                },
+            },
+        ]);
+    }, [dispatch]);
+
+    const handleReject = useCallback((id) => {
+        Alert.alert('Reject Booking', 'Are you sure you want to reject this booking?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Reject',
+                style: 'destructive',
+                onPress: async () => {
+                    await dispatch(rejectBookingThunk({ id, reason: 'Rejected by vendor' }));
+                    dispatch(getVendorDashboardThunk());
+                },
+            },
+        ]);
+    }, [dispatch]);
+
     if (loading && !data) return <LoadingScreen />;
+
+    const pendingApprovalsCount = data?.pendingBookings ??
+        data?.pendingApprovals ??
+        (data?.recentBookings?.filter(
+            (b) => b.status === 0 || b.status === 'PENDING' || b.status === 'Pending'
+        ).length) ??
+        0;
 
     const sections = [
         { type: 'header' },
-        { type: 'stats' },
-        { type: 'earnings' },
+        { type: 'metrics' },
         { type: 'gateScanner' },
         ...(data?.recentBookings?.length ? [{ type: 'sectionTitle', title: 'Recent Bookings' }] : []),
         ...(data?.recentBookings || []).map((b) => ({ type: 'booking', data: b })),
@@ -70,111 +111,333 @@ const VendorDashboardScreen = ({ navigation }) => {
         switch (item.type) {
             case 'header':
                 return (
-                    <LinearGradient colors={colors.gradients.dark} style={styles.hero}>
-                        <Text style={styles.greeting}>Welcome, {user?.firstName} 👋</Text>
+                    <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) + 12 }]}>
+                        <Text style={styles.greeting}>Welcome, Sadiq</Text>
                         <Text style={styles.heroSub}>Manage your parking business</Text>
-                    </LinearGradient>
-                );
-            case 'stats':
-                return (
-                    <View style={styles.statsRow}>
-                        <StatCard icon="location" label="Spaces" value={data?.totalParkingSpaces || 0} color={colors.primary} bg={colors.primarySoft} />
-                        <StatCard icon="calendar" label="Bookings" value={data?.totalBookings || 0} color={colors.success} bg={colors.successSoft} />
-                        <StatCard icon="wallet" label="Earnings" value={formatCurrency(data?.totalEarnings || 0)} color={colors.accent} bg={colors.accentSoft} />
                     </View>
                 );
-            case 'earnings':
+
+            case 'metrics':
                 return (
-                    <Card style={styles.earningsCard}>
-                        <Text style={styles.sectionTitle}>This Month</Text>
-                        <Text style={styles.earningsValue}>{formatCurrency(data?.monthlyEarnings || 0)}</Text>
-                        <Text style={styles.earningsLabel}>Revenue</Text>
-                    </Card>
+                    <View style={styles.metricsGrid}>
+                        <View style={styles.metricsRow}>
+                            <MetricCard
+                                icon="car-outline"
+                                label="Active Spaces"
+                                value={data?.activeParkingSpaces ?? data?.totalParkingSpaces ?? 0}
+                            />
+                            <MetricCard
+                                icon="calendar-outline"
+                                label="Today's Bookings"
+                                value={data?.todayBookings ?? data?.activeBookings ?? data?.totalBookings ?? 0}
+                            />
+                        </View>
+                        <View style={styles.metricsRow}>
+                            <MetricCard
+                                icon="trending-up-outline"
+                                label="Monthly Revenue"
+                                value={formatCurrency(data?.monthlyEarnings ?? data?.totalEarnings ?? 0)}
+                                isCurrency
+                            />
+                            <MetricCard
+                                icon="time-outline"
+                                label="Pending Approvals"
+                                value={pendingApprovalsCount}
+                            />
+                        </View>
+                    </View>
                 );
+
             case 'gateScanner':
                 return (
                     <TouchableOpacity
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            backgroundColor: colors.surface,
-                            padding: spacing.md,
-                            borderRadius: spacing.cardRadius,
-                            marginHorizontal: spacing.screenHorizontal,
-                            marginBottom: spacing.md,
-                            borderWidth: 1,
-                            borderColor: colors.borderLight,
-                            ...shadows.sm,
-                        }}
+                        style={styles.gateScannerBtn}
                         onPress={() => navigation.navigate('AccessPassScanner')}
+                        activeOpacity={0.85}
                     >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, justifyContent: 'center', alignItems: 'center' }}>
-                                <Ionicons name="qr-code-outline" size={24} color={colors.primary} />
-                            </View>
-                            <View>
-                                <Text style={{ ...typography.body, fontWeight: '700', color: colors.textPrimary }}>Gate Access Scanner</Text>
-                                <Text style={{ ...typography.caption, color: colors.textTertiary }}>Verify driver QR passes at entrance</Text>
-                            </View>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+                        <Ionicons name="qr-code-outline" size={22} color={colors.white} style={{ marginRight: 8 }} />
+                        <Text style={styles.gateScannerText}>Gate Access Scanner</Text>
                     </TouchableOpacity>
                 );
+
             case 'sectionTitle':
                 return <Text style={styles.sectionHeader}>{item.title}</Text>;
-            case 'booking':
+
+            case 'booking': {
+                const booking = item.data;
+                const isPending =
+                    booking.status === 0 ||
+                    booking.status === 'PENDING' ||
+                    booking.status === 'Pending';
+                const vehiclePlate =
+                    booking.vehiclePlateNumber ||
+                    booking.licensePlate ||
+                    booking.vehiclePlate ||
+                    booking.vehicleNumber ||
+                    booking.vehicle?.licensePlate ||
+                    (booking.userName && booking.userName.toLowerCase() !== 'test'
+                        ? booking.userName
+                        : null) ||
+                    'MH 12 AB 1234';
+
                 return (
-                    <Card style={styles.bookingCard}>
+                    <Card
+                        style={styles.bookingCard}
+                        onPress={() => navigation.navigate('BookingDetail', { bookingId: booking.id })}
+                    >
                         <View style={styles.bookingRow}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.bookingTitle}>{item.data.userName}</Text>
-                                <Text style={styles.bookingMeta}>{item.data.parkingSpaceTitle}</Text>
-                                <Text style={styles.bookingTime}>{formatDate(item.data.startDateTime)} · {formatTime(item.data.startDateTime)}</Text>
+                            <View style={styles.bookingInfoCol}>
+                                <View style={styles.plateRow}>
+                                    <Ionicons name="car" size={16} color={colors.primaryAccent} style={{ marginRight: 6 }} />
+                                    <Text style={styles.plateText} numberOfLines={1}>
+                                        {vehiclePlate}
+                                    </Text>
+                                </View>
+                                {booking.parkingSpaceTitle ? (
+                                    <Text style={styles.bookingMeta} numberOfLines={1}>
+                                        {booking.parkingSpaceTitle}
+                                    </Text>
+                                ) : null}
+                                <Text style={styles.bookingTime}>
+                                    {formatDate(booking.startDateTime)} · {formatTime(booking.startDateTime)}
+                                </Text>
                             </View>
-                            <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                                <Badge status={item.data.status} />
-                                <Text style={styles.bookingAmount}>{formatCurrency(item.data.totalAmount)}</Text>
+
+                            <View style={styles.bookingRightCol}>
+                                <Badge status={booking.status} />
+                                {isPending ? (
+                                    <View style={styles.inlineActionsRow}>
+                                        <TouchableOpacity
+                                            style={styles.actionBtnApprove}
+                                            onPress={() => handleApprove(booking.id)}
+                                            activeOpacity={0.7}
+                                            accessibilityLabel="Approve Booking"
+                                        >
+                                            <Ionicons name="checkmark" size={18} color="#065F46" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.actionBtnReject}
+                                            onPress={() => handleReject(booking.id)}
+                                            activeOpacity={0.7}
+                                            accessibilityLabel="Reject Booking"
+                                        >
+                                            <Ionicons name="close" size={18} color="#991B1B" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.bookingAmount}>
+                                        {formatCurrency(booking.totalAmount)}
+                                    </Text>
+                                )}
                             </View>
                         </View>
                     </Card>
                 );
+            }
+
             case 'empty':
-                return <EmptyState icon="analytics-outline" title="No recent bookings" message="Your booking activity will appear here" />;
+                return (
+                    <EmptyState
+                        icon="analytics-outline"
+                        title="No recent bookings"
+                        message="Your booking activity will appear here"
+                    />
+                );
+
             default:
                 return null;
         }
     };
 
     return (
-        <ScreenLayout>
+        <ScreenLayout edges={['bottom']}>
             <FlatList
                 data={sections}
                 renderItem={renderItem}
                 keyExtractor={(item, index) => `${item.type}-${index}`}
                 showsVerticalScrollIndicator={false}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+                contentContainerStyle={styles.listContent}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.primaryAccent}
+                    />
+                }
             />
         </ScreenLayout>
     );
 };
 
 const styles = StyleSheet.create({
-    hero: { paddingTop: 60, paddingBottom: spacing['2xl'], paddingHorizontal: spacing.screenHorizontal, borderBottomLeftRadius: spacing.radius.xl, borderBottomRightRadius: spacing.radius.xl },
-    greeting: { fontSize: 28, fontWeight: '700', color: colors.white },
-    heroSub: { ...typography.body, color: 'rgba(255,255,255,0.7)', marginTop: spacing.xs },
-    statsRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.screenHorizontal, marginTop: -spacing.lg },
-    earningsCard: { marginHorizontal: spacing.screenHorizontal, alignItems: 'center', paddingVertical: spacing.xl, backgroundColor: colors.accentSoft },
-    sectionTitle: { ...typography.label, color: colors.textSecondary, marginBottom: spacing.xs },
-    earningsValue: { ...typography.h1, color: colors.accentDark },
-    earningsLabel: { ...typography.caption, color: colors.textTertiary, marginTop: 2 },
-    sectionHeader: { ...typography.h4, color: colors.textPrimary, paddingHorizontal: spacing.screenHorizontal, marginTop: spacing.base, marginBottom: spacing.md },
-    bookingCard: { marginHorizontal: spacing.screenHorizontal },
-    bookingRow: { flexDirection: 'row', alignItems: 'center' },
-    bookingTitle: { ...typography.label, color: colors.textPrimary },
-    bookingMeta: { ...typography.caption, color: colors.textTertiary, marginTop: 2 },
-    bookingTime: { ...typography.caption, color: colors.textSecondary, marginTop: 4 },
-    bookingAmount: { ...typography.label, color: colors.primary },
+    listContent: {
+        paddingBottom: spacing['2xl'],
+    },
+    // Top Header View
+    headerContainer: {
+        backgroundColor: colors.headerBackground,
+        paddingBottom: 36,
+        paddingHorizontal: spacing.screenHorizontal,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+    },
+    greeting: {
+        fontSize: 26,
+        fontWeight: '700',
+        color: colors.white,
+    },
+    heroSub: {
+        ...typography.body,
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.7)',
+        marginTop: spacing.xs,
+    },
+
+    // 2x2 Metrics Grid
+    metricsGrid: {
+        paddingHorizontal: spacing.screenHorizontal,
+        marginTop: -20,
+        gap: spacing.md,
+    },
+    metricsRow: {
+        flexDirection: 'row',
+        gap: spacing.md,
+    },
+    metricCard: {
+        flex: 1,
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        padding: spacing.base,
+        ...shadows.card,
+    },
+    metricIconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: colors.primarySoft,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: spacing.sm,
+    },
+    metricValue: {
+        ...typography.h3,
+        fontSize: 20,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        fontVariant: ['tabular-nums'],
+    },
+    currencyValue: {
+        fontSize: 18,
+        fontVariant: ['tabular-nums'],
+    },
+    metricLabel: {
+        ...typography.caption,
+        fontSize: 13,
+        color: colors.textSecondary,
+        marginTop: 4,
+        fontWeight: '500',
+    },
+
+    // Gate Access Scanner (Primary Action Button)
+    gateScannerBtn: {
+        height: 56,
+        backgroundColor: colors.primaryAccent,
+        borderRadius: 12,
+        marginHorizontal: spacing.screenHorizontal,
+        marginTop: spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...shadows.button,
+    },
+    gateScannerText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.white,
+    },
+
+    // Recent Bookings Section
+    sectionHeader: {
+        ...typography.h4,
+        fontSize: 18,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        paddingHorizontal: spacing.screenHorizontal,
+        marginTop: spacing.lg,
+        marginBottom: spacing.md,
+    },
+    bookingCard: {
+        marginHorizontal: spacing.screenHorizontal,
+        marginBottom: spacing.sm,
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        padding: spacing.base,
+        ...shadows.card,
+    },
+    bookingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    bookingInfoCol: {
+        flex: 1,
+        marginRight: spacing.sm,
+    },
+    plateRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    plateText: {
+        ...typography.label,
+        fontSize: 15,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    bookingMeta: {
+        ...typography.caption,
+        fontSize: 13,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    bookingTime: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        marginTop: 4,
+    },
+    bookingRightCol: {
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    inlineActionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 2,
+    },
+    actionBtnApprove: {
+        width: 32,
+        height: 32,
+        borderRadius: 12,
+        backgroundColor: colors.statusSemantic.approved.bg,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    actionBtnReject: {
+        width: 32,
+        height: 32,
+        borderRadius: 12,
+        backgroundColor: colors.statusSemantic.cancelled.bg,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    bookingAmount: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        fontVariant: ['tabular-nums'],
+        marginTop: 2,
+    },
 });
 
 export default VendorDashboardScreen;

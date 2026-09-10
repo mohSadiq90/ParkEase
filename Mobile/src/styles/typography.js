@@ -87,6 +87,12 @@ export const typography = {
         fontWeight: '600',
         lineHeight: 20,
     },
+    currency: {
+        fontVariant: ['tabular-nums'],
+    },
+    tabular: {
+        fontVariant: ['tabular-nums'],
+    },
 };
 
 export default typography;

@@ -22,7 +22,7 @@ export const spacing = {
     // Card
     cardPadding: 16,
     cardMargin: 12,
-    cardRadius: 16,
+    cardRadius: 12,
 
     // Button
     buttonPaddingH: 24,
@@ -34,12 +34,16 @@ export const spacing = {
     inputPaddingV: 14,
     inputRadius: 12,
 
-    // Border radius
+    // Border radius (Global: 12pt for cards, buttons, status pills)
+    globalRadius: 12,
     radius: {
         sm: 8,
         md: 12,
         lg: 16,
         xl: 20,
+        card: 12,
+        pill: 12,
+        global: 12,
         full: 9999,
     },
 };

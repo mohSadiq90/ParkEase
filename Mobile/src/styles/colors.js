@@ -4,11 +4,12 @@
  */
 
 export const colors = {
-    // Primary
-    primary: '#2563EB',
-    primaryDark: '#1D4ED8',
-    primaryLight: '#3B82F6',
-    primarySoft: '#DBEAFE',
+    // Primary Accent (Indigo #4F46E5)
+    primary: '#4F46E5',
+    primaryAccent: '#4F46E5',
+    primaryDark: '#4338CA',
+    primaryLight: '#6366F1',
+    primarySoft: '#EEF2FF',
 
     // Secondary / Accent
     accent: '#F59E0B',
@@ -43,16 +44,27 @@ export const colors = {
     background: '#F8FAFC',
     surface: '#FFFFFF',
     surfaceElevated: '#FFFFFF',
+    headerBackground: '#0F172A',
     border: '#E2E8F0',
     borderLight: '#F1F5F9',
     divider: '#E2E8F0',
 
     // Text
-    textPrimary: '#0F172A',
-    textSecondary: '#475569',
+    textPrimary: '#1E293B',
+    textSecondary: '#64748B',
     textTertiary: '#94A3B8',
     textInverse: '#FFFFFF',
-    textLink: '#2563EB',
+    textLink: '#4F46E5',
+
+    // Semantic Status Colors (Pill Background / Text)
+    statusSemantic: {
+        pending: { bg: '#FEF3C7', text: '#92400E' },
+        awaiting: { bg: '#FEF3C7', text: '#92400E' },
+        approved: { bg: '#D1FAE5', text: '#065F46' },
+        active: { bg: '#D1FAE5', text: '#065F46' },
+        cancelled: { bg: '#FEE2E2', text: '#991B1B' },
+        rejected: { bg: '#FEE2E2', text: '#991B1B' },
+    },
 
     // Dark variants (for cards, badges, etc.)
     dark: '#0F172A',

@@ -31,7 +31,24 @@ export const shadows = {
     lg: createShadow(3),
     xl: createShadow(4),
     '2xl': createShadow(5),
-    card: createShadow(2),
+    card: Platform.select({
+        ios: {
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+        },
+        android: {
+            elevation: 2,
+        },
+        default: {
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+            elevation: 2,
+        },
+    }),
     button: createShadow(3),
     modal: createShadow(5),
 };

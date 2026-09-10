@@ -50,9 +50,9 @@ import CorporateMembersScreen from '../screens/Corporate/CorporateMembersScreen'
 import CorporateAllocationsScreen from '../screens/Corporate/CorporateAllocationsScreen';
 import CorporateBookingsScreen from '../screens/Corporate/CorporateBookingsScreen';
 
-// Admin Screens
 import AdminDashboardScreen from '../screens/Admin/AdminDashboardScreen';
 import AccessPassScannerScreen from '../screens/Vendor/AccessPassScannerScreen';
+import MenuScreen from '../screens/Menu/MenuScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -62,10 +62,17 @@ const stackOptions = {
 };
 
 const NOTIFICATION_ROUTE_TAB_MAP = {
-    ChatScreen: 'MessagesTab',
-    ConversationList: 'MessagesTab',
-    Notifications: 'ProfileTab',
-    Profile: 'ProfileTab',
+    ChatScreen: 'MenuTab',
+    ConversationList: 'MenuTab',
+    Notifications: 'MenuTab',
+    Profile: 'MenuTab',
+    EditProfile: 'MenuTab',
+    ChangePassword: 'MenuTab',
+    Vehicles: 'MenuTab',
+    Favorites: 'MenuTab',
+    MyPasses: 'MenuTab',
+    AdminDashboard: 'MenuTab',
+    CorporateDashboard: 'MenuTab',
 };
 
 const DynamicDashboardScreen = (props) => {
@@ -170,9 +177,27 @@ const ProfileStack = () => (
     </Stack.Navigator>
 );
 
-// ── Corporate Stack ──
-const CorporateStack = () => (
+// ── Menu Stack ──
+const MenuStack = () => (
     <Stack.Navigator screenOptions={stackOptions}>
+        <Stack.Screen name="MenuHome" component={MenuScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <Stack.Screen name="Vehicles" component={VehiclesScreen} />
+        <Stack.Screen name="Favorites" component={FavoritesScreen} />
+        <Stack.Screen name="MyPasses" component={MyPassesScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
+        <Stack.Screen name="MyListings" component={MyListingsScreen} />
+        <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
+        <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
+        <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="ConversationList" component={ConversationListScreen} />
+        <Stack.Screen name="Search" component={SearchScreen} />
+        <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
+        <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+        <Stack.Screen name="AccessPassScanner" component={AccessPassScannerScreen} />
         <Stack.Screen name="CorporateDashboard" component={CorporateDashboardScreen} />
         <Stack.Screen name="CompanyManagement" component={CompanyManagementScreen} />
         <Stack.Screen name="CorporateMembers" component={CorporateMembersScreen} />
@@ -184,6 +209,7 @@ const CorporateStack = () => (
 const AppTabNavigator = ({ navigation }) => {
     const dispatch = useDispatch();
     const insets = useSafeAreaInsets();
+    const { isVendor } = useAuth();
     const { unreadCount: notificationUnreadCount } = useSelector((s) => s.notification);
     const { unreadCount: messageUnreadCount } = useSelector((s) => s.chat);
 
@@ -234,17 +260,27 @@ const AppTabNavigator = ({ navigation }) => {
                 tabBarIcon: ({ focused, color, size }) => {
                     const icons = {
                         HomeTab: focused ? 'home' : 'home-outline',
-                        SearchTab: focused ? 'search' : 'search-outline',
-                        ListingsTab: focused ? 'location' : 'location-outline',
                         BookingsTab: focused ? 'calendar' : 'calendar-outline',
-                        MessagesTab: focused ? 'chatbubbles' : 'chatbubbles-outline',
-                        ProfileTab: focused ? 'person' : 'person-outline',
-                        CorporateTab: focused ? 'business' : 'business-outline',
+                        ListingsTab: focused ? 'location' : 'location-outline',
+                        MenuTab: focused ? 'grid' : 'grid-outline',
+                        SearchTab: focused ? 'search' : 'search-outline',
                     };
-                    return <Ionicons name={icons[route.name]} size={size} color={color} />;
+                    return (
+                        <Ionicons
+                            name={icons[route.name] || 'ellipse-outline'}
+                            size={size || 22}
+                            color={color}
+                        />
+                    );
                 },
-                tabBarActiveTintColor: colors.primary,
-                tabBarInactiveTintColor: colors.textTertiary,
+                tabBarActiveTintColor: colors.primaryAccent,
+                tabBarInactiveTintColor: '#94A3B8',
+                tabBarItemStyle: {
+                    minHeight: 44,
+                    minWidth: 44,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                },
                 tabBarStyle: {
                     backgroundColor: colors.surface,
                     borderTopColor: colors.borderLight,
@@ -253,8 +289,8 @@ const AppTabNavigator = ({ navigation }) => {
                     height: 60 + Math.max(insets.bottom, 0),
                 },
                 tabBarLabelStyle: {
-                    fontSize: 10,
-                    fontWeight: '500',
+                    fontSize: 11,
+                    fontWeight: '600',
                 },
             })}
         >
@@ -264,48 +300,47 @@ const AppTabNavigator = ({ navigation }) => {
                 options={{ tabBarLabel: 'Home' }} 
                 listeners={{ tabPress: refreshCounts }}
             />
+            {isVendor ? (
+                <>
+                    <Tab.Screen 
+                        name="BookingsTab" 
+                        component={BookingsStack} 
+                        options={{ tabBarLabel: 'Bookings' }} 
+                        listeners={{ tabPress: refreshCounts }}
+                    />
+                    <Tab.Screen 
+                        name="ListingsTab" 
+                        component={ListingsStack} 
+                        options={{ tabBarLabel: 'Listings' }} 
+                        listeners={{ tabPress: refreshCounts }}
+                    />
+                </>
+            ) : (
+                <>
+                    <Tab.Screen 
+                        name="SearchTab" 
+                        component={SearchStack} 
+                        options={{ tabBarLabel: 'Search' }} 
+                        listeners={{ tabPress: refreshCounts }}
+                    />
+                    <Tab.Screen 
+                        name="BookingsTab" 
+                        component={BookingsStack} 
+                        options={{ tabBarLabel: 'Bookings' }} 
+                        listeners={{ tabPress: refreshCounts }}
+                    />
+                </>
+            )}
             <Tab.Screen 
-                name="SearchTab" 
-                component={SearchStack} 
-                options={{ tabBarLabel: 'Search' }} 
-                listeners={{ tabPress: refreshCounts }}
-            />
-            <Tab.Screen 
-                name="ListingsTab" 
-                component={ListingsStack} 
-                options={{ tabBarLabel: 'Listings' }} 
-                listeners={{ tabPress: refreshCounts }}
-            />
-            <Tab.Screen 
-                name="BookingsTab" 
-                component={BookingsStack} 
-                options={{ tabBarLabel: 'Bookings' }} 
-                listeners={{ tabPress: refreshCounts }}
-            />
-            <Tab.Screen 
-                name="MessagesTab" 
-                component={MessagesStack} 
+                name="MenuTab" 
+                component={MenuStack} 
                 options={{ 
-                    tabBarLabel: 'Messages',
-                    tabBarBadge: messageUnreadCount > 0 ? messageUnreadCount : null,
-                    tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.white }
-                }} 
-                listeners={{ tabPress: refreshCounts }}
-            />
-            <Tab.Screen 
-                name="ProfileTab" 
-                component={ProfileStack} 
-                options={{ 
-                    tabBarLabel: 'Profile',
-                    tabBarBadge: notificationUnreadCount > 0 ? notificationUnreadCount : null,
+                    tabBarLabel: 'Menu',
+                    tabBarBadge: (notificationUnreadCount + (messageUnreadCount || 0)) > 0
+                        ? (notificationUnreadCount + (messageUnreadCount || 0))
+                        : null,
                     tabBarBadgeStyle: { backgroundColor: colors.danger, color: colors.white }
                 }} 
-                listeners={{ tabPress: refreshCounts }}
-            />
-            <Tab.Screen 
-                name="CorporateTab" 
-                component={CorporateStack} 
-                options={{ tabBarLabel: 'Corporate' }} 
                 listeners={{ tabPress: refreshCounts }}
             />
         </Tab.Navigator>
