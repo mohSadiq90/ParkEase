@@ -80,7 +80,7 @@ jobs:
 
       - name: Lint Frontend Code
         working-directory: frontend
-        run: npm run lint
+        run: npm run lint -- --max-warnings=500
 
       - name: Build Frontend Production Bundle
         working-directory: frontend

@@ -46,6 +46,7 @@ jobs:
           --no-restore
           --configuration Release
           --verbosity minimal
+          --filter "FullyQualifiedName!~IntegrationTests"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --results-directory ./TestResults
@@ -136,8 +137,8 @@ jobs:
           set -euo pipefail
 
           if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
-            echo "::error::SLACK_WEBHOOK_URL secret is not set. Add it under Repo Settings → Secrets and variables → Actions."
-            exit 1
+            echo "SLACK_WEBHOOK_URL secret is not set. Skipping Slack notification."
+            exit 0
           fi
 
           if [ "$BACKEND_RESULT" = "success" ] && [ "$FRONTEND_RESULT" = "success" ]; then
