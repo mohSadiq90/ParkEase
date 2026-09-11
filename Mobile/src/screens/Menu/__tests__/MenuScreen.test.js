@@ -108,5 +108,32 @@ describe('MenuScreen', () => {
     expect(mockNavigation.navigate).toHaveBeenCalledWith('ChangePassword');
 
     expect(getByText('Log Out')).toBeTruthy();
+
+    // About & System
+    expect(getByText('About & System')).toBeTruthy();
+    expect(getByText('Built With')).toBeTruthy();
+  });
+
+  it('opens and closes the Built With modal with 25 technology tags', () => {
+    const { getByText, getByTestId, queryByText, getByLabelText } = renderWithProviders(
+      <MenuScreen navigation={mockNavigation} />
+    );
+
+    // Open via Built With menu item
+    fireEvent.press(getByText('Built With'));
+    expect(getByText('25 Core Technologies & Architecture')).toBeTruthy();
+    expect(getByText('React Native')).toBeTruthy();
+    expect(getByText('Expo SDK 54')).toBeTruthy();
+    expect(getByText('Redux Toolkit')).toBeTruthy();
+
+    // Close via Done button
+    fireEvent.press(getByText('Done'));
+
+    // Open via Footer button
+    fireEvent.press(getByTestId('menu-footer-built-with'));
+    expect(getByText('25 Core Technologies & Architecture')).toBeTruthy();
+
+    // Close via header close icon
+    fireEvent.press(getByLabelText('Close Built With Modal'));
   });
 });

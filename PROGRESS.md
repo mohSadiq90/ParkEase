@@ -9,6 +9,35 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-11] - Slack Dispatch: Devpost Hackathon "Built With" 25 Tags & Mobile Tech Stack Hub
+- **Features & Enhancements**:
+  - **Devpost "Built With" Tags Resolution (<@U06FVANTNHL>)**:
+    - Received Slack request: `"*Built with* \n _You can add up to 25 tags._ \n • ** Built with* \n answer please"`.
+    - Formulated and documented the authoritative 25 Devpost tags for both the **CALL-E Hackathon: Supply Chain Supplier Status Check Agent** and the **ParkEase Mobile Platform**.
+    - Created `ParkEase/docs/BUILT_WITH.md` and `call-e-hackathon/docs/DEVPOST_SUBMISSION.md` with comma-separated and pill-formatted strings for single-click copy-paste.
+  - **Mobile In-App "Built With" Architecture & Modal (`MenuScreen.js`)**:
+    - Integrated an interactive in-app "Built With" technology stack showcase into `Mobile/src/screens/Menu/MenuScreen.js`.
+    - Added an "About & System" section containing a dedicated "Built With" MenuItem with `code-slash-outline` icon and subtitle detailing the 25 core technologies.
+    - Updated the app version footer to an interactive touchable opening the "Built With" modal directly.
+    - Implemented `PARKEASE_BUILT_WITH_TAGS` (25 structured technology tags with categories, icons, and descriptions).
+    - Designed full responsive modal featuring categorized chips, architecture overview, and copyable Devpost tag text string.
+- **Automated Testing & Verification**:
+  - Extended `Mobile/src/screens/Menu/__tests__/MenuScreen.test.js` to verify:
+    - "About & System" section and "Built With" item rendering.
+    - Modal opening via "Built With" menu item and closing via "Done" button.
+    - Modal opening via footer and closing via header close button.
+    - Proper rendering of core tags (`React Native`, `Expo SDK 54`, `Redux Toolkit`).
+  - Ran full test suite across ParkEase Mobile: **100% pass rate** (36/36 suites, 184/184 unit tests passing).
+  - Maintained strict 5GB disk space limit (2.5GB free on `/home`).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Menu/MenuScreen.js`
+  - `Mobile/src/screens/Menu/__tests__/MenuScreen.test.js`
+  - `docs/BUILT_WITH.md`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - Mobile test suite: 100% passing (36 suites, 184 tests).
+  - Pushed changes to `origin/main` to trigger the Android Release APK & Firebase App Distribution workflow.
+
 ### [2026-09-10] - Slack Dispatch: Call-E Hackathon Supply Chain Status Check Agent Architecture & Scoping
 - **Architecture, Task Composition & Scoping**:
   - Received request via Slack from user `<@U06FVANTNHL>`: *"Complete Plan: Supply Chain Supplier Status Check Agent... plan ahead and make task composition before starting implementation, also configure guidelines and best practices etc"*.
