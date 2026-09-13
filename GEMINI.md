@@ -56,11 +56,4 @@
   Never run backend .NET tests (`dotnet test`) or web frontend tests (`vitest`).
 - **Build & CI Target**: The exclusive deployment pipeline is the **Android Release APK Build & Firebase App Distribution** (`.github/workflows/build-and-distribute.yml`). Pushes to `main` must only trigger the Android build and distribution pipeline for mobile changes.
 
----
-
-## 7. Slack & N8N Bot Response Formatting Guidelines
-- **Concise & Short Responses**: Keep all messages and updates well-formatted, concise, and short. Do not generate long prose.
-- **No Unnecessary Emojis or Heavy Markdown**: Avoid unnecessary emojis or heavy markdown formatting (such as complex tables, nested blockquotes, or decorative banners) because responses are reported back in Slack messages.
-- **Optimized for Slack Readability**: Content must be easily readable in Slack threads: concise, point-to-point, and focused purely on technical facts without unnecessary gossip or conversational filler.
-- **Direct Update Reporting**: After completing a task or query, respond directly with the concise update (summary of what was changed, key files modified, test results, and sync status). No unnecessary elements in the message.
 
