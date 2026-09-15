@@ -86,6 +86,68 @@ Following a deep analysis of [changelog.getsolari.com](https://changelog.getsola
 
 ---
 
+### Project 5: AutoPen SecOps — Autonomous Web Application Vulnerability & Penetration Testing Agent
+- **Target Market**: DevSecOps teams, cybersecurity consultancies, and compliance-driven enterprise SaaS organizations (SOC2 Type II, ISO27001, HIPAA audit prep).
+- **The Problem**: Dynamic Application Security Testing (DAST) tools (OWASP ZAP, Burp Suite) generate high false-positive rates, break on complex Single-Page Applications (SPAs) with shadow DOMs, struggle with multi-factor authentication, and cannot autonomously confirm multi-step exploit chains (e.g. CSRF chaining into privilege escalation).
+- **The Solari Solution**:
+  - Leverages isolated **Solari Sandboxes** running pre-configured offensive security toolchains (nuclei, sqlmap, custom fuzzers, Metasploit modules).
+  - Uses **Solari Cloud Browsers** with stealth GPU rendering and 15-country residential proxies to safely fuzz authenticated application endpoints, identify DOM-based XSS, and probe authorization boundary bypasses.
+  - Utilizes **Login Handoff** (`POST /profiles/{id}/login-handoff`) allowing internal security auditors to authenticate sensitive test sessions without sharing credentials or long-lived API tokens.
+  - Automatically records **MP4 Video Proofs-of-Concept (PoC)** and exports deterministic attack graphs and remediation steps directly into GitHub Security Advisories or Jira.
+  - **Memory Snapshots**: Enables agents to revert test environments after executing disruptive payloads (e.g. destructive data injection tests) without re-provisioning infrastructure.
+- **Key Business ROI**: Reduces penetration testing preparation and exploit verification cycles from weeks to hours; detects complex business-logic vulnerabilities missed by static scanners while providing undeniable video proof.
+
+---
+
+### Project 6: CustOps Sentinel — Autonomous Tier-2 Bug Triage & User Journey Replication Agent
+- **Target Market**: B2B enterprise SaaS, FinTech platforms, and customer experience engineering teams handling high volumes of complex user-reported software anomalies.
+- **The Problem**: Customer support engineers waste 30-40% of their time attempting to reproduce elusive user bugs ("works on my machine") caused by unique browser setups, cookie states, network conditions, or localized caching issues.
+- **The Solari Solution**:
+  - Parses customer bug reports or Zendesk/Intercom tickets and instantly provisions an ephemeral **Solari Cloud Browser** or **Desktop VM** matching the user's OS, screen resolution, browser version, and geographic locale.
+  - Employs **Login Handoff** to send the customer a secure, isolated single-use link to log into a staging or sandbox replica of their workspace.
+  - The AI agent follows customer ticket descriptions to autonomously re-enact the user journey, intercepting console errors, network payload failures, and DOM mutations.
+  - Generates complete **MP4 session recordings**, network HAR archives, and structured reproduction scripts, attaching them directly to Linear or Jira engineering issues.
+- **Key Business ROI**: Slashes Tier-2 escalation resolution time by 65%; eliminates frustrating back-and-forth "can you take a screenshot/recording?" customer interactions.
+
+---
+
+### Project 7: AdSentry — Autonomous Digital Ad Fraud, Cloaking & Brand Compliance Detection Agent
+- **Target Market**: Global digital advertisers, affiliate marketing networks, legal/IP enforcement teams, and heavily regulated financial/healthcare institutions.
+- **The Problem**: Bad actors and rogue affiliates use sophisticated cloaking (geo-targeting, IP filtering, user-agent sniffing, and browser fingerprinting) to display compliant pages to ad review crawlers while delivering deceptive, copyright-infringing, or predatory landing pages to real consumers.
+- **The Solari Solution**:
+  - Employs **Solari Cloud Browsers** equipped with stealth hardware GPU rendering and residential/mobile proxy egress across 15 countries to completely defeat affiliate cloaking mechanisms.
+  - Built-in automatic **CAPTCHA solving** (Cloudflare Turnstile, reCaptcha, hCaptcha) navigates aggressive interstitial verification walls.
+  - Autonomous agents traverse redirect chains, uncover hidden arbitrage funnels, and detect unauthorized trademark usage, counterfeit listings, or predatory disclaimers.
+  - Records full **MP4 video evidence** and cryptographically stamped screenshots for legal takedown notices and affiliate contract enforcement.
+- **Key Business ROI**: Recovers hundreds of thousands of dollars in stolen or fraudulent affiliate payouts; protects enterprise brand equity with legally defensible audit logs.
+
+---
+
+### Project 8: BioStream — Autonomous Genomic Data Processing & Scientific Computing Sandbox
+- **Target Market**: Biotech research institutions, bioinformatics laboratories, pharmaceutical clinical research organizations, and academic scientific research groups.
+- **The Problem**: Genomic data processing (FASTQ/BAM alignment, variant calling, RNA-seq) involves heterogeneous toolchains, complex dependencies, and large memory requirements. Scientists often lack cloud DevOps expertise to provision ephemeral, high-memory cluster nodes and manage stateful execution.
+- **The Solari Solution**:
+  - Deploys compute-dense **Solari Sandboxes** (scalable up to 16 vCPUs, 64 GB RAM, 20 GB disk) mounted with **Persistent Volumes** storing reference genomes and pipeline datasets.
+  - Utilizes **Stateful Python Kernels** (`solari_run_code`) with native support for inline data plots, generating publication-ready PCA plots, expression heatmaps, and volcano plots.
+  - Harnesses **Snapshot Forking**: When comparing multiple normalization or variant-filtering strategies, the agent snapshots the cleaned pipeline state and forks into parallel microVMs to execute downstream statistical models simultaneously.
+  - Exposes interactive visualization dashboards using dynamic **Port Previews (`*.preview.getsolari.com`)**.
+- **Key Business ROI**: Cuts computational analysis turnaround by 75%; eliminates cloud VM infrastructure configuration overhead for life science researchers.
+
+---
+
+### Project 9: CodeProctor — Autonomous Technical Interview Lab & Interactive Live Assessment Sandbox
+- **Target Market**: Technical hiring platforms, developer bootcamps, university computer science programs, and enterprise engineering recruitment teams.
+- **The Problem**: Existing online coding assessments either rely on oversimplified browser-based sandboxes that cannot run realistic full-stack apps or require clunky cloud VMs that take 30-60 seconds to boot, incur massive idle costs, and offer no intelligent real-time candidate assistance or cheat detection.
+- **The Solari Solution**:
+  - Spins up dedicated full-stack **Solari Sandboxes** in ~1s from pre-warmed snapshot templates (Next.js, Python/FastAPI, Spring Boot, Go, Rust).
+  - Instantly serves candidate applications through ephemeral **Port Previews (`*.preview.getsolari.com`)** for real-time frontend and API evaluation.
+  - Integrates with the **Solari MCP Server (`@solarisdk/mcp`)** to provide an intelligent, context-aware AI interviewer that observes candidate code edits, answers technical clarifications, and runs unit tests.
+  - For GUI or desktop development challenges, leverages **Solari Desktops** with low-latency VNC streaming (`streamUrl`) for native window testing.
+  - Compiles full **MP4 session recordings**, terminal keystroke replays, and git commit history into an objective post-interview candidate evaluation packet.
+- **Key Business ROI**: Instant sub-second environment initialization maximizes candidate engagement; provides deep full-stack evaluation telemetry without engineering interviewer fatigue.
+
+---
+
 ## 3. Recommended Project to Build First: "PreviewPulse" or "Solari Hunter"
 
 ### Top Recommendation: **PreviewPulse (Autonomous PR Preview & Visual Regression Agent)**
