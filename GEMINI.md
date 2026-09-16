@@ -32,15 +32,16 @@
 
 ---
 
-## 5. Post-Work Commit & Push (Mandatory Sync)
-**MANDATORY AT CONCLUSION OF WORK:**
-1. Update `PROGRESS.md` to reflect all completed changes.
-2. Commit with meaningful conventional commit messages:
+## 5. Continuous Commit & Push On Passing Tests (Mandatory Sync)
+**MANDATORY AT EVERY STEP ONCE TESTS PASS:**
+1. **Commit and Push at Every Step:** Whenever automated test suites pass after completing any implementation step, feature addition, bug fix, or documentation update, immediately stage, commit, and push to `origin/main`. Never leave uncommitted changes or unpushed commits between steps or across turns.
+2. **Update Progress Log:** Ensure `PROGRESS.md` reflects all completed changes before committing and pushing.
+3. **Commit with meaningful conventional commit messages:**
    ```bash
    git add .
    git commit -m "feat/fix: <description>"
    ```
-3. Push to `origin main`:
+4. **Push to Remote:** Immediately push to `origin main` to trigger the Android Release APK build & Firebase App Distribution pipeline:
    ```bash
    git push origin main
    ```

@@ -37,6 +37,66 @@ export const toggleCameraKeyThunk = createAsyncThunk(
     }
 );
 
+export const createCameraKeyThunk = createAsyncThunk(
+    'iot/createCameraKey',
+    async ({ parkingSpaceId, keyData }, { rejectWithValue }) => {
+        try {
+            const response = await iotService.createCameraKey(parkingSpaceId, keyData);
+            return response.data || response;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to create camera key');
+        }
+    }
+);
+
+export const deleteCameraKeyThunk = createAsyncThunk(
+    'iot/deleteCameraKey',
+    async ({ parkingSpaceId, keyId }, { rejectWithValue }) => {
+        try {
+            await iotService.deleteCameraKey(parkingSpaceId, keyId);
+            return keyId;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to delete camera key');
+        }
+    }
+);
+
+export const createPlateRuleThunk = createAsyncThunk(
+    'iot/createPlateRule',
+    async ({ parkingSpaceId, ruleData }, { rejectWithValue }) => {
+        try {
+            const response = await iotService.createPlateRule(parkingSpaceId, ruleData);
+            return response.data || response;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to create plate rule');
+        }
+    }
+);
+
+export const togglePlateRuleThunk = createAsyncThunk(
+    'iot/togglePlateRule',
+    async ({ parkingSpaceId, ruleId, isEnabled }, { rejectWithValue }) => {
+        try {
+            const response = await iotService.togglePlateRule(parkingSpaceId, ruleId, isEnabled);
+            return response.data || response;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to toggle plate rule');
+        }
+    }
+);
+
+export const deletePlateRuleThunk = createAsyncThunk(
+    'iot/deletePlateRule',
+    async ({ parkingSpaceId, ruleId }, { rejectWithValue }) => {
+        try {
+            await iotService.deletePlateRule(parkingSpaceId, ruleId);
+            return ruleId;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to delete plate rule');
+        }
+    }
+);
+
 const iotSlice = createSlice({
     name: 'iot',
     initialState: {

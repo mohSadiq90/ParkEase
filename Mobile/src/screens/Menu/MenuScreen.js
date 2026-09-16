@@ -146,6 +146,18 @@ const MenuScreen = ({ navigation }) => {
                     onPress={() => navigation.navigate('AccessPassScanner')}
                 />
                 <MenuItem
+                    icon="ticket-outline"
+                    label="Event Parking Packages"
+                    subtitle="Manage venue zones & event packages"
+                    onPress={() => navigation.navigate('VendorEventPackages')}
+                />
+                <MenuItem
+                    icon="scan-outline"
+                    label="LPR Camera & Rules"
+                    subtitle="Camera keys & plate access rules"
+                    onPress={() => navigation.navigate('LprSettings')}
+                />
+                <MenuItem
                     icon="search-outline"
                     label="Find Parking Spaces"
                     subtitle="Explore & search public spots"
@@ -187,6 +199,18 @@ const MenuScreen = ({ navigation }) => {
                     label="Company Management"
                     subtitle="Manage corporate organizations"
                     onPress={() => navigation.navigate('CompanyManagement')}
+                />
+                <MenuItem
+                    icon="layers-outline"
+                    label="Parking Inventory"
+                    subtitle="Company-owned facilities & bays"
+                    onPress={() => navigation.navigate('CorporateParkingSpaces')}
+                />
+                <MenuItem
+                    icon="search-circle-outline"
+                    label="Lease Browse"
+                    subtitle="Discover & lease marketplace spaces"
+                    onPress={() => navigation.navigate('CorporateLeaseBrowse')}
                 />
                 <MenuItem
                     icon="people-outline"
@@ -248,6 +272,29 @@ const MenuScreen = ({ navigation }) => {
                     label="My Passes"
                     subtitle="Subscription & digital wallet passes"
                     onPress={() => navigation.navigate('MyPasses')}
+                />
+                <MenuItem
+                    icon="flame-outline"
+                    label="Event Parking Passes"
+                    subtitle="Browse & buy event tickets"
+                    onPress={() => navigation.navigate('EventPackages')}
+                />
+            </Card>
+
+            {/* Tools & Simulators */}
+            <Text style={styles.sectionHeader}>Tools & Simulators</Text>
+            <Card style={styles.cardGroup}>
+                <MenuItem
+                    icon="scan-circle-outline"
+                    label="LPR Simulator"
+                    subtitle="Simulate ticketless barrier entry/exit"
+                    onPress={() => navigation.navigate('LprSimulator')}
+                />
+                <MenuItem
+                    icon="flash-outline"
+                    label="EV Charge Simulator"
+                    subtitle="Simulate OCPP charging & fee settlement"
+                    onPress={() => navigation.navigate('EvChargeSimulator')}
                 />
             </Card>
 

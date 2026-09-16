@@ -36,6 +36,14 @@ describe('MenuScreen', () => {
     fireEvent.press(getByText('Gate Access Scanner'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('AccessPassScanner');
 
+    expect(getByText('Event Parking Packages')).toBeTruthy();
+    fireEvent.press(getByText('Event Parking Packages'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('VendorEventPackages');
+
+    expect(getByText('LPR Camera & Rules')).toBeTruthy();
+    fireEvent.press(getByText('LPR Camera & Rules'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('LprSettings');
+
     expect(getByText('Find Parking Spaces')).toBeTruthy();
     fireEvent.press(getByText('Find Parking Spaces'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('Search');
@@ -56,6 +64,14 @@ describe('MenuScreen', () => {
     expect(getByText('Company Management')).toBeTruthy();
     fireEvent.press(getByText('Company Management'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('CompanyManagement');
+
+    expect(getByText('Parking Inventory')).toBeTruthy();
+    fireEvent.press(getByText('Parking Inventory'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CorporateParkingSpaces');
+
+    expect(getByText('Lease Browse')).toBeTruthy();
+    fireEvent.press(getByText('Lease Browse'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CorporateLeaseBrowse');
 
     expect(getByText('Corporate Members')).toBeTruthy();
     fireEvent.press(getByText('Corporate Members'));
@@ -93,6 +109,20 @@ describe('MenuScreen', () => {
     expect(getByText('My Passes')).toBeTruthy();
     fireEvent.press(getByText('My Passes'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('MyPasses');
+
+    expect(getByText('Event Parking Passes')).toBeTruthy();
+    fireEvent.press(getByText('Event Parking Passes'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('EventPackages');
+
+    // Tools & Simulators
+    expect(getByText('Tools & Simulators')).toBeTruthy();
+    expect(getByText('LPR Simulator')).toBeTruthy();
+    fireEvent.press(getByText('LPR Simulator'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('LprSimulator');
+
+    expect(getByText('EV Charge Simulator')).toBeTruthy();
+    fireEvent.press(getByText('EV Charge Simulator'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('EvChargeSimulator');
 
     // Account & Security
     expect(getByText('Profile Details')).toBeTruthy();

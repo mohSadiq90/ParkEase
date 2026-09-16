@@ -50,6 +50,17 @@ import CorporateMembersScreen from '../screens/Corporate/CorporateMembersScreen'
 import CorporateAllocationsScreen from '../screens/Corporate/CorporateAllocationsScreen';
 import CorporateBookingsScreen from '../screens/Corporate/CorporateBookingsScreen';
 import CorporateInvoicesScreen from '../screens/Corporate/CorporateInvoicesScreen';
+import CorporateLeaseBrowseScreen from '../screens/Corporate/CorporateLeaseBrowseScreen';
+import CorporateParkingSpacesScreen from '../screens/Corporate/CorporateParkingSpacesScreen';
+
+// Tools & Simulators
+import LprSimulatorScreen from '../screens/Tools/LprSimulatorScreen';
+import EvChargeSimulatorScreen from '../screens/Tools/EvChargeSimulatorScreen';
+
+// Events & Smart Operations
+import EventPackagesScreen from '../screens/Member/EventPackagesScreen';
+import VendorEventPackagesScreen from '../screens/Vendor/VendorEventPackagesScreen';
+import LprSettingsScreen from '../screens/Vendor/LprSettingsScreen';
 
 import AdminDashboardScreen from '../screens/Admin/AdminDashboardScreen';
 import AccessPassScannerScreen from '../screens/Vendor/AccessPassScannerScreen';
@@ -79,12 +90,19 @@ const NOTIFICATION_ROUTE_TAB_MAP = {
     CorporateAllocations: 'MenuTab',
     CorporateBookings: 'MenuTab',
     CorporateInvoices: 'MenuTab',
+    CorporateLeaseBrowse: 'MenuTab',
+    CorporateParkingSpaces: 'MenuTab',
     MyListings: 'MenuTab',
     MyBookings: 'MenuTab',
     IncomingBookings: 'MenuTab',
     Search: 'MenuTab',
     CreateParking: 'MenuTab',
     AccessPassScanner: 'MenuTab',
+    EventPackages: 'MenuTab',
+    VendorEventPackages: 'MenuTab',
+    LprSettings: 'MenuTab',
+    LprSimulator: 'MenuTab',
+    EvChargeSimulator: 'MenuTab',
 };
 
 const DynamicDashboardScreen = (props) => {
@@ -116,6 +134,13 @@ const HomeStack = () => (
         <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
         <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
         <Stack.Screen name="AccessPassScanner" component={AccessPassScannerScreen} />
+        <Stack.Screen name="EventPackages" component={EventPackagesScreen} />
+        <Stack.Screen name="VendorEventPackages" component={VendorEventPackagesScreen} />
+        <Stack.Screen name="LprSettings" component={LprSettingsScreen} />
+        <Stack.Screen name="CorporateLeaseBrowse" component={CorporateLeaseBrowseScreen} />
+        <Stack.Screen name="CorporateParkingSpaces" component={CorporateParkingSpacesScreen} />
+        <Stack.Screen name="LprSimulator" component={LprSimulatorScreen} />
+        <Stack.Screen name="EvChargeSimulator" component={EvChargeSimulatorScreen} />
     </Stack.Navigator>
 );
 
@@ -131,6 +156,7 @@ const SearchStack = () => (
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
         <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
+        <Stack.Screen name="EventPackages" component={EventPackagesScreen} />
     </Stack.Navigator>
 );
 
@@ -144,6 +170,8 @@ const ListingsStack = () => (
         <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
         <Stack.Screen name="AccessPassScanner" component={AccessPassScannerScreen} />
+        <Stack.Screen name="VendorEventPackages" component={VendorEventPackagesScreen} />
+        <Stack.Screen name="LprSettings" component={LprSettingsScreen} />
     </Stack.Navigator>
 );
 
@@ -221,6 +249,13 @@ const MenuStack = () => (
         <Stack.Screen name="CorporateAllocations" component={CorporateAllocationsScreen} />
         <Stack.Screen name="CorporateBookings" component={CorporateBookingsScreen} />
         <Stack.Screen name="CorporateInvoices" component={CorporateInvoicesScreen} />
+        <Stack.Screen name="CorporateLeaseBrowse" component={CorporateLeaseBrowseScreen} />
+        <Stack.Screen name="CorporateParkingSpaces" component={CorporateParkingSpacesScreen} />
+        <Stack.Screen name="EventPackages" component={EventPackagesScreen} />
+        <Stack.Screen name="VendorEventPackages" component={VendorEventPackagesScreen} />
+        <Stack.Screen name="LprSettings" component={LprSettingsScreen} />
+        <Stack.Screen name="LprSimulator" component={LprSimulatorScreen} />
+        <Stack.Screen name="EvChargeSimulator" component={EvChargeSimulatorScreen} />
     </Stack.Navigator>
 );
 
