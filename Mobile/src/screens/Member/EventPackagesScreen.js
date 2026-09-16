@@ -158,7 +158,7 @@ const EventPackagesScreen = ({ navigation }) => {
                             keyboardShouldPersistTaps="handled"
                             keyboardDismissMode="on-drag"
                             showsVerticalScrollIndicator={false}
-                            contentContainerStyle={{ paddingBottom: spacing.sm }}
+                            contentContainerStyle={{ paddingBottom: 40 }}
                         >
                             <View style={styles.modalHeader}>
                                 <Text style={styles.modalTitle}>Event Pass Checkout</Text>

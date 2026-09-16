@@ -188,7 +188,7 @@ const MyVehiclesScreen = ({ navigation }) => {
                             keyboardShouldPersistTaps="handled"
                             keyboardDismissMode="on-drag"
                             showsVerticalScrollIndicator={false}
-                            contentContainerStyle={{ paddingBottom: spacing.md }}
+                            contentContainerStyle={{ paddingBottom: 40 }}
                         >
                             <Text style={styles.modalTitle}>{editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}</Text>
                             

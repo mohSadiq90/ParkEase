@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: spacing.screenHorizontal,
         paddingTop: 40,
-        paddingBottom: 40,
+        paddingBottom: 80,
     },
     logoSection: {
         alignItems: 'center',

@@ -18,6 +18,7 @@ const ScreenLayout = ({
     edges = ['top', 'bottom'],
     keyboardAvoiding = true,
     keyboardVerticalOffset,
+    keyboardBehavior = Platform.OS === 'ios' ? 'padding' : undefined,
     keyboardShouldPersistTaps = 'handled',
     keyboardDismissMode = 'on-drag',
 }) => {
@@ -59,7 +60,7 @@ const ScreenLayout = ({
                 {keyboardAvoiding ? (
                     <KeyboardAvoidingView
                         style={styles.keyboardView}
-                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        behavior={keyboardBehavior}
                         keyboardVerticalOffset={offset}
                     >
                         {scrollContent}
@@ -78,7 +79,7 @@ const ScreenLayout = ({
             {keyboardAvoiding ? (
                 <KeyboardAvoidingView
                     style={styles.keyboardView}
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    behavior={keyboardBehavior}
                     keyboardVerticalOffset={offset}
                 >
                     {staticContent}
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         flexGrow: 1,
-        paddingBottom: 24,
+        paddingBottom: 80,
     },
 });
 

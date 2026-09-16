@@ -50,6 +50,7 @@ const SignupScreen = ({ navigation }) => {
         <LinearGradient colors={colors.gradients.hero} style={styles.gradient}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
                 style={styles.container}
             >
                 <ScrollView
@@ -130,7 +131,7 @@ const SignupScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     gradient: { flex: 1 },
     container: { flex: 1 },
-    scrollContent: { flexGrow: 1, paddingHorizontal: spacing.screenHorizontal, paddingBottom: 60 },
+    scrollContent: { flexGrow: 1, paddingHorizontal: spacing.screenHorizontal, paddingBottom: 80 },
     header: { marginBottom: spacing.xl },
     backButton: { marginBottom: spacing.base },
     title: { fontSize: 32, fontWeight: '800', color: colors.white },

@@ -112,7 +112,7 @@ const ChatScreen = ({ route, navigation }) => {
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={0}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? (insets?.top || 0) : 0}
         >
             {/* Header */}
             <View style={[styles.header, { paddingTop: Math.max(insets?.top || 0, 12) + 4 }]}>
@@ -137,6 +137,8 @@ const ChatScreen = ({ route, navigation }) => {
                     renderItem={renderMessage}
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.messagesList}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="interactive"
                     onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
                     ListEmptyComponent={
                         <View style={styles.centered}>

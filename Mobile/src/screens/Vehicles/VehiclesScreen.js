@@ -179,8 +179,8 @@ const VehiclesScreen = ({ navigation }) => {
                         keyboardShouldPersistTaps="handled"
                         keyboardDismissMode="on-drag"
                         showsVerticalScrollIndicator={false}
-                        style={{ maxHeight: 380 }}
-                        contentContainerStyle={{ paddingBottom: spacing.sm }}
+                        style={{ maxHeight: 420 }}
+                        contentContainerStyle={{ paddingBottom: spacing.xl }}
                     >
                         <Text style={styles.formTitle}>Add New Vehicle</Text>
                         

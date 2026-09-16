@@ -16,6 +16,8 @@ import {
     TextInput,
     Alert,
     ScrollView,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -306,7 +308,10 @@ const LprSettingsScreen = ({ route, navigation }) => {
                 transparent={true}
                 onRequestClose={() => setKeyModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Create Camera API Key</Text>
@@ -315,55 +320,62 @@ const LprSettingsScreen = ({ route, navigation }) => {
                             </TouchableOpacity>
                         </View>
 
-                        {createdSecret ? (
-                            <View style={styles.secretBox}>
-                                <Ionicons name="key-outline" size={28} color={colors.primary} />
-                                <Text style={styles.secretTitle}>Camera Secret Generated</Text>
-                                <Text style={styles.secretDesc}>
-                                    Copy this secret now. It will never be displayed again.
-                                </Text>
-                                <View style={styles.secretValueBox}>
-                                    <Text style={styles.secretValueText} selectable>{createdSecret}</Text>
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            contentContainerStyle={{ paddingBottom: 24 }}
+                        >
+                            {createdSecret ? (
+                                <View style={styles.secretBox}>
+                                    <Ionicons name="key-outline" size={28} color={colors.primary} />
+                                    <Text style={styles.secretTitle}>Camera Secret Generated</Text>
+                                    <Text style={styles.secretDesc}>
+                                        Copy this secret now. It will never be displayed again.
+                                    </Text>
+                                    <View style={styles.secretValueBox}>
+                                        <Text style={styles.secretValueText} selectable>{createdSecret}</Text>
+                                    </View>
+                                    <Button
+                                        title="Done"
+                                        onPress={() => { setCreatedSecret(null); setKeyModalVisible(false); }}
+                                        style={{ marginTop: spacing.md }}
+                                    />
                                 </View>
-                                <Button
-                                    title="Done"
-                                    onPress={() => { setCreatedSecret(null); setKeyModalVisible(false); }}
-                                    style={{ marginTop: spacing.md }}
-                                />
-                            </View>
-                        ) : (
-                            <View style={styles.modalBody}>
-                                <Text style={styles.inputLabel}>Camera Name</Text>
-                                <TextInput
-                                    style={styles.formInput}
-                                    placeholder="e.g. North Gate Entry Camera"
-                                    placeholderTextColor={colors.textTertiary}
-                                    value={keyName}
-                                    onChangeText={setKeyName}
-                                    testID="create-key-name-input"
-                                />
+                            ) : (
+                                <View style={styles.modalBody}>
+                                    <Text style={styles.inputLabel}>Camera Name</Text>
+                                    <TextInput
+                                        style={styles.formInput}
+                                        placeholder="e.g. North Gate Entry Camera"
+                                        placeholderTextColor={colors.textTertiary}
+                                        value={keyName}
+                                        onChangeText={setKeyName}
+                                        testID="create-key-name-input"
+                                    />
 
-                                <Text style={styles.inputLabel}>Hardware Key ID (Optional)</Text>
-                                <TextInput
-                                    style={styles.formInput}
-                                    placeholder="e.g. CAM-01"
-                                    placeholderTextColor={colors.textTertiary}
-                                    value={keyId}
-                                    onChangeText={setKeyId}
-                                    autoCapitalize="characters"
-                                    testID="create-key-id-input"
-                                />
+                                    <Text style={styles.inputLabel}>Hardware Key ID (Optional)</Text>
+                                    <TextInput
+                                        style={styles.formInput}
+                                        placeholder="e.g. CAM-01"
+                                        placeholderTextColor={colors.textTertiary}
+                                        value={keyId}
+                                        onChangeText={setKeyId}
+                                        autoCapitalize="characters"
+                                        testID="create-key-id-input"
+                                    />
 
-                                <Button
-                                    title="Generate Key & Secret"
-                                    onPress={handleCreateKey}
-                                    style={{ marginTop: spacing.md }}
-                                    testID="submit-create-key-btn"
-                                />
-                            </View>
-                        )}
+                                    <Button
+                                        title="Generate Key & Secret"
+                                        onPress={handleCreateKey}
+                                        style={{ marginTop: spacing.md }}
+                                        testID="submit-create-key-btn"
+                                    />
+                                </View>
+                            )}
+                        </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Create Plate Rule Modal */}
@@ -373,7 +385,10 @@ const LprSettingsScreen = ({ route, navigation }) => {
                 transparent={true}
                 onRequestClose={() => setRuleModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Add Plate Access Rule</Text>
@@ -382,59 +397,66 @@ const LprSettingsScreen = ({ route, navigation }) => {
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.modalBody}>
-                            <Text style={styles.inputLabel}>Vehicle License Plate</Text>
-                            <TextInput
-                                style={styles.formInput}
-                                placeholder="e.g. DL 01 AB 1234"
-                                placeholderTextColor={colors.textTertiary}
-                                value={plateNumber}
-                                onChangeText={setPlateNumber}
-                                autoCapitalize="characters"
-                                testID="plate-rule-number-input"
-                            />
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            contentContainerStyle={{ paddingBottom: 24 }}
+                        >
+                            <View style={styles.modalBody}>
+                                <Text style={styles.inputLabel}>Vehicle License Plate</Text>
+                                <TextInput
+                                    style={styles.formInput}
+                                    placeholder="e.g. DL 01 AB 1234"
+                                    placeholderTextColor={colors.textTertiary}
+                                    value={plateNumber}
+                                    onChangeText={setPlateNumber}
+                                    autoCapitalize="characters"
+                                    testID="plate-rule-number-input"
+                                />
 
-                            <Text style={styles.inputLabel}>Action Rule</Text>
-                            <View style={styles.ruleTypeRow}>
-                                <TouchableOpacity
-                                    style={[styles.ruleTypeBtn, ruleType === 1 && styles.ruleTypeBtnAllow]}
-                                    onPress={() => setRuleType(1)}
-                                    testID="rule-type-allow"
-                                >
-                                    <Text style={[styles.ruleTypeBtnText, ruleType === 1 && { color: colors.white }]}>
-                                        Allow / Whitelist
-                                    </Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.ruleTypeBtn, ruleType === 2 && styles.ruleTypeBtnDeny]}
-                                    onPress={() => setRuleType(2)}
-                                    testID="rule-type-deny"
-                                >
-                                    <Text style={[styles.ruleTypeBtnText, ruleType === 2 && { color: colors.white }]}>
-                                        Deny / Blacklist
-                                    </Text>
-                                </TouchableOpacity>
+                                <Text style={styles.inputLabel}>Action Rule</Text>
+                                <View style={styles.ruleTypeRow}>
+                                    <TouchableOpacity
+                                        style={[styles.ruleTypeBtn, ruleType === 1 && styles.ruleTypeBtnAllow]}
+                                        onPress={() => setRuleType(1)}
+                                        testID="rule-type-allow"
+                                    >
+                                        <Text style={[styles.ruleTypeBtnText, ruleType === 1 && { color: colors.white }]}>
+                                            Allow / Whitelist
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.ruleTypeBtn, ruleType === 2 && styles.ruleTypeBtnDeny]}
+                                        onPress={() => setRuleType(2)}
+                                        testID="rule-type-deny"
+                                    >
+                                        <Text style={[styles.ruleTypeBtnText, ruleType === 2 && { color: colors.white }]}>
+                                            Deny / Blacklist
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <Text style={styles.inputLabel}>Reason / Internal Note</Text>
+                                <TextInput
+                                    style={styles.formInput}
+                                    placeholder="e.g. VIP guest or payment defaulter"
+                                    placeholderTextColor={colors.textTertiary}
+                                    value={ruleNote}
+                                    onChangeText={setRuleNote}
+                                    testID="plate-rule-note-input"
+                                />
+
+                                <Button
+                                    title="Create Plate Rule"
+                                    onPress={handleCreateRule}
+                                    style={{ marginTop: spacing.md }}
+                                    testID="submit-plate-rule-btn"
+                                />
                             </View>
-
-                            <Text style={styles.inputLabel}>Reason / Internal Note</Text>
-                            <TextInput
-                                style={styles.formInput}
-                                placeholder="e.g. VIP guest or payment defaulter"
-                                placeholderTextColor={colors.textTertiary}
-                                value={ruleNote}
-                                onChangeText={setRuleNote}
-                                testID="plate-rule-note-input"
-                            />
-
-                            <Button
-                                title="Create Plate Rule"
-                                onPress={handleCreateRule}
-                                style={{ marginTop: spacing.md }}
-                                testID="submit-plate-rule-btn"
-                            />
-                        </View>
+                        </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );

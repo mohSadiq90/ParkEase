@@ -383,7 +383,7 @@ const MenuScreen = ({ navigation }) => {
                             showsVerticalScrollIndicator={false}
                         >
                             <View style={styles.tagSummaryCard}>
-                                <Text style={styles.tagSummaryTitle}>Devpost & Production Stack</Text>
+                                <Text style={styles.tagSummaryTitle}>Architecture & Production Stack</Text>
                                 <Text style={styles.tagSummaryDesc}>
                                     ParkEase Mobile is engineered as a zero-compromise cross-platform React Native client with 100% automated test coverage.
                                 </Text>
@@ -402,7 +402,7 @@ const MenuScreen = ({ navigation }) => {
                             </View>
 
                             <View style={styles.rawTagsCard}>
-                                <Text style={styles.rawTagsLabel}>Devpost Submission Tags (Comma-Separated):</Text>
+                                <Text style={styles.rawTagsLabel}>Core Architecture Tags (Comma-Separated):</Text>
                                 <Text style={styles.rawTagsText} selectable>
                                     react-native, expo, javascript, redux-toolkit, react-navigation, react-native-maps, axios, secure-store, barcode-scanner, google-signin, apple-sso, stripe, firebase, posthog, jest, react-native-testing-library, github-actions, android, ios, lpr-recognition, eventbus, linear-gradient, vector-icons, safe-area-insets, monorepo
                                 </Text>

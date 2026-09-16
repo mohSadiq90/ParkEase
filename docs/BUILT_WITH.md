@@ -1,12 +1,12 @@
 # 🛠️ Built With: ParkEase Mobile Platform
 
-This document outlines the **25 core technologies, frameworks, and architectural components** powering the **ParkEase Mobile Application**. These tags are prepared specifically for hackathon and project showcases (such as **Devpost**'s *"Built with"* section, which accepts up to 25 tags).
+This document outlines the **25 core technologies, frameworks, and architectural components** powering the **ParkEase Mobile Application**. These tags are prepared specifically for project showcases, architecture overviews, and technical specifications.
 
 ---
 
-## 🏷️ Devpost Tags (Copy-Paste Formats)
+## 🏷️ Core Architecture Tags (Copy-Paste Formats)
 
-### 📋 Comma-Separated (Single-Field Devpost Paste)
+### 📋 Comma-Separated
 ```text
 react-native, expo, javascript, redux-toolkit, react-navigation, react-native-maps, axios, secure-store, barcode-scanner, google-signin, apple-sso, stripe, firebase, posthog, jest, react-native-testing-library, github-actions, android, ios, lpr-recognition, eventbus, linear-gradient, vector-icons, safe-area-insets, monorepo
 ```
@@ -53,4 +53,4 @@ Users and reviewers can view the complete list of 25 technologies directly insid
 1. Navigate to the **Menu** tab (bottom navigation).
 2. Scroll to the **About & System** section.
 3. Tap **Built With** (or tap the version footer at the bottom).
-4. An interactive modal displays all 25 technologies, categories, and direct Devpost submission text.
+4. An interactive modal displays all 25 technologies, categories, and direct architecture tag text.

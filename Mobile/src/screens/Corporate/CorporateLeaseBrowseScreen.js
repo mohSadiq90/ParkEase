@@ -17,6 +17,8 @@ import {
     Switch,
     Alert,
     RefreshControl,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
@@ -240,7 +242,10 @@ const CorporateLeaseBrowseScreen = ({ navigation }) => {
                 transparent={true}
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Request Corporate Lease</Text>
@@ -249,7 +254,13 @@ const CorporateLeaseBrowseScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                        <ScrollView
+                            style={styles.modalBody}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            contentContainerStyle={{ paddingBottom: 40 }}
+                        >
                             <Text style={styles.modalFacilityTitle}>{selectedSpace?.title}</Text>
                             <Text style={styles.modalFacilitySubtitle}>{selectedSpace?.address}, {selectedSpace?.city}</Text>
 
@@ -333,7 +344,7 @@ const CorporateLeaseBrowseScreen = ({ navigation }) => {
                             />
                         </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );

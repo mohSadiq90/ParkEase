@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../../styles/globalStyles';
@@ -160,35 +160,42 @@ const ReviewsListScreen = ({ route, navigation }) => {
                     style={styles.modalOverlay}
                 >
                     <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Reply to Review</Text>
-                            <TouchableOpacity onPress={() => setReplyModalVisible(false)}>
-                                <Ionicons name="close" size={24} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
-                        <TextInput
-                            style={styles.replyInput}
-                            placeholder="Thank the driver or address their feedback..."
-                            placeholderTextColor={colors.textTertiary}
-                            value={replyText}
-                            onChangeText={setReplyText}
-                            multiline
-                            numberOfLines={4}
-                        />
-                        <View style={styles.modalActions}>
-                            <Button
-                                title="Cancel"
-                                variant="outline"
-                                onPress={() => setReplyModalVisible(false)}
-                                style={{ flex: 1 }}
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            contentContainerStyle={{ paddingBottom: 16 }}
+                        >
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Reply to Review</Text>
+                                <TouchableOpacity onPress={() => setReplyModalVisible(false)}>
+                                    <Ionicons name="close" size={24} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+                            <TextInput
+                                style={styles.replyInput}
+                                placeholder="Thank the driver or address their feedback..."
+                                placeholderTextColor={colors.textTertiary}
+                                value={replyText}
+                                onChangeText={setReplyText}
+                                multiline
+                                numberOfLines={4}
                             />
-                            <Button
-                                title="Post Reply"
-                                onPress={handleSubmitReply}
-                                loading={submittingReply}
-                                style={{ flex: 1 }}
-                            />
-                        </View>
+                            <View style={styles.modalActions}>
+                                <Button
+                                    title="Cancel"
+                                    variant="outline"
+                                    onPress={() => setReplyModalVisible(false)}
+                                    style={{ flex: 1 }}
+                                />
+                                <Button
+                                    title="Post Reply"
+                                    onPress={handleSubmitReply}
+                                    loading={submittingReply}
+                                    style={{ flex: 1 }}
+                                />
+                            </View>
+                        </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
             </Modal>

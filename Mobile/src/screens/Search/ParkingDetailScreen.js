@@ -608,44 +608,51 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                     style={styles.modalOverlay}
                 >
                     <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Reply as Host</Text>
-                            <TouchableOpacity onPress={() => setReplyModalVisible(false)}>
-                                <Ionicons name="close" size={22} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
-                        <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm }}>
-                            Responding to {selectedReview?.userName || 'customer'}:
-                        </Text>
-                        <TextInput
-                            style={styles.modalInput}
-                            placeholder="Write your official response..."
-                            placeholderTextColor={colors.textTertiary}
-                            multiline
-                            numberOfLines={4}
-                            value={replyText}
-                            onChangeText={setReplyText}
-                            textAlignVertical="top"
-                        />
-                        <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.md }}>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }]}
-                                onPress={() => setReplyModalVisible(false)}
-                            >
-                                <Text style={{ ...typography.label, color: colors.textPrimary }}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
-                                onPress={handleSendReply}
-                                disabled={submittingReply || !replyText.trim()}
-                            >
-                                {submittingReply ? (
-                                    <ActivityIndicator size="small" color={colors.white} />
-                                ) : (
-                                    <Text style={{ ...typography.label, color: colors.white, fontWeight: '700' }}>Send Reply</Text>
-                                )}
-                            </TouchableOpacity>
-                        </View>
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            contentContainerStyle={{ paddingBottom: 16 }}
+                        >
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Reply as Host</Text>
+                                <TouchableOpacity onPress={() => setReplyModalVisible(false)}>
+                                    <Ionicons name="close" size={22} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+                            <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm }}>
+                                Responding to {selectedReview?.userName || 'customer'}:
+                            </Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Write your official response..."
+                                placeholderTextColor={colors.textTertiary}
+                                multiline
+                                numberOfLines={4}
+                                value={replyText}
+                                onChangeText={setReplyText}
+                                textAlignVertical="top"
+                            />
+                            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.md }}>
+                                <TouchableOpacity
+                                    style={[styles.modalBtn, { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }]}
+                                    onPress={() => setReplyModalVisible(false)}
+                                >
+                                    <Text style={{ ...typography.label, color: colors.textPrimary }}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                                    onPress={handleSendReply}
+                                    disabled={submittingReply || !replyText.trim()}
+                                >
+                                    {submittingReply ? (
+                                        <ActivityIndicator size="small" color={colors.white} />
+                                    ) : (
+                                        <Text style={{ ...typography.label, color: colors.white, fontWeight: '700' }}>Send Reply</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
             </Modal>

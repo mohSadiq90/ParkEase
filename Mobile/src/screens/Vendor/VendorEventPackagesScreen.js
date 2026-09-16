@@ -16,6 +16,8 @@ import {
     ScrollView,
     Alert,
     RefreshControl,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
@@ -285,7 +287,10 @@ const VendorEventPackagesScreen = ({ navigation }) => {
                 transparent={true}
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Create Event Package</Text>
@@ -294,7 +299,13 @@ const VendorEventPackagesScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                        <ScrollView
+                            style={styles.modalBody}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            contentContainerStyle={{ paddingBottom: 40 }}
+                        >
                             <Text style={styles.inputLabel}>Package Title</Text>
                             <TextInput
                                 style={styles.formInput}
@@ -415,7 +426,7 @@ const VendorEventPackagesScreen = ({ navigation }) => {
                             />
                         </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );
