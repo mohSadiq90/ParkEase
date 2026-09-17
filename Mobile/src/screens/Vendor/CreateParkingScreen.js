@@ -249,6 +249,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
             peakHourMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.peakHourMultiplier) || 1.25 : undefined,
             weekendMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.weekendMultiplier) || 1.15 : undefined,
             valetFee: formData.isValetEnabled ? parseFloat(formData.valetFee) || 0 : undefined,
+            imageUrl: (Array.isArray(formData.imageUrls) && formData.imageUrls[0]) || formData.imageUrl || '',
         };
 
         if (isEditing) {
@@ -299,7 +300,16 @@ const CreateParkingScreen = ({ navigation, route }) => {
                         const res = await dispatch(deleteParkingThunk(editData.id));
                         if (!res.error) {
                             Alert.alert('Deleted', 'Parking space has been deleted.', [
-                                { text: 'OK', onPress: () => navigation.navigate('VendorDashboard') }
+                                {
+                                    text: 'OK',
+                                    onPress: () => {
+                                        if (navigation?.canGoBack?.()) {
+                                            navigation.goBack();
+                                        } else {
+                                            navigation.navigate('MyListings');
+                                        }
+                                    },
+                                },
                             ]);
                         } else {
                             Alert.alert('Error', res.payload || 'Failed to delete listing.');

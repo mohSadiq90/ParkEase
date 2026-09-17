@@ -14,6 +14,7 @@ import { colors } from '../styles/globalStyles';
 import VendorDashboardScreen from '../screens/Vendor/VendorDashboardScreen';
 import MyListingsScreen from '../screens/Vendor/MyListingsScreen';
 import CreateParkingScreen from '../screens/Vendor/CreateParkingScreen';
+import ParkingDetailScreen from '../screens/Search/ParkingDetailScreen';
 import VendorBookingsScreen from '../screens/Vendor/VendorBookingsScreen';
 import BookingDetailScreen from '../screens/Booking/BookingDetailScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
@@ -40,6 +41,7 @@ const ListingsStack = () => (
     <Stack.Navigator screenOptions={stackOptions}>
         <Stack.Screen name="MyListings" component={MyListingsScreen} />
         <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
+        <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
     </Stack.Navigator>
 );
 

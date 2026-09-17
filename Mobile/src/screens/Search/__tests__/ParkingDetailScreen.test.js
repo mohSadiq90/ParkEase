@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderWithProviders } from '../../../utils/test-utils';
+import { renderWithProviders, fireEvent } from '../../../utils/test-utils';
 import ParkingDetailScreen from '../ParkingDetailScreen';
 import apiClient from '../../../services/api/apiClient';
 
@@ -88,5 +88,61 @@ describe('ParkingDetailScreen', () => {
     expect(getByText('Great spot with super clean bays!')).toBeTruthy();
     expect(getByText('Response from Host')).toBeTruthy();
     expect(getByText('Thank you Alice! Happy to host you.')).toBeTruthy();
+  });
+
+  it('renders Edit Listing buttons and navigates to CreateParking when viewing own listing', async () => {
+    const mockParking = {
+      data: {
+        id: 'spot-777',
+        title: 'Host Own Garage',
+        address: '123 Host Lane',
+        city: 'Metro City',
+        state: 'CA',
+        averageRating: 5.0,
+        totalReviews: 10,
+        parkingType: 0,
+        availableSpots: 5,
+        totalSpots: 10,
+        hourlyRate: 20,
+        ownerId: 'user-host-1',
+      },
+    };
+
+    apiClient.get.mockImplementation((url) => {
+      if (url.includes('forecast')) {
+        return Promise.resolve({ success: true, data: {} });
+      }
+      if (url.includes('reviews')) {
+        return Promise.resolve({ data: { reviews: [] } });
+      }
+      return Promise.resolve({ data: { data: mockParking.data } });
+    });
+
+    const { findByText, getByTestId, getByText } = renderWithProviders(
+      <ParkingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { parkingId: 'spot-777', isOwnListing: true } }}
+      />,
+      {
+        preloadedState: {
+          auth: {
+            user: { id: 'user-host-1', name: 'Host User' },
+            isAuthenticated: true,
+          },
+        },
+      }
+    );
+
+    await findByText('Host Own Garage');
+
+    expect(getByText('This is your listing')).toBeTruthy();
+    expect(getByTestId('hero-edit-listing-btn')).toBeTruthy();
+    expect(getByTestId('owner-banner-edit-btn')).toBeTruthy();
+    expect(getByTestId('edit-listing-bottom-button')).toBeTruthy();
+
+    fireEvent.press(getByTestId('edit-listing-bottom-button'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {
+      editData: mockParking.data,
+    });
   });
 });

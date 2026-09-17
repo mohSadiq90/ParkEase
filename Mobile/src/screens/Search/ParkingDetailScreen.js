@@ -124,10 +124,12 @@ const ParkingDetailScreen = ({ navigation, route }) => {
     }, [imageUrls]);
 
     const isOwnListing = Boolean(
-        user?.id && (
+        route?.params?.isOwnListing ||
+        (user?.id && (
             (parking?.ownerId && String(parking.ownerId).trim().toLowerCase() === String(user.id).trim().toLowerCase()) ||
-            (parking?.userId && String(parking.userId).trim().toLowerCase() === String(user.id).trim().toLowerCase())
-        )
+            (parking?.userId && String(parking.userId).trim().toLowerCase() === String(user.id).trim().toLowerCase()) ||
+            (parking?.vendorId && String(parking.vendorId).trim().toLowerCase() === String(user.id).trim().toLowerCase())
+        ))
     );
 
     const handleToggleFavorite = useCallback(async () => {
@@ -307,6 +309,17 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                     </TouchableOpacity>
 
                     <View style={[styles.heroTopRight, { top: insets.top + 8 }]}>
+                        {isOwnListing && (
+                            <TouchableOpacity
+                                style={styles.heroBtn}
+                                onPress={() => navigation.navigate('CreateParking', { editData: parking })}
+                                accessibilityRole="button"
+                                accessibilityLabel="Edit Listing"
+                                testID="hero-edit-listing-btn"
+                            >
+                                <Ionicons name="create-outline" size={20} color={colors.white} />
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity style={styles.heroBtn} onPress={handleShare}>
                             <Ionicons name="share-outline" size={20} color={colors.white} />
                         </TouchableOpacity>
@@ -365,8 +378,20 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                     {/* Own listing banner */}
                     {isOwnListing && (
                         <View style={styles.ownerBanner}>
-                            <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
-                            <Text style={styles.ownerBannerText}>This is your listing</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                                <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
+                                <Text style={styles.ownerBannerText}>This is your listing</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.ownerBannerEditBtn}
+                                onPress={() => navigation.navigate('CreateParking', { editData: parking })}
+                                accessibilityRole="button"
+                                accessibilityLabel="Edit Space"
+                                testID="owner-banner-edit-btn"
+                            >
+                                <Ionicons name="create-outline" size={14} color={colors.primary} />
+                                <Text style={styles.ownerBannerEditBtnText}>Edit Space</Text>
+                            </TouchableOpacity>
                         </View>
                     )}
 
@@ -599,7 +624,11 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                         <TouchableOpacity
                             style={[styles.bookBtn, { backgroundColor: colors.textPrimary }]}
                             onPress={() => navigation.navigate('CreateParking', { editData: parking })}
+                            accessibilityRole="button"
+                            accessibilityLabel="Edit Listing"
+                            testID="edit-listing-bottom-button"
                         >
+                            <Ionicons name="create-outline" size={18} color={colors.white} style={{ marginRight: 6 }} />
                             <Text style={styles.bookBtnText}>Edit Listing</Text>
                         </TouchableOpacity>
                     </>
@@ -871,6 +900,22 @@ const styles = StyleSheet.create({
     },
     ownerBannerText: {
         fontSize: 14,
+        fontWeight: '600',
+        color: colors.primary,
+    },
+    ownerBannerEditBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        backgroundColor: colors.white,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+    },
+    ownerBannerEditBtnText: {
+        fontSize: 13,
         fontWeight: '600',
         color: colors.primary,
     },

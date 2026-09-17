@@ -9,6 +9,45 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Missing Option to Edit Parking Space Listings (<@U06FVANTNHL>)
+- **Prominent Listing Edit Actions & Intuitive Space Management**:
+  - Investigated issue reported by `<@U06FVANTNHL>`: hosts had no option to edit their parking listings. On `MyListingsScreen.js`, `onEdit` was passed as an unused no-op arrow function `() => {}` and `ListingCard` completely omitted any edit controls, buttons, or touchable actions.
+  - Implemented comprehensive listing editing options across `MyListingsScreen.js`:
+    - Added dedicated **"Edit Listing"** primary action button (`testID={`edit-listing-btn-${listing.id}`}`) invoking `handleEdit(listing)` which navigates directly to `CreateParking` with `{ editData: listing }`.
+    - Added quick-access pencil edit icon button (`testID={`quick-edit-${listing.id}`}`) directly in the card header next to the active switch for one-tap access.
+    - Added interactive card press handler (`Card onPress={() => handleEdit(listing)}`) allowing hosts to tap anywhere on the listing card to start editing.
+    - Added **"View"** details button (`testID={`view-listing-btn-${listing.id}`}`) navigating to `ParkingDetail` (`{ parkingId: listing.id, isOwnListing: true }`).
+    - Added quick search bar allowing hosts to filter listings by title, street address, or city.
+    - Added segmented filter tabs ("All", "Active", "Inactive") with dynamic count badges, supporting route params (`route.params.filter` / `route.params.initialFilter`).
+    - Added `useFocusEffect` hook from `@react-navigation/native` to automatically refetch listings upon returning from editing.
+- **Ownership-Aware Listing Editing in Parking Details & Navigation**:
+  - `ParkingDetailScreen.js`:
+    - Enhanced `isOwnListing` detection to support `route.params.isOwnListing` alongside `ownerId`, `userId`, and `vendorId` matching.
+    - Added top-right hero edit button (`testID="hero-edit-listing-btn"`) when viewing own listing.
+    - Added "Edit Space" action button (`testID="owner-banner-edit-btn"`) directly in the "This is your listing" verification banner.
+    - Added `testID="edit-listing-bottom-button"` and pencil icon to the sticky bottom bar's "Edit Listing" CTA.
+  - `CreateParkingScreen.js`:
+    - Ensured `imageUrl` fallback is synced into payload alongside `imageUrls` when saving changes.
+    - Updated `handleDelete` callback to safely use `navigation.goBack()` or fallback to `navigation.navigate('MyListings')`.
+  - `VendorTabNavigator.js`:
+    - Added `ParkingDetailScreen` to `ListingsStack` for seamless drill-down and preview from listings.
+- **Automated Testing & Scope Verification**:
+  - Created `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`: 10 comprehensive unit tests verifying "Edit Listing" action button, quick edit icon in header, card press navigation, "View" details button, search filtering, active/inactive filter tabs, active switch toggling, and empty state CTA.
+  - Updated `Mobile/src/screens/Search/__tests__/ParkingDetailScreen.test.js`: added test verifying hero edit button, owner banner edit button, bottom bar edit button, and navigation to `CreateParking` with `editData`.
+  - Executed full Mobile test suite (`npm test -- --watchAll=false` in `Mobile/`): **100% pass rate** (49/49 test suites, 248/248 unit tests passing).
+  - Maintained strict mobile-only scope: zero modifications to `backend/` or `frontend/`.
+- **Key Files Modified & Created**:
+  - `Mobile/src/screens/Vendor/MyListingsScreen.js`
+  - `Mobile/src/screens/Search/ParkingDetailScreen.js`
+  - `Mobile/src/screens/Vendor/CreateParkingScreen.js`
+  - `Mobile/src/navigation/VendorTabNavigator.js`
+  - `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`
+  - `Mobile/src/screens/Search/__tests__/ParkingDetailScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 49 mobile test suites passing cleanly (248/248 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Find & Explore Parking Big Button & Eliminate Home Screen Redundancy (<@U06FVANTNHL>)
 - **Find & Explore Parking Big Button Navigation Fix**:
   - Investigated issue reported by `<@U06FVANTNHL>`: the prominent "Find & Explore Parking" button on the home screen (`VendorDashboardScreen.js`) failed to navigate because it called `navigation.navigate('SearchTab', ...)`, which does not exist in `HomeStack` or in `AppTabNavigator` for vendor roles. Since React Navigation does not throw an error on unhandled routes, the `catch` block was ignored and the press silently failed.
