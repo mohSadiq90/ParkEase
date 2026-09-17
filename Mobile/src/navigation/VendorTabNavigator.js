@@ -95,6 +95,7 @@ const VendorTabNavigator = () => {
                 fontSize: 11,
                 fontWeight: '500',
             },
+            tabBarHideOnKeyboard: true,
         })}
     >
         <Tab.Screen name="DashboardTab" component={DashboardStack} options={{ tabBarLabel: 'Dashboard' }} />

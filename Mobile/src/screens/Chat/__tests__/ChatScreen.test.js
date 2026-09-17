@@ -112,4 +112,45 @@ describe('ChatScreen', () => {
     expect(getByText('Start the conversation!')).toBeTruthy();
     expect(chatService.getMessages).not.toHaveBeenCalled();
   });
+
+  it('hides bottom tab bar on mount and restores it on unmount', () => {
+    const mockSetOptions = jest.fn();
+    const mockParentNav = {
+      getState: () => ({ type: 'tab' }),
+      setOptions: mockSetOptions,
+    };
+    const navWithParent = {
+      ...mockNavigation,
+      getParent: jest.fn(() => mockParentNav),
+    };
+
+    const route = {
+      params: { conversationId: null, parkingSpaceId: 'spot-1' },
+    };
+
+    const { unmount } = renderWithProviders(
+      <ChatScreen navigation={navWithParent} route={route} />
+    );
+
+    expect(mockSetOptions).toHaveBeenCalledWith({ tabBarStyle: { display: 'none' } });
+
+    unmount();
+    expect(mockSetOptions).toHaveBeenCalledWith({ tabBarStyle: undefined });
+  });
+
+  it('configures KeyboardAvoidingView to prevent obscuring the textfield', () => {
+    const route = {
+      params: { conversationId: null, parkingSpaceId: 'spot-1' },
+    };
+
+    const { UNSAFE_getByType } = renderWithProviders(
+      <ChatScreen navigation={mockNavigation} route={route} />
+    );
+
+    const { KeyboardAvoidingView } = require('react-native');
+    const kav = UNSAFE_getByType(KeyboardAvoidingView);
+    expect(kav.props.keyboardVerticalOffset).toBe(0);
+    // On test environment (often iOS or android depending on jest setup):
+    expect(['padding', 'height']).toContain(kav.props.behavior);
+  });
 });

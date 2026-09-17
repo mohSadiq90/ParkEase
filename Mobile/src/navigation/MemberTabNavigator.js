@@ -106,6 +106,7 @@ const MemberTabNavigator = () => {
                 fontSize: 11,
                 fontWeight: '500',
             },
+            tabBarHideOnKeyboard: true,
         })}
     >
         <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home' }} />

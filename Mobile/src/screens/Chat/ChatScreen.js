@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     View, Text, FlatList, TextInput, TouchableOpacity,
-    StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert
+    StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Keyboard
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/globalStyles';
@@ -28,8 +28,48 @@ const ChatScreen = ({ route, navigation }) => {
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(Boolean(targetConvId));
     const [sending, setSending] = useState(false);
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
     const flatListRef = useRef(null);
     const pollInterval = useRef(null);
+
+    // Hide bottom tab bar while in chat to give maximum viewport and avoid keyboard clashes
+    useEffect(() => {
+        let parentNav = navigation?.getParent?.();
+        while (parentNav && !parentNav.getState?.()?.type?.includes('tab')) {
+            const nextParent = parentNav.getParent?.();
+            if (!nextParent) break;
+            parentNav = nextParent;
+        }
+        if (parentNav?.setOptions) {
+            parentNav.setOptions({ tabBarStyle: { display: 'none' } });
+        }
+        return () => {
+            if (parentNav?.setOptions) {
+                parentNav.setOptions({ tabBarStyle: undefined });
+            }
+        };
+    }, [navigation]);
+
+    // Track keyboard visibility and auto-scroll to latest message
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const showSub = Keyboard.addListener(showEvent, () => {
+            setKeyboardVisible(true);
+            setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+        });
+        const hideSub = Keyboard.addListener(hideEvent, () => {
+            setKeyboardVisible(false);
+        });
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
 
     const loadMessages = useCallback(async (convId = currentConvId) => {
         if (!convId) {
@@ -141,8 +181,8 @@ const ChatScreen = ({ route, navigation }) => {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? (insets?.top || 0) : 0}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={0}
         >
             {/* Header */}
             <View style={[styles.header, { paddingTop: Math.max(insets?.top || 0, 12) + 4 }]}>
@@ -166,9 +206,10 @@ const ChatScreen = ({ route, navigation }) => {
                     data={messages}
                     renderItem={renderMessage}
                     keyExtractor={(item, index) => (item?.id ? String(item.id) : `msg-${index}`)}
+                    style={styles.messagesListContainer}
                     contentContainerStyle={styles.messagesList}
                     keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="interactive"
+                    keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
                     onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
                     ListEmptyComponent={
                         <View style={styles.centered}>
@@ -180,11 +221,21 @@ const ChatScreen = ({ route, navigation }) => {
             )}
 
             {/* Input */}
-            <View style={styles.inputContainer}>
+            <View style={[
+                styles.inputContainer,
+                {
+                    paddingBottom: keyboardVisible
+                        ? 8
+                        : Math.max(insets?.bottom || 0, 8),
+                },
+            ]}>
                 <TextInput
                     style={styles.input}
                     value={newMessage}
                     onChangeText={setNewMessage}
+                    onFocus={() => {
+                        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 150);
+                    }}
                     placeholder="Type a message..."
                     placeholderTextColor={colors.textTertiary}
                     maxLength={2000}
@@ -219,6 +270,7 @@ const styles = StyleSheet.create({
     headerInfo: { flex: 1 },
     headerName: { fontSize: 16, fontWeight: '600', color: colors.text },
     headerSubtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+    messagesListContainer: { flex: 1 },
     messagesList: { padding: 12, paddingBottom: 4 },
     messageBubbleRow: { flexDirection: 'row', marginBottom: 8 },
     messageBubbleRowMine: { justifyContent: 'flex-end' },
@@ -241,7 +293,6 @@ const styles = StyleSheet.create({
     inputContainer: {
         flexDirection: 'row', alignItems: 'flex-end', padding: 8,
         backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.borderLight,
-        paddingBottom: Platform.OS === 'ios' ? 24 : 8,
     },
     input: {
         flex: 1, backgroundColor: colors.background, borderRadius: 20,

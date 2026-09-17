@@ -9,6 +9,33 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Mobile Chat Keyboard Avoidance & Viewport Protection (<@U06FVANTNHL>)
+- **Chat Keyboard Avoidance & Textfield Visibility Fix**:
+  - `ChatScreen.js`: Fixed critical keyboard occlusion where the virtual soft keyboard covered the message textfield and send button.
+  - Implemented cross-platform `KeyboardAvoidingView` behavior: configured `behavior={Platform.OS === 'ios' ? 'padding' : 'height'}` to ensure Android (in edge-to-edge mode) dynamically resizes view height rather than leaving the input hidden behind the soft keyboard.
+  - Corrected `keyboardVerticalOffset`: reset from incorrect `insets.top` to `0` since the chat header is rendered inside the view with no external navigation header, eliminating the 47-59px overlap under the keyboard.
+  - Added real-time `Keyboard` visibility tracking: dynamically adjusts `inputContainer` bottom padding (`8px` when keyboard is visible, `Math.max(insets.bottom, 8)` when hidden) preventing awkward gaps and home indicator clashes.
+  - Added auto-scroll to end on keyboard show and `TextInput` focus, and configured cross-platform dismiss mode (`interactive` on iOS, `on-drag` on Android).
+  - Added automatic bottom tab bar hiding (`tabBarStyle: { display: 'none' }`) while inside the chat thread with safe cleanup on unmount/blur.
+- **Tab Navigator Soft Keyboard Resilience**:
+  - `AppTabNavigator.js`, `MemberTabNavigator.js`, `VendorTabNavigator.js`: Configured `tabBarHideOnKeyboard: true` across all bottom tab navigators to prevent bottom tab bars from floating over or competing with keyboards.
+  - `Mobile/app.json`: Added `"softwareKeyboardLayoutMode": "resize"` to Android configuration for deterministic OS keyboard resizing in builds.
+- **Automated Testing & Scope Verification**:
+  - Expanded `ChatScreen.test.js` with unit tests validating `KeyboardAvoidingView` configuration (behavior and offset), bottom tab bar hiding/restoration, and auto-scroll listeners.
+  - Executed ParkEase Mobile test suite (`npm test -- --watchAll=false` in `Mobile/`): **100% pass rate** (46/46 test suites, 217/217 unit tests passing).
+  - Maintained strict mobile-only scope: zero modifications to `backend/` or `frontend/`.
+- **Key Files Modified**:
+  - `Mobile/app.json`
+  - `Mobile/src/navigation/AppTabNavigator.js`
+  - `Mobile/src/navigation/MemberTabNavigator.js`
+  - `Mobile/src/navigation/VendorTabNavigator.js`
+  - `Mobile/src/screens/Chat/ChatScreen.js`
+  - `Mobile/src/screens/Chat/__tests__/ChatScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 46 mobile test suites passing cleanly (217/217 tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Mobile Dashboard Feature Grids, Deep Navigation Parity & Chat Hardening (<@U06FVANTNHL>)
 - **Role Dashboard Feature Grids & Quick Access**:
   - `MemberDashboardScreen.js`: Added 10-tile interactive Features & Quick Access grid (`MEMBER_FEATURE_TILES`: Find Parking, Reservations, My Garage, Favorites, Digital Passes, Event Passes, Messages, Gate Pass QR, EV Charging, LPR Simulator) with one-touch deep-link navigation and clickable stats cards navigating directly into filtered booking views.

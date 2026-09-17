@@ -380,6 +380,7 @@ const AppTabNavigator = ({ navigation }) => {
                     fontSize: 11,
                     fontWeight: '600',
                 },
+                tabBarHideOnKeyboard: true,
             })}
         >
             <Tab.Screen 
