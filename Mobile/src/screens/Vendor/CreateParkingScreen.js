@@ -80,9 +80,10 @@ const CreateParkingScreen = ({ navigation, route }) => {
     const dispatch = useDispatch();
     const { createLoading, loading: parkingLoading } = useSelector((s) => s.parking);
     const scrollViewRef = useRef(null);
+    const stepOffsets = useRef({ 1: 0, 2: 0, 3: 0, 4: 0 });
 
-    const [activeStep, setActiveStep] = useState(1);
-    const [viewMode, setViewMode] = useState('all'); // 'steps' | 'all'
+    const [activeStep, setActiveStep] = useState(route?.params?.initialStep || 1);
+    const [viewMode, setViewMode] = useState(route?.params?.initialViewMode || 'all'); // 'steps' | 'all'
 
     const [formData, setFormData] = useState({
         title: '',
@@ -201,9 +202,57 @@ const CreateParkingScreen = ({ navigation, route }) => {
         }));
     };
 
+    const handleStepLayout = (stepId) => (event) => {
+        const layout = event?.nativeEvent?.layout;
+        if (layout && typeof layout.y === 'number') {
+            stepOffsets.current[stepId] = layout.y;
+        }
+    };
+
     const handleStepChange = (stepId) => {
         setActiveStep(stepId);
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        if (viewMode === 'all') {
+            const targetY = (stepOffsets.current && stepOffsets.current[stepId]) || 0;
+            scrollViewRef.current?.scrollTo?.({ y: Math.max(0, targetY - 12), animated: true });
+        } else {
+            scrollViewRef.current?.scrollTo?.({ y: 0, animated: true });
+        }
+    };
+
+    const handleToggleViewMode = (newMode) => {
+        if (newMode === viewMode) return;
+        setViewMode(newMode);
+        if (newMode === 'all') {
+            setTimeout(() => {
+                const targetY = (stepOffsets.current && stepOffsets.current[activeStep]) || 0;
+                scrollViewRef.current?.scrollTo?.({ y: Math.max(0, targetY - 12), animated: true });
+            }, 60);
+        } else {
+            scrollViewRef.current?.scrollTo?.({ y: 0, animated: false });
+        }
+    };
+
+    const handleScroll = (event) => {
+        if (viewMode !== 'all') return;
+        const scrollY = event?.nativeEvent?.contentOffset?.y;
+        if (typeof scrollY !== 'number') return;
+
+        const s2 = stepOffsets.current[2] || 999999;
+        const s3 = stepOffsets.current[3] || 999999;
+        const s4 = stepOffsets.current[4] || 999999;
+
+        let currentStep = 1;
+        if (scrollY >= s4 - 120) {
+            currentStep = 4;
+        } else if (scrollY >= s3 - 120) {
+            currentStep = 3;
+        } else if (scrollY >= s2 - 120) {
+            currentStep = 2;
+        }
+
+        if (currentStep !== activeStep) {
+            setActiveStep(currentStep);
+        }
     };
 
     const isStepComplete = (stepId) => {
@@ -335,21 +384,52 @@ const CreateParkingScreen = ({ navigation, route }) => {
                     <View style={styles.headerCenter}>
                         <Text style={styles.headerTitle}>{isEditing ? 'Edit Parking Space' : 'New Parking Space'}</Text>
                         <Text style={styles.headerSubtitle}>
-                            Step {activeStep} of 4 • {STEPS[activeStep - 1]?.label}
+                            {viewMode === 'steps'
+                                ? `Step ${activeStep} of 4 • ${STEPS[activeStep - 1]?.label}`
+                                : `All Sections • Step ${activeStep} of 4 (${STEPS[activeStep - 1]?.label})`}
                         </Text>
                     </View>
                     <View style={styles.headerRightActions}>
-                        <TouchableOpacity
-                            onPress={() => setViewMode((m) => (m === 'steps' ? 'all' : 'steps'))}
-                            style={styles.viewModeToggle}
-                        >
-                            <Ionicons
-                                name={viewMode === 'steps' ? 'list-outline' : 'albums-outline'}
-                                size={18}
-                                color={colors.primary}
-                            />
-                            <Text style={styles.viewModeText}>{viewMode === 'steps' ? 'All' : 'Steps'}</Text>
-                        </TouchableOpacity>
+                        {/* Segmented Mode Toggle: Steps vs All */}
+                        <View style={styles.segmentedToggleContainer} testID="view-mode-toggle">
+                            <TouchableOpacity
+                                onPress={() => handleToggleViewMode('steps')}
+                                style={[styles.segmentedToggleBtn, viewMode === 'steps' && styles.segmentedToggleBtnActive]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Steps view mode"
+                                accessibilityState={{ selected: viewMode === 'steps' }}
+                                testID="view-mode-steps-btn"
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons
+                                    name="albums-outline"
+                                    size={13}
+                                    color={viewMode === 'steps' ? colors.white : colors.textSecondary}
+                                />
+                                <Text style={[styles.segmentedToggleText, viewMode === 'steps' && styles.segmentedToggleTextActive]}>
+                                    Steps
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={() => handleToggleViewMode('all')}
+                                style={[styles.segmentedToggleBtn, viewMode === 'all' && styles.segmentedToggleBtnActive]}
+                                accessibilityRole="button"
+                                accessibilityLabel="All sections view mode"
+                                accessibilityState={{ selected: viewMode === 'all' }}
+                                testID="view-mode-all-btn"
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons
+                                    name="list-outline"
+                                    size={13}
+                                    color={viewMode === 'all' ? colors.white : colors.textSecondary}
+                                />
+                                <Text style={[styles.segmentedToggleText, viewMode === 'all' && styles.segmentedToggleTextActive]}>
+                                    All
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
 
                         {isEditing && (
                             <TouchableOpacity
@@ -380,6 +460,9 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                     onPress={() => handleStepChange(step.id)}
                                     style={[styles.stepTab, isActive && styles.stepTabActive]}
                                     activeOpacity={0.7}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${step.label} step`}
+                                    testID={`step-tab-${step.id}`}
                                 >
                                     <View style={[styles.stepTabIconContainer, isActive && styles.stepTabIconActive, isComplete && !isActive && styles.stepTabIconComplete]}>
                                         <Ionicons
@@ -402,13 +485,27 @@ const CreateParkingScreen = ({ navigation, route }) => {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
-                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 140 }}
+                    onScroll={handleScroll}
+                    scrollEventThrottle={16}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: viewMode === 'steps' ? 140 : 60 }}
                 >
                     <View style={styles.content}>
                         {/* ========================================================= */}
                         {/* STEP 1: PROPERTY BASICS & LOCATION */}
                         {/* ========================================================= */}
-                        <View style={viewMode === 'all' || activeStep === 1 ? styles.stepVisible : styles.stepHidden}>
+                        <View
+                            onLayout={handleStepLayout(1)}
+                            style={viewMode === 'all' || activeStep === 1 ? styles.stepVisible : styles.stepHidden}
+                            testID="step-1-section"
+                        >
+                            {viewMode === 'all' && (
+                                <View style={styles.sectionDividerHeader}>
+                                    <View style={styles.sectionNumberBadge}>
+                                        <Text style={styles.sectionNumberText}>1</Text>
+                                    </View>
+                                    <Text style={styles.sectionHeaderTitle}>{STEPS[0].fullLabel}</Text>
+                                </View>
+                            )}
                             {/* Basic Info */}
                             <Card>
                                 <View style={styles.cardHeader}>
@@ -544,7 +641,19 @@ const CreateParkingScreen = ({ navigation, route }) => {
                         {/* ========================================================= */}
                         {/* STEP 2: CATEGORY & SMART ACCESS FEATURES */}
                         {/* ========================================================= */}
-                        <View style={viewMode === 'all' || activeStep === 2 ? styles.stepVisible : styles.stepHidden}>
+                        <View
+                            onLayout={handleStepLayout(2)}
+                            style={viewMode === 'all' || activeStep === 2 ? styles.stepVisible : styles.stepHidden}
+                            testID="step-2-section"
+                        >
+                            {viewMode === 'all' && (
+                                <View style={styles.sectionDividerHeader}>
+                                    <View style={styles.sectionNumberBadge}>
+                                        <Text style={styles.sectionNumberText}>2</Text>
+                                    </View>
+                                    <Text style={styles.sectionHeaderTitle}>{STEPS[1].fullLabel}</Text>
+                                </View>
+                            )}
                             {/* Category & Smart Access Policy */}
                             <Card>
                                 <View style={styles.cardHeader}>
@@ -785,7 +894,19 @@ const CreateParkingScreen = ({ navigation, route }) => {
                         {/* ========================================================= */}
                         {/* STEP 3: PRICING & REVENUE */}
                         {/* ========================================================= */}
-                        <View style={viewMode === 'all' || activeStep === 3 ? styles.stepVisible : styles.stepHidden}>
+                        <View
+                            onLayout={handleStepLayout(3)}
+                            style={viewMode === 'all' || activeStep === 3 ? styles.stepVisible : styles.stepHidden}
+                            testID="step-3-section"
+                        >
+                            {viewMode === 'all' && (
+                                <View style={styles.sectionDividerHeader}>
+                                    <View style={styles.sectionNumberBadge}>
+                                        <Text style={styles.sectionNumberText}>3</Text>
+                                    </View>
+                                    <Text style={styles.sectionHeaderTitle}>{STEPS[2].fullLabel}</Text>
+                                </View>
+                            )}
                             {/* Pricing */}
                             <Card>
                                 <View style={styles.cardHeader}>
@@ -922,7 +1043,19 @@ const CreateParkingScreen = ({ navigation, route }) => {
                         {/* ========================================================= */}
                         {/* STEP 4: PHOTOS, AMENITIES & REVIEW */}
                         {/* ========================================================= */}
-                        <View style={viewMode === 'all' || activeStep === 4 ? styles.stepVisible : styles.stepHidden}>
+                        <View
+                            onLayout={handleStepLayout(4)}
+                            style={viewMode === 'all' || activeStep === 4 ? styles.stepVisible : styles.stepHidden}
+                            testID="step-4-section"
+                        >
+                            {viewMode === 'all' && (
+                                <View style={styles.sectionDividerHeader}>
+                                    <View style={styles.sectionNumberBadge}>
+                                        <Text style={styles.sectionNumberText}>4</Text>
+                                    </View>
+                                    <Text style={styles.sectionHeaderTitle}>{STEPS[3].fullLabel}</Text>
+                                </View>
+                            )}
                             {/* Listing Photos */}
                             <Card>
                                 <View style={styles.cardHeader}>
@@ -1053,13 +1186,16 @@ const CreateParkingScreen = ({ navigation, route }) => {
                             </Card>
 
                             {/* Submit and Delete Actions */}
-                            <Button
-                                title={isEditing ? 'Save Changes' : 'Create Space'}
-                                onPress={handleSubmit}
-                                loading={createLoading || parkingLoading}
-                                style={styles.submitBtn}
-                                icon={<Ionicons name={isEditing ? 'save-outline' : 'add-circle-outline'} size={20} color={colors.white} />}
-                            />
+                            {viewMode === 'all' && (
+                                <Button
+                                    title={isEditing ? 'Save Changes' : 'Create Space'}
+                                    onPress={handleSubmit}
+                                    loading={createLoading || parkingLoading}
+                                    style={styles.submitBtn}
+                                    testID="submit-parking-button"
+                                    icon={<Ionicons name={isEditing ? 'save-outline' : 'add-circle-outline'} size={20} color={colors.white} />}
+                                />
+                            )}
 
                             {isEditing && (
                                 <Button
@@ -1077,7 +1213,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
 
                 {/* Bottom Sticky Navigation Bar (When in Steps Mode) */}
                 {viewMode === 'steps' && (
-                    <View style={styles.stickyFooter}>
+                    <View style={styles.stickyFooter} testID="sticky-stepper-footer">
                         {activeStep > 1 && (
                             <Button
                                 title="Back"
@@ -1085,14 +1221,16 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                 onPress={() => handleStepChange(activeStep - 1)}
                                 style={styles.navBackBtn}
                                 icon={<Ionicons name="arrow-back" size={18} color={colors.primary} />}
+                                testID="stepper-back-btn"
                             />
                         )}
                         {activeStep < 4 ? (
                             <Button
                                 title={`Next: ${STEPS[activeStep]?.label}`}
                                 onPress={() => handleStepChange(activeStep + 1)}
-                                style={styles.navNextBtn}
+                                style={activeStep === 1 ? styles.navSingleNextBtn : styles.navNextBtn}
                                 icon={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+                                testID="stepper-next-btn"
                             />
                         ) : (
                             <Button
@@ -1101,6 +1239,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                 loading={createLoading || parkingLoading}
                                 style={styles.navNextBtn}
                                 icon={<Ionicons name={isEditing ? 'save-outline' : 'add-circle-outline'} size={20} color={colors.white} />}
+                                testID="submit-parking-button"
                             />
                         )}
                     </View>
@@ -1161,19 +1300,78 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#FECACA',
     },
-    viewModeToggle: {
+    // Segmented Toggle
+    segmentedToggleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.background,
+        borderRadius: spacing.radius.full,
+        padding: 3,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    segmentedToggleBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: 6,
+        paddingHorizontal: 9,
+        paddingVertical: 5,
         borderRadius: spacing.radius.full,
-        backgroundColor: colors.primarySoft,
+    },
+    segmentedToggleBtnActive: {
+        backgroundColor: colors.primary,
+        ...shadows.sm,
+    },
+    segmentedToggleText: {
+        ...typography.caption,
+        fontSize: 12,
+        fontWeight: '600',
+        color: colors.textSecondary,
+    },
+    segmentedToggleTextActive: {
+        color: colors.white,
+        fontWeight: '700',
+    },
+    viewModeToggle: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     viewModeText: {
         ...typography.caption,
         fontWeight: '600',
         color: colors.primary,
+    },
+
+    // Section Divider Headers in 'All' Mode
+    sectionDividerHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        marginTop: spacing.md,
+        marginBottom: spacing.xs,
+        paddingHorizontal: 2,
+    },
+    sectionNumberBadge: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: colors.primarySoft,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    sectionNumberText: {
+        ...typography.caption,
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.primary,
+    },
+    sectionHeaderTitle: {
+        ...typography.label,
+        fontSize: 13,
+        fontWeight: '700',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
 
     // Stepper
@@ -1583,6 +1781,9 @@ const styles = StyleSheet.create({
     },
     navNextBtn: {
         flex: 2,
+    },
+    navSingleNextBtn: {
+        flex: 1,
     },
 });
 

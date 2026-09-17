@@ -152,4 +152,101 @@ describe('CreateParkingScreen', () => {
       );
     });
   });
+
+  it('toggles between all and steps view modes using segmented toggle', () => {
+    const { getByTestId, getByText, queryByTestId } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    // Initial mode is 'all'
+    expect(getByText(/All Sections • Step 1 of 4/)).toBeTruthy();
+    expect(queryByTestId('sticky-stepper-footer')).toBeNull();
+
+    // Switch to 'steps' mode
+    const stepsBtn = getByTestId('view-mode-steps-btn');
+    fireEvent.press(stepsBtn);
+
+    // Now in 'steps' mode
+    expect(getByText(/Step 1 of 4 • Basics/)).toBeTruthy();
+    expect(getByTestId('sticky-stepper-footer')).toBeTruthy();
+    expect(getByTestId('stepper-next-btn')).toBeTruthy();
+
+    // Switch back to 'all' mode
+    const allBtn = getByTestId('view-mode-all-btn');
+    fireEvent.press(allBtn);
+
+    expect(getByText(/All Sections • Step 1 of 4/)).toBeTruthy();
+    expect(queryByTestId('sticky-stepper-footer')).toBeNull();
+  });
+
+  it('renders only one submit button on step 4 in steps mode (no duplicates)', () => {
+    const { getByTestId, getAllByText } = renderWithProviders(
+      <CreateParkingScreen
+        navigation={mockNavigation}
+        route={{ params: { initialViewMode: 'steps', initialStep: 4 } }}
+      />
+    );
+
+    // Verify sticky footer is present on step 4
+    expect(getByTestId('sticky-stepper-footer')).toBeTruthy();
+    expect(getByTestId('stepper-back-btn')).toBeTruthy();
+
+    // Verify there is exactly ONE "Create Space" button on the screen
+    const createButtons = getAllByText('Create Space');
+    expect(createButtons).toHaveLength(1);
+    expect(getByTestId('submit-parking-button')).toBeTruthy();
+  });
+
+  it('navigates through steps using stepper tabs and next/back buttons in steps mode', () => {
+    const { getByTestId, getByText } = renderWithProviders(
+      <CreateParkingScreen
+        navigation={mockNavigation}
+        route={{ params: { initialViewMode: 'steps', initialStep: 1 } }}
+      />
+    );
+
+    expect(getByText(/Step 1 of 4 • Basics/)).toBeTruthy();
+
+    // Press Next to go to Step 2
+    fireEvent.press(getByTestId('stepper-next-btn'));
+    expect(getByText(/Step 2 of 4 • Access/)).toBeTruthy();
+    expect(getByTestId('stepper-back-btn')).toBeTruthy();
+
+    // Press Next to go to Step 3
+    fireEvent.press(getByTestId('stepper-next-btn'));
+    expect(getByText(/Step 3 of 4 • Pricing/)).toBeTruthy();
+
+    // Press Back to return to Step 2
+    fireEvent.press(getByTestId('stepper-back-btn'));
+    expect(getByText(/Step 2 of 4 • Access/)).toBeTruthy();
+
+    // Tap directly on Step 4 tab
+    fireEvent.press(getByTestId('step-tab-4'));
+    expect(getByText(/Step 4 of 4 • Review/)).toBeTruthy();
+    expect(getByTestId('submit-parking-button')).toBeTruthy();
+  });
+
+  it('scrolls to the corresponding step section when tapping step tabs in all mode', () => {
+    const { getByTestId, getByText } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    // In all mode, simulate layouts for each step
+    fireEvent(getByTestId('step-1-section'), 'layout', { nativeEvent: { layout: { y: 0 } } });
+    fireEvent(getByTestId('step-2-section'), 'layout', { nativeEvent: { layout: { y: 450 } } });
+    fireEvent(getByTestId('step-3-section'), 'layout', { nativeEvent: { layout: { y: 900 } } });
+    fireEvent(getByTestId('step-4-section'), 'layout', { nativeEvent: { layout: { y: 1350 } } });
+
+    // Tap step 2 tab
+    fireEvent.press(getByTestId('step-tab-2'));
+    expect(getByText(/All Sections • Step 2 of 4/)).toBeTruthy();
+
+    // Tap step 3 tab
+    fireEvent.press(getByTestId('step-tab-3'));
+    expect(getByText(/All Sections • Step 3 of 4/)).toBeTruthy();
+
+    // Tap step 4 tab
+    fireEvent.press(getByTestId('step-tab-4'));
+    expect(getByText(/All Sections • Step 4 of 4/)).toBeTruthy();
+  });
 });

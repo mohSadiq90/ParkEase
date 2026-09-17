@@ -9,6 +9,41 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix New Parking Space Form Steps vs All Toggle, Step Scrolling & Duplicate Buttons (<@U06FVANTNHL>)
+- **Steps vs All View Mode Toggle & Smooth Step Scrolling**:
+  - Investigated issues reported by `<@U06FVANTNHL>`:
+    1. Steps vs All toggle was confusing with inverted text labels and lacked clear UX state indication.
+    2. Tapping step tabs (1, 2, 3, 4) in All mode failed to scroll to that step section, resetting to top (`y: 0`).
+    3. Enabling steps mode and navigating to Step 4 showed two duplicate "Create Space" buttons at the bottom (inline + sticky footer).
+  - Implemented modern Apple HIG-compliant segmented toggle control in `CreateParkingScreen.js`:
+    - Replaced single ambiguous toggle button with clear segmented pill control (`[ 📑 Steps | 📄 All ]`) with dedicated `testID="view-mode-toggle"`, `testID="view-mode-steps-btn"`, and `testID="view-mode-all-btn"`.
+    - Active mode clearly highlighted with primary background and white text; inactive mode clearly indicated with subtle text and icon.
+    - Added dynamic header subtitle updating between `Step X of 4 • <Label>` (Steps mode) and `All Sections • Step X of 4 (<Label>)` (All mode).
+    - Preserved active step position and smooth scrolling when toggling between view modes.
+  - Implemented interactive step scrolling & scroll tracking in All mode:
+    - Added `stepOffsets` ref measuring `y` layout coordinates of each step section (`step-1-section`, `step-2-section`, `step-3-section`, `step-4-section`).
+    - Tapping on step tabs in the stepper bar now smoothly scrolls directly to that specific section (`scrollViewRef.current.scrollTo`).
+    - Added `onScroll` listener tracking current viewport position in All mode, dynamically updating active step, progress bar, and stepper indicator.
+    - Added clean section headers (`1 Property Basics & Location`, `2 Category & Smart Access`, `3 Pricing & Dynamic Rates`, `4 Photos, Amenities & Review`) dividing sections in All mode.
+  - Eliminated duplicate submit button on Step 4:
+    - In Steps mode: sticky footer provides the single primary action button (`Back` and `Create Space` / `Save Changes`); eliminated duplicate inline submit button from Step 4 scrollable view.
+    - In All mode: single submit button is rendered cleanly at the bottom of the complete form with zero duplicate buttons.
+- **Automated Testing & Verification**:
+  - Updated `Mobile/src/screens/Vendor/__tests__/CreateParkingScreen.test.js`: added 4 new unit tests covering:
+    1. Toggling between All and Steps view modes using the segmented toggle.
+    2. Verifying only one submit button is rendered on Step 4 in Steps mode (no duplicates).
+    3. Navigating through steps using stepper tabs and next/back buttons in Steps mode.
+    4. Scrolling to the corresponding step section when tapping step tabs in All mode.
+  - Executed full Mobile test suite (`npm test -- --watchAll=false` in `Mobile/`): **100% pass rate** (49/49 test suites, 256/256 unit tests passing).
+  - Maintained strict mobile-only scope: zero modifications to `backend/` or `frontend/`.
+- **Key Files Modified**:
+  - `Mobile/src/screens/Vendor/CreateParkingScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/CreateParkingScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 49 mobile test suites passing cleanly (256/256 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Missing Option to Delete Parking Space Listings (<@U06FVANTNHL>)
 - **Comprehensive Listing Deletion Across Host Management**:
   - Investigated issue reported by `<@U06FVANTNHL>`: hosts had no option to delete their parking listings from `MyListingsScreen.js`, `ParkingDetailScreen.js`, or the early steps of `CreateParkingScreen.js`.
