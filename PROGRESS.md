@@ -9,6 +9,34 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Eliminate Redundant Duplicate Menu Profile Options & Streamline Profile Details (<@U06FVANTNHL>)
+- **Audited Profile & Menu Navigation Structure (`ProfileScreen.js`, `MenuScreen.js`)**:
+  - Investigated issue reported by `<@U06FVANTNHL>` regarding repeated content and redundant duplicate options across the Profile Details and Menu sections.
+  - Identified that on `ProfileScreen.js`, driver feature rows ("My Vehicles", "My Passes", "Favorites") were rendered in BOTH the top "Features Menu" card AND duplicated in the "Account Settings Menu" card directly below.
+  - Identified dead unused inline edit profile form state and inputs in `ProfileScreen.js` that was redundant with the dedicated, full-featured `EditProfileScreen.js`.
+- **Elimination of Redundant Duplicate Rows in Profile Details (`ProfileScreen.js`)**:
+  - Removed duplicate `My Vehicles`, `My Passes`, and `Favorites` items from the "Account Settings Menu" card.
+  - Established clean, single proper entry points:
+    - Driver features anchored strictly in the "Features Menu": `My Garage (Vehicles)` (plate management), `Saved Favorites` (quick-booking pinned locations), and `Parking Passes` (active gate access tokens).
+    - Account settings anchored strictly in the "Account Settings Menu": `Edit Profile` (personal info), `Email`, `Phone`, `Change Password` (security credentials), and `Notifications` (unread count badge).
+  - Cleaned up dead inline edit profile form state (`editing`, `firstName`, `lastName`, `phoneNumber`, `handleSaveProfile`) and unused imports from `ProfileScreen.js`.
+  - Added back button and header edit pencil button affordance (`create-outline`) directly in the `ProfileScreen.js` header navigating seamlessly to `EditProfile`.
+- **Preserved Distinct Single Entry Points across Menu and Profile (`MenuScreen.js`, `ProfileScreen.js`)**:
+  - Confirmed that `Change Password` appears only once in `ProfileScreen.js` (Account Settings) and once in `MenuScreen.js` (Account & Security), preserving access without duplication.
+  - Retained clean dual entry points for `Edit Profile` (quick edit pencil on Menu card header, and dedicated Account Settings row), conforming to user guidance that editing from multiple natural places is acceptable while eliminating 10x sprawl.
+- **Automated Testing Suite**:
+  - Added 2 unit tests in `Mobile/src/screens/Profile/__tests__/ProfileScreens.test.js`:
+    1. Verifies that `My Garage (Vehicles)`, `Saved Favorites`, `Parking Passes`, `Edit Profile`, and `Change Password` exist, while redundant duplicate `My Vehicles` rows are not present.
+    2. Verifies clean navigation from Account Settings to `ChangePassword`, `EditProfile`, and `Vehicles` from `My Garage`.
+  - Executed full Mobile automated test suite: **100% pass rate** (52/52 test suites, 317/317 tests passing cleanly).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Profile/ProfileScreen.js`
+  - `Mobile/src/screens/Profile/__tests__/ProfileScreens.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 52 test suites passing cleanly (317/317 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Horizontally Scrollable Pills for Vehicle Categories, Booking Filters, & Modals (<@U06FVANTNHL>)
 - **Vehicle Category Pills Horizontal Scroll (`VehiclesScreen.js`, `MyVehiclesScreen.js`)**:
   - Resolved UI overflow bug where vehicle category pills (Car, Motorcycle, SUV, Truck, Van, Electric) overflowed the right edge of the screen without horizontal scrolling on the Add Vehicle form.

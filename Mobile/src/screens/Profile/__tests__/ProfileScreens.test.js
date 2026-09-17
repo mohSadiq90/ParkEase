@@ -183,7 +183,7 @@ describe('Mobile Profile Extension Screens', () => {
         },
       };
 
-      const { getByText, getAllByText } = renderWithProviders(
+      const { getByText, getAllByText, queryByText, queryAllByText } = renderWithProviders(
         <ProfileScreen navigation={mockNavigation} />,
         { preloadedState }
       );
@@ -192,8 +192,45 @@ describe('Mobile Profile Extension Screens', () => {
       expect(getAllByText('sarah@skynet.com').length).toBeGreaterThan(0);
       expect(getByText('My Garage (Vehicles)')).toBeTruthy();
       expect(getByText('Saved Favorites')).toBeTruthy();
+      expect(getByText('Parking Passes')).toBeTruthy();
+      expect(getByText('Edit Profile')).toBeTruthy();
+      expect(getByText('Change Password')).toBeTruthy();
       expect(getByText('Delete Account')).toBeTruthy();
       expect(getByText('Logout')).toBeTruthy();
+
+      // Ensure duplicate items are not present
+      const allMyVehicles = queryAllByText ? queryAllByText('My Vehicles') : [];
+      expect(allMyVehicles.length).toBe(0);
+    });
+
+    it('navigates to ChangePassword and EditProfile from Account Settings without duplicate options', () => {
+      const ProfileScreen = require('../ProfileScreen').default;
+      const preloadedState = {
+        auth: {
+          user: { id: 'u-1', firstName: 'Sarah', lastName: 'Connor', email: 'sarah@skynet.com' },
+          token: 'jwt-token',
+        },
+      };
+
+      const { getByText, queryByText } = renderWithProviders(
+        <ProfileScreen navigation={mockNavigation} />,
+        { preloadedState }
+      );
+
+      // Verify no duplicate options on profile screen
+      expect(queryByText('My Vehicles')).toBeNull();
+
+      // Navigate to ChangePassword
+      fireEvent.press(getByText('Change Password'));
+      expect(mockNavigation.navigate).toHaveBeenCalledWith('ChangePassword');
+
+      // Navigate to EditProfile
+      fireEvent.press(getByText('Edit Profile'));
+      expect(mockNavigation.navigate).toHaveBeenCalledWith('EditProfile');
+
+      // Navigate to Vehicles from My Garage
+      fireEvent.press(getByText('My Garage (Vehicles)'));
+      expect(mockNavigation.navigate).toHaveBeenCalledWith('Vehicles');
     });
 
     it('triggers Alert confirmation and handles logout on Press', async () => {

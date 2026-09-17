@@ -1,23 +1,20 @@
 /**
- * ProfileScreen
- * User profile, edit info, change password, logout
+ * ProfileScreen (Profile Details)
+ * User profile, garage, saved favorites, passes, and account security settings
+ * Streamlined to eliminate redundant duplicate options and dead inline form code.
  */
 
 import React, { useState, useCallback } from 'react';
-import { EventBus } from '../../utils/EventBus';
 import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { authService } from '../../services/auth/authService';
 import { deleteAccountThunk } from '../../store/slices/authSlice';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import Button from '../../components/Common/Button';
-import Input from '../../components/Common/Input';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { APP_VERSION_STRING } from '../../config/version';
-
 
 const MenuItem = ({ icon, label, value, onPress, danger = false, badge = 0 }) => (
     <TouchableOpacity style={menuStyles.item} onPress={onPress}>
@@ -58,23 +55,11 @@ const menuStyles = StyleSheet.create({
 
 const ProfileScreen = ({ navigation }) => {
     const dispatch = useDispatch();
-    const { user, logout, updateProfile, loading, isAdmin } = useAuth();
-    const [editing, setEditing] = useState(false);
+    const { user, logout, isAdmin, isCorporate, isVendor } = useAuth();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-    const [firstName, setFirstName] = useState(user?.firstName || '');
-    const [lastName, setLastName] = useState(user?.lastName || '');
-    const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
 
     // Get unread count safely
-    const { unreadCount: notificationUnreadCount } = useSelector((s) => s.notification);
-
-    const handleSaveProfile = useCallback(async () => {
-        const result = await updateProfile({ firstName, lastName, phoneNumber });
-        if (!result.error) {
-            setEditing(false);
-            EventBus.emit('SHOW_BANNER', { title: 'Success', message: 'Profile updated', type: 'success' });
-        }
-    }, [updateProfile, firstName, lastName, phoneNumber]);
+    const { unreadCount: notificationUnreadCount } = useSelector((s) => s.notification || { unreadCount: 0 });
 
     const handleLogout = useCallback(() => {
         if (isLoggingOut) {
@@ -114,9 +99,8 @@ const ProfileScreen = ({ navigation }) => {
                     onPress: async () => {
                         try {
                             await dispatch(deleteAccountThunk()).unwrap();
-                            EventBus.emit('SHOW_BANNER', { title: 'Account Deleted', message: 'Your account has been permanently deleted.', type: 'success' });
                         } catch (error) {
-                            EventBus.emit('SHOW_ERROR_BANNER', { title: 'Error', message: error || 'Failed to delete account.' });
+                            Alert.alert('Error', error || 'Failed to delete account.');
                         }
                     },
                 },
@@ -124,40 +108,49 @@ const ProfileScreen = ({ navigation }) => {
         );
     }, [dispatch]);
 
+    const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.fullName || 'User';
+    const roleLabel = isCorporate ? 'Corporate Fleet' : isVendor ? 'Vendor Partner' : 'Driver Member';
+
     return (
-        <ScreenLayout scrollable contentStyle={{ paddingBottom: editing ? 140 : spacing['3xl'] }}>
+        <ScreenLayout scrollable contentStyle={styles.contentContainer}>
             <View style={styles.content}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.screenTitle}>Profile</Text>
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={styles.backButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Go back"
+                    >
+                        <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+                    </TouchableOpacity>
+                    <Text style={styles.screenTitle}>Profile Details</Text>
+                    <TouchableOpacity
+                        style={styles.headerEditBtn}
+                        onPress={() => navigation.navigate('EditProfile')}
+                        accessibilityRole="button"
+                        accessibilityLabel="Edit Profile"
+                    >
+                        <Ionicons name="create-outline" size={22} color={colors.primary} />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Avatar & Info */}
                 <View style={styles.avatarSection}>
                     <View style={styles.avatarCircle}>
                         <Text style={styles.avatarText}>
-                            {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                            {user?.firstName?.charAt(0) || fullName?.charAt(0) || 'U'}
+                            {user?.lastName?.charAt(0) || ''}
                         </Text>
                     </View>
-                    <Text style={styles.userName}>{user?.firstName} {user?.lastName}</Text>
+                    <Text style={styles.userName}>{fullName}</Text>
                     <Text style={styles.userEmail}>{user?.email}</Text>
+                    <View style={styles.roleBadge}>
+                        <Text style={styles.roleText}>{roleLabel}</Text>
+                    </View>
                 </View>
 
-                {/* Edit Profile */}
-                {editing ? (
-                    <Card>
-                        <Text style={styles.sectionTitle}>Edit Profile</Text>
-                        <Input label="First Name" value={firstName} onChangeText={setFirstName} leftIcon="person-outline" />
-                        <Input label="Last Name" value={lastName} onChangeText={setLastName} />
-                        <Input label="Phone" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" leftIcon="call-outline" />
-                        <View style={styles.editActions}>
-                            <Button title="Save" onPress={handleSaveProfile} loading={loading} style={{ flex: 1 }} />
-                            <Button title="Cancel" onPress={() => setEditing(false)} variant="ghost" style={{ flex: 1 }} />
-                        </View>
-                    </Card>
-                ) : null}
-
-                {/* Features Menu */}
+                {/* Features & Garage Menu - Each option appears only ONCE in its proper place */}
                 <Card style={{ marginBottom: spacing.md }}>
                     <MenuItem
                         icon="car-sport-outline"
@@ -171,8 +164,18 @@ const ProfileScreen = ({ navigation }) => {
                             }
                         }}
                     />
-                    <MenuItem icon="heart-outline" label="Saved Favorites" value="Quick-book pinned locations" onPress={() => navigation.navigate('Favorites')} />
-                    <MenuItem icon="ticket-outline" label="Parking Passes" value="Active gate access tokens" onPress={() => navigation.navigate('MyPasses')} />
+                    <MenuItem
+                        icon="heart-outline"
+                        label="Saved Favorites"
+                        value="Quick-book pinned locations"
+                        onPress={() => navigation.navigate('Favorites')}
+                    />
+                    <MenuItem
+                        icon="ticket-outline"
+                        label="Parking Passes"
+                        value="Active gate access tokens"
+                        onPress={() => navigation.navigate('MyPasses')}
+                    />
                 </Card>
 
                 {/* Platform Admin Console (Only visible to Admin) */}
@@ -187,20 +190,46 @@ const ProfileScreen = ({ navigation }) => {
                     </Card>
                 )}
 
-                {/* Account Settings Menu */}
-                <Card>
-                    <MenuItem icon="person-outline" label="Edit Profile" value={`${user?.firstName} ${user?.lastName}`} onPress={() => navigation.navigate('EditProfile')} />
-                    <MenuItem icon="mail-outline" label="Email" value={user?.email} onPress={() => { }} />
-                    <MenuItem icon="call-outline" label="Phone" value={user?.phoneNumber} onPress={() => { }} />
-                    <MenuItem icon="lock-closed-outline" label="Change Password" onPress={handleChangePassword} />
-                    <MenuItem icon="car-outline" label="My Vehicles" onPress={() => navigation.navigate('Vehicles')} />
-                    <MenuItem icon="ticket-outline" label="My Passes" onPress={() => navigation.navigate('MyPasses')} />
-                    <MenuItem icon="heart-outline" label="Favorites" onPress={() => navigation.navigate('Favorites')} />
-                    <MenuItem icon="notifications-outline" label="Notifications" badge={notificationUnreadCount} onPress={() => navigation.navigate('Notifications')} />
+                {/* Account Settings Menu - Cleaned of duplicate vehicles/passes/favorites rows */}
+                <Card style={{ marginBottom: spacing.md }}>
+                    <MenuItem
+                        icon="person-outline"
+                        label="Edit Profile"
+                        value={fullName}
+                        onPress={() => navigation.navigate('EditProfile')}
+                    />
+                    <MenuItem
+                        icon="mail-outline"
+                        label="Email"
+                        value={user?.email || 'Not provided'}
+                        onPress={() => { }}
+                    />
+                    <MenuItem
+                        icon="call-outline"
+                        label="Phone"
+                        value={user?.phoneNumber || 'Not provided'}
+                        onPress={() => { }}
+                    />
+                    <MenuItem
+                        icon="lock-closed-outline"
+                        label="Change Password"
+                        onPress={handleChangePassword}
+                    />
+                    <MenuItem
+                        icon="notifications-outline"
+                        label="Notifications"
+                        badge={notificationUnreadCount}
+                        onPress={() => navigation.navigate('Notifications')}
+                    />
                 </Card>
 
                 <Card>
-                    <MenuItem icon="trash-outline" label="Delete Account" onPress={handleDeleteAccount} danger />
+                    <MenuItem
+                        icon="trash-outline"
+                        label="Delete Account"
+                        onPress={handleDeleteAccount}
+                        danger
+                    />
                 </Card>
 
                 <Button
@@ -221,18 +250,38 @@ const ProfileScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+    contentContainer: { paddingBottom: spacing['3xl'] },
     content: { paddingBottom: spacing['3xl'] },
-    header: { paddingTop: spacing.md, paddingHorizontal: spacing.screenHorizontal, paddingBottom: spacing.base },
-    screenTitle: { ...typography.h2, color: colors.textPrimary },
-    avatarSection: { alignItems: 'center', paddingVertical: spacing.xl },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: spacing.md,
+        paddingHorizontal: spacing.screenHorizontal,
+        paddingBottom: spacing.sm,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+    },
+    screenTitle: { ...typography.h3, color: colors.textPrimary },
+    headerEditBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'flex-end',
+    },
+    avatarSection: { alignItems: 'center', paddingVertical: spacing.lg },
     avatarCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...shadows.lg },
     avatarText: { fontSize: 28, fontWeight: '700', color: colors.white },
     userName: { ...typography.h3, color: colors.textPrimary, marginTop: spacing.md },
     userEmail: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
     roleBadge: { marginTop: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: colors.primarySoft, borderRadius: spacing.radius.full },
     roleText: { ...typography.caption, color: colors.primary, fontWeight: '600' },
-    sectionTitle: { ...typography.label, color: colors.textPrimary, marginBottom: spacing.md },
-    editActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
     logoutBtn: { marginTop: spacing.xl, marginHorizontal: spacing.screenHorizontal },
     versionContainer: { alignItems: 'center', marginTop: spacing.lg, paddingBottom: spacing.md },
     versionText: { ...typography.caption, color: colors.textMuted },
