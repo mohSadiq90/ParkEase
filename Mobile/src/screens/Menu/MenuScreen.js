@@ -93,14 +93,9 @@ const MenuScreen = ({ navigation }) => {
                 onPress: async () => {
                     try {
                         setIsLoggingOut(true);
-                        await logout().unwrap();
+                        await logout();
                     } catch (error) {
                         setIsLoggingOut(false);
-                        EventBus.emit('SHOW_BANNER', {
-                            title: 'Logout Failed',
-                            message: error || 'Could not log out right now.',
-                            type: 'error',
-                        });
                     }
                 },
             },

@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, renderWithProviders, waitFor } from '../../../utils/test-utils';
+import { Alert } from 'react-native';
+import { fireEvent, renderWithProviders, waitFor, act } from '../../../utils/test-utils';
 import MyVehiclesScreen from '../MyVehiclesScreen';
 import FavoritesScreen from '../FavoritesScreen';
 import MyPassesScreen from '../MyPassesScreen';
@@ -173,6 +174,37 @@ describe('Mobile Profile Extension Screens', () => {
       expect(getByText('Saved Favorites')).toBeTruthy();
       expect(getByText('Delete Account')).toBeTruthy();
       expect(getByText('Logout')).toBeTruthy();
+    });
+
+    it('triggers Alert confirmation and handles logout on Press', async () => {
+      const ProfileScreen = require('../ProfileScreen').default;
+      const alertSpy = jest.spyOn(Alert, 'alert');
+      const preloadedState = {
+        auth: {
+          user: { id: 'u-1', firstName: 'Sarah', lastName: 'Connor', email: 'sarah@skynet.com' },
+          token: 'jwt-token',
+          isAuthenticated: true,
+        },
+      };
+
+      const { getByText } = renderWithProviders(
+        <ProfileScreen navigation={mockNavigation} />,
+        { preloadedState }
+      );
+
+      fireEvent.press(getByText('Logout'));
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Logout',
+        'Are you sure you want to logout?',
+        expect.any(Array)
+      );
+
+      const alertButtons = alertSpy.mock.calls[0][2];
+      const logoutButton = alertButtons.find((btn) => btn.text === 'Logout');
+      await act(async () => {
+        await logoutButton.onPress();
+      });
+      alertSpy.mockRestore();
     });
   });
 });

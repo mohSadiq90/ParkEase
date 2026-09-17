@@ -9,6 +9,32 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Mobile Logout Delay with Instant Optimistic Authentication Reset (<@U06FVANTNHL>)
+- **Instant Optimistic Client Logout & Non-Blocking Server Revocation**:
+  - Investigated logout latency reported by `<@U06FVANTNHL>`: identified that `authService.logout()` previously awaited a synchronous HTTP POST request to `/auth/logout` (`await apiClient.post(ENDPOINTS.AUTH.LOGOUT)`), which caused a multi-second UI stall while awaiting the network round trip. In addition, `authSlice` previously only cleared `state.isAuthenticated` on `logoutThunk.fulfilled`, keeping the user stuck on the current screen until the network responded.
+  - Updated `authSlice.js`: added optimistic state reset on `logoutThunk.pending` (`Object.assign(state, { ...initialState, isSessionChecked: true })`), immediately switching `state.isAuthenticated` to `false` in 0ms on dispatch. Also added handlers for `logoutThunk.fulfilled` and `logoutThunk.rejected` guaranteeing the user is never trapped in a logged-in state.
+  - Updated `authService.js`: refactored `logout()` to perform immediate local teardown (instant PostHog analytics tracking & user reset, immediate SecureStore clearance via `storageService.clearAll()`), while dispatching the backend server revocation endpoint non-blocking in the background with bearer authorization and a 5-second timeout.
+  - Updated `MenuScreen.js` and `ProfileScreen.js`: streamlined `handleLogout` to invoke `logout()` directly without false failure banner popups since local logout is instant and guaranteed.
+- **Automated Testing & Verification**:
+  - Created `Mobile/src/services/auth/__tests__/authService.test.js`: added 5 unit tests validating that `authService.logout()` tracks `AUTH_LOGOUT`, resets PostHog user identity, clears secure storage immediately, fires server revocation in the background with authorization header, and handles network or storage errors gracefully.
+  - Updated `Mobile/src/store/slices/__tests__/authSlice.test.js`: added unit tests validating that `logoutThunk.pending` immediately resets the auth state to unauthenticated, and `fulfilled`/`rejected` states maintain the unauthenticated state.
+  - Updated `MenuScreen.test.js` and `ProfileScreens.test.js`: added unit tests verifying that tapping Logout triggers the confirmation alert and initiates immediate logout.
+  - Executed full Mobile test suite (`npm test -- --watchAll=false`): **100% pass rate** (48/48 test suites, 235/235 tests passing).
+  - Maintained strict mobile-only scope: zero modifications to `backend/` or `frontend/`.
+- **Key Files Modified & Created**:
+  - `Mobile/src/services/auth/authService.js`
+  - `Mobile/src/store/slices/authSlice.js`
+  - `Mobile/src/screens/Menu/MenuScreen.js`
+  - `Mobile/src/screens/Profile/ProfileScreen.js`
+  - `Mobile/src/services/auth/__tests__/authService.test.js`
+  - `Mobile/src/store/slices/__tests__/authSlice.test.js`
+  - `Mobile/src/screens/Menu/__tests__/MenuScreen.test.js`
+  - `Mobile/src/screens/Profile/__tests__/ProfileScreens.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 48 mobile test suites passing cleanly (235/235 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Hardcoded Host Greeting & Dynamic Profile Greeting Fallbacks (<@U06FVANTNHL>)
 - **Fix Hardcoded Greeting & Dynamic Fallbacks**:
   - Investigated home screen greeting reported by `<@U06FVANTNHL>`: confirmed that `VendorDashboardScreen.js` had a hardcoded `'Sadiq'` fallback (`(user ? 'Partner' : 'Sadiq')`), causing the header to display `"Welcome, Sadiq"` whenever `user` was null or loading.

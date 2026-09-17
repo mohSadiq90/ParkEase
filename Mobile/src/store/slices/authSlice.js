@@ -454,7 +454,13 @@ const authSlice = createSlice({
             })
 
             // Logout
+            .addCase(logoutThunk.pending, (state) => {
+                Object.assign(state, { ...initialState, isSessionChecked: true });
+            })
             .addCase(logoutThunk.fulfilled, (state) => {
+                Object.assign(state, { ...initialState, isSessionChecked: true });
+            })
+            .addCase(logoutThunk.rejected, (state) => {
                 Object.assign(state, { ...initialState, isSessionChecked: true });
             })
 

@@ -206,14 +206,33 @@ export const authService = {
 
 
     async logout() {
+        // 1. Immediately track analytics and reset user session
         try {
-            await apiClient.post(ENDPOINTS.AUTH.LOGOUT);
+            posthogService.trackEvent(AnalyticsEvents.AUTH_LOGOUT);
+            posthogService.resetUser();
         } catch (error) {
-            logger.warn(TAG, 'Logout API call failed', error);
+            logger.warn(TAG, 'Analytics reset failed on logout', error);
         }
-        posthogService.trackEvent(AnalyticsEvents.AUTH_LOGOUT);
-        posthogService.resetUser();
-        await storageService.clearAll();
+
+        // 2. Dispatch server logout in background without blocking instant local logout.
+        // Retrieve token before wiping storage so the backend receives the bearer token.
+        try {
+            storageService.getAccessToken().then((token) => {
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                return apiClient.post(ENDPOINTS.AUTH.LOGOUT, {}, { headers, timeout: 5000 });
+            }).catch((error) => {
+                logger.warn(TAG, 'Background logout API call failed', error);
+            });
+        } catch (error) {
+            logger.warn(TAG, 'Background logout dispatch failed', error);
+        }
+
+        // 3. Clear local secure storage immediately
+        try {
+            await storageService.clearAll();
+        } catch (error) {
+            logger.warn(TAG, 'Storage clear failed on logout', error);
+        }
     },
 
     async refreshToken() {

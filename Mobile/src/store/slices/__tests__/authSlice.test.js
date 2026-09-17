@@ -9,6 +9,7 @@ import reducer, {
   updateLinkedProviders,
   clearError,
   resetAuth,
+  logoutThunk,
 } from '../authSlice';
 import authService from '../../../services/auth/authService';
 
@@ -278,6 +279,53 @@ describe('authSlice', () => {
       expect(state.loading).toBe(false);
       expect(state.error).toBe('Corporate SSO is not configured for this domain. Please log in using password.');
       expect(state.isAuthenticated).toBe(false);
+    });
+  });
+
+  describe('logoutThunk', () => {
+    const authenticatedState = {
+      ...initialState,
+      user: { id: 101, email: 'test@parkease.com' },
+      token: 'valid-jwt-token',
+      isAuthenticated: true,
+      isSessionChecked: true,
+      channel: 'Corporate',
+      companyId: 'comp-1',
+      companyRole: 'Admin',
+      corporateCompanies: [{ id: 'comp-1' }],
+    };
+
+    it('should immediately reset auth state to unauthenticated on pending (instant local logout)', () => {
+      const action = { type: logoutThunk.pending.type };
+      const state = reducer(authenticatedState, action);
+
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+      expect(state.token).toBeNull();
+      expect(state.isSessionChecked).toBe(true);
+      expect(state.channel).toBe('Marketplace');
+      expect(state.companyId).toBeNull();
+      expect(state.corporateCompanies).toEqual([]);
+    });
+
+    it('should maintain unauthenticated state on fulfilled', () => {
+      const action = { type: logoutThunk.fulfilled.type };
+      const state = reducer(authenticatedState, action);
+
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+      expect(state.token).toBeNull();
+      expect(state.isSessionChecked).toBe(true);
+    });
+
+    it('should maintain unauthenticated state on rejected to ensure user is never trapped in session', () => {
+      const action = { type: logoutThunk.rejected.type, payload: 'Network error' };
+      const state = reducer(authenticatedState, action);
+
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+      expect(state.token).toBeNull();
+      expect(state.isSessionChecked).toBe(true);
     });
   });
 });

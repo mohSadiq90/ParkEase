@@ -1,7 +1,10 @@
 import React from 'react';
-import { fireEvent } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { fireEvent, act } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../utils/test-utils';
 import MenuScreen from '../MenuScreen';
+
+jest.mock('../../../services/api/apiClient');
 
 describe('MenuScreen', () => {
   const mockNavigation = {
@@ -200,5 +203,26 @@ describe('MenuScreen', () => {
 
     // Close via header close icon
     fireEvent.press(getByLabelText('Close Built With Modal'));
+  });
+
+  it('triggers Alert confirmation and handles logout on Press', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const { getByText } = renderWithProviders(
+      <MenuScreen navigation={mockNavigation} />
+    );
+
+    fireEvent.press(getByText('Log Out'));
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Logout',
+      'Are you sure you want to logout?',
+      expect.any(Array)
+    );
+
+    const alertButtons = alertSpy.mock.calls[0][2];
+    const logoutButton = alertButtons.find((btn) => btn.text === 'Logout');
+    await act(async () => {
+      await logoutButton.onPress();
+    });
+    alertSpy.mockRestore();
   });
 });
