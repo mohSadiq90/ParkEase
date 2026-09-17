@@ -15,30 +15,24 @@ import { useAuth } from '../../hooks/useAuth';
 import chatService from '../../services/chat/chatService';
 
 const ChatScreen = ({ route, navigation }) => {
-    const { conversationId, parkingSpaceId, participantName, parkingTitle } = route.params;
+    const { conversationId, parkingSpaceId, participantName, parkingTitle } = route?.params || {};
     const { user } = useAuth();
     const insets = useSafeAreaInsets();
+    const [currentConvId, setCurrentConvId] = useState(conversationId || null);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(Boolean(conversationId));
     const [sending, setSending] = useState(false);
     const flatListRef = useRef(null);
     const pollInterval = useRef(null);
 
-    useEffect(() => {
-        loadMessages();
-        markRead();
-
-        // Poll for new messages every 5 seconds (lightweight real-time substitute for mobile)
-        pollInterval.current = setInterval(loadMessages, 5000);
-        return () => {
-            if (pollInterval.current) clearInterval(pollInterval.current);
-        };
-    }, [conversationId]);
-
-    const loadMessages = async () => {
+    const loadMessages = useCallback(async (convId = currentConvId) => {
+        if (!convId) {
+            setLoading(false);
+            return;
+        }
         try {
-            const result = await chatService.getMessages(conversationId);
+            const result = await chatService.getMessages(convId);
             if (result.success) {
                 // Reverse to show oldest first (API returns newest first)
                 setMessages((result.data || []).reverse());
@@ -48,13 +42,29 @@ const ChatScreen = ({ route, navigation }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentConvId]);
 
-    const markRead = async () => {
+    const markRead = useCallback(async (convId = currentConvId) => {
+        if (!convId) return;
         try {
-            await chatService.markAsRead(conversationId);
+            await chatService.markAsRead(convId);
         } catch { }
-    };
+    }, [currentConvId]);
+
+    useEffect(() => {
+        if (currentConvId) {
+            loadMessages(currentConvId);
+            markRead(currentConvId);
+
+            // Poll for new messages every 5 seconds (lightweight real-time substitute for mobile)
+            pollInterval.current = setInterval(() => loadMessages(currentConvId), 5000);
+        } else {
+            setLoading(false);
+        }
+        return () => {
+            if (pollInterval.current) clearInterval(pollInterval.current);
+        };
+    }, [currentConvId, loadMessages, markRead]);
 
     const handleSend = async () => {
         const content = newMessage.trim();
@@ -62,10 +72,13 @@ const ChatScreen = ({ route, navigation }) => {
 
         setSending(true);
         try {
-            const result = await chatService.sendMessage(parkingSpaceId, content);
+            const result = await chatService.sendMessage(parkingSpaceId, content, currentConvId);
             if (result.success && result.data) {
                 setMessages(prev => [...prev, result.data]);
                 setNewMessage('');
+                if (result.data.conversationId && !currentConvId) {
+                    setCurrentConvId(result.data.conversationId);
+                }
                 // Auto-scroll
                 setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
             }
@@ -120,8 +133,8 @@ const ChatScreen = ({ route, navigation }) => {
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
                 <View style={styles.headerInfo}>
-                    <Text style={styles.headerName} numberOfLines={1}>{participantName}</Text>
-                    <Text style={styles.headerSubtitle} numberOfLines={1}>🅿️ {parkingTitle}</Text>
+                    <Text style={styles.headerName} numberOfLines={1}>{participantName || 'Host / Driver'}</Text>
+                    <Text style={styles.headerSubtitle} numberOfLines={1}>🅿️ {parkingTitle || 'Parking Space'}</Text>
                 </View>
             </View>
 
@@ -162,6 +175,7 @@ const ChatScreen = ({ route, navigation }) => {
                     editable={!sending}
                 />
                 <TouchableOpacity
+                    testID="chat-send-btn"
                     style={[styles.sendBtn, (!newMessage.trim() || sending) && styles.sendBtnDisabled]}
                     onPress={handleSend}
                     disabled={!newMessage.trim() || sending}

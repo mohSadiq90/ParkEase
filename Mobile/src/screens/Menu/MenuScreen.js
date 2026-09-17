@@ -65,11 +65,23 @@ const MenuItem = ({ icon, label, subtitle, onPress, badge = 0, danger = false })
 );
 
 const MenuScreen = ({ navigation }) => {
-    const { user, logout, isVendor, isAdmin } = useAuth();
+    const { user, logout, isVendor, isAdmin, isCorporate } = useAuth();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [builtWithModalVisible, setBuiltWithModalVisible] = useState(false);
     const { unreadCount: notificationUnreadCount } = useSelector((s) => s.notification || { unreadCount: 0 });
     const { unreadTotalCount: messageUnreadCount } = useSelector((s) => s.chat || { unreadTotalCount: 0 });
+
+    const displayName =
+        user?.fullName ||
+        (user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : null) ||
+        (user?.name ? user.name : null) ||
+        user?.email?.split('@')[0] ||
+        (isCorporate ? 'Corporate Account' : 'Partner');
+
+    const displayEmail = user?.email || (isCorporate ? 'corporate@company.com' : 'user@parkease.com');
+
+    const avatarInitial1 = (user?.firstName?.[0] || displayName?.[0] || 'U').toUpperCase();
+    const avatarInitial2 = (user?.lastName?.[0] || displayName?.split(' ')?.[1]?.[0] || '').toUpperCase();
 
     const handleLogout = useCallback(() => {
         if (isLoggingOut) return;
@@ -101,18 +113,15 @@ const MenuScreen = ({ navigation }) => {
             <Card style={styles.profileCard}>
                 <View style={styles.avatarWrap}>
                     <Text style={styles.avatarText}>
-                        {(user?.firstName?.[0] || 'S').toUpperCase()}
-                        {(user?.lastName?.[0] || '').toUpperCase()}
+                        {avatarInitial1}{avatarInitial2}
                     </Text>
                 </View>
                 <View style={styles.profileInfo}>
-                    <Text style={styles.profileName}>
-                        {user?.firstName || 'Sadiq'} {user?.lastName || ''}
-                    </Text>
-                    <Text style={styles.profileEmail}>{user?.email || 'vendor@parkease.com'}</Text>
+                    <Text style={styles.profileName}>{displayName}</Text>
+                    <Text style={styles.profileEmail}>{displayEmail}</Text>
                     <View style={styles.rolePill}>
                         <Text style={styles.rolePillText}>
-                            {isVendor ? 'Vendor Partner' : 'Driver Member'}
+                            {isCorporate ? 'Corporate Fleet' : isVendor ? 'Vendor Partner' : 'Driver Member'}
                         </Text>
                     </View>
                 </View>
@@ -124,122 +133,130 @@ const MenuScreen = ({ navigation }) => {
                 </TouchableOpacity>
             </Card>
 
-            {/* Business & Operations */}
-            <Text style={styles.sectionHeader}>Operations & Listings</Text>
-            <Card style={styles.cardGroup}>
-                <MenuItem
-                    icon="list-outline"
-                    label="My Listings"
-                    subtitle="View, edit & manage parking spaces"
-                    onPress={() => navigation.navigate('MyListings')}
-                />
-                <MenuItem
-                    icon="add-circle-outline"
-                    label="Add Parking Space"
-                    subtitle="Create new parking space listing"
-                    onPress={() => navigation.navigate('CreateParking')}
-                />
-                <MenuItem
-                    icon="qr-code-outline"
-                    label="Gate Access Scanner"
-                    subtitle="Scan driver entry QR passes"
-                    onPress={() => navigation.navigate('AccessPassScanner')}
-                />
-                <MenuItem
-                    icon="ticket-outline"
-                    label="Event Parking Packages"
-                    subtitle="Manage venue zones & event packages"
-                    onPress={() => navigation.navigate('VendorEventPackages')}
-                />
-                <MenuItem
-                    icon="scan-outline"
-                    label="LPR Camera & Rules"
-                    subtitle="Camera keys & plate access rules"
-                    onPress={() => navigation.navigate('LprSettings')}
-                />
-                <MenuItem
-                    icon="search-outline"
-                    label="Find Parking Spaces"
-                    subtitle="Explore & search public spots"
-                    onPress={() => navigation.navigate('Search')}
-                />
-                <MenuItem
-                    icon="calendar-outline"
-                    label="My Reservations"
-                    subtitle="Personal driver parking bookings"
-                    onPress={() => navigation.navigate('MyBookings')}
-                />
-                <MenuItem
-                    icon="checkmark-done-circle-outline"
-                    label="Incoming Host Bookings"
-                    subtitle="Manage reservations for your spaces"
-                    onPress={() => navigation.navigate('IncomingBookings')}
-                />
-                {isAdmin && (
-                    <MenuItem
-                        icon="shield-checkmark-outline"
-                        label="Admin Dashboard"
-                        subtitle="System overview & verification"
-                        onPress={() => navigation.navigate('AdminDashboard')}
-                    />
-                )}
-            </Card>
+            {/* Corporate & Fleet Hub - ONLY for Corporate Users */}
+            {isCorporate && (
+                <>
+                    <Text style={styles.sectionHeader}>Corporate & Fleet</Text>
+                    <Card style={styles.cardGroup}>
+                        <MenuItem
+                            icon="business-outline"
+                            label="Corporate Dashboard"
+                            subtitle="Fleet management & company accounts"
+                            onPress={() => navigation.navigate('CorporateDashboard')}
+                        />
+                        <MenuItem
+                            icon="briefcase-outline"
+                            label="Company Management"
+                            subtitle="Manage corporate organizations"
+                            onPress={() => navigation.navigate('CompanyManagement')}
+                        />
+                        <MenuItem
+                            icon="layers-outline"
+                            label="Parking Inventory"
+                            subtitle="Company-owned facilities & bays"
+                            onPress={() => navigation.navigate('CorporateParkingSpaces')}
+                        />
+                        <MenuItem
+                            icon="search-circle-outline"
+                            label="Lease Browse"
+                            subtitle="Discover & lease marketplace spaces"
+                            onPress={() => navigation.navigate('CorporateLeaseBrowse')}
+                        />
+                        <MenuItem
+                            icon="people-outline"
+                            label="Corporate Members"
+                            subtitle="Employee directory & access roles"
+                            onPress={() => navigation.navigate('CorporateMembers')}
+                        />
+                        <MenuItem
+                            icon="calendar-number-outline"
+                            label="Corporate Bookings"
+                            subtitle="Company & team reservations"
+                            onPress={() => navigation.navigate('CorporateBookings')}
+                        />
+                        <MenuItem
+                            icon="pie-chart-outline"
+                            label="Department Allocations"
+                            subtitle="Quota distribution & dedicated bays"
+                            onPress={() => navigation.navigate('CorporateAllocations')}
+                        />
+                        <MenuItem
+                            icon="receipt-outline"
+                            label="Corporate Invoices"
+                            subtitle="Monthly statements & receipts"
+                            onPress={() => navigation.navigate('CorporateInvoices')}
+                        />
+                    </Card>
+                </>
+            )}
 
-            {/* Corporate & Fleet Hub */}
-            <Text style={styles.sectionHeader}>Corporate & Fleet</Text>
-            <Card style={styles.cardGroup}>
-                <MenuItem
-                    icon="business-outline"
-                    label="Corporate Dashboard"
-                    subtitle="Fleet management & company accounts"
-                    onPress={() => navigation.navigate('CorporateDashboard')}
-                />
-                <MenuItem
-                    icon="briefcase-outline"
-                    label="Company Management"
-                    subtitle="Manage corporate organizations"
-                    onPress={() => navigation.navigate('CompanyManagement')}
-                />
-                <MenuItem
-                    icon="layers-outline"
-                    label="Parking Inventory"
-                    subtitle="Company-owned facilities & bays"
-                    onPress={() => navigation.navigate('CorporateParkingSpaces')}
-                />
-                <MenuItem
-                    icon="search-circle-outline"
-                    label="Lease Browse"
-                    subtitle="Discover & lease marketplace spaces"
-                    onPress={() => navigation.navigate('CorporateLeaseBrowse')}
-                />
-                <MenuItem
-                    icon="people-outline"
-                    label="Corporate Members"
-                    subtitle="Employee directory & access roles"
-                    onPress={() => navigation.navigate('CorporateMembers')}
-                />
-                <MenuItem
-                    icon="calendar-number-outline"
-                    label="Corporate Bookings"
-                    subtitle="Company & team reservations"
-                    onPress={() => navigation.navigate('CorporateBookings')}
-                />
-                <MenuItem
-                    icon="pie-chart-outline"
-                    label="Department Allocations"
-                    subtitle="Quota distribution & dedicated bays"
-                    onPress={() => navigation.navigate('CorporateAllocations')}
-                />
-                <MenuItem
-                    icon="receipt-outline"
-                    label="Corporate Invoices"
-                    subtitle="Monthly statements & receipts"
-                    onPress={() => navigation.navigate('CorporateInvoices')}
-                />
-            </Card>
+            {/* Marketplace Operations & Listings - ONLY for Marketplace Users (Vendors / Drivers / Admins) */}
+            {!isCorporate && (
+                <>
+                    <Text style={styles.sectionHeader}>Operations & Listings</Text>
+                    <Card style={styles.cardGroup}>
+                        <MenuItem
+                            icon="list-outline"
+                            label="My Listings"
+                            subtitle="View, edit & manage parking spaces"
+                            onPress={() => navigation.navigate('MyListings')}
+                        />
+                        <MenuItem
+                            icon="add-circle-outline"
+                            label="Add Parking Space"
+                            subtitle="Create new parking space listing"
+                            onPress={() => navigation.navigate('CreateParking')}
+                        />
+                        <MenuItem
+                            icon="qr-code-outline"
+                            label="Gate Access Scanner"
+                            subtitle="Scan driver entry QR passes"
+                            onPress={() => navigation.navigate('AccessPassScanner')}
+                        />
+                        <MenuItem
+                            icon="ticket-outline"
+                            label="Event Parking Packages"
+                            subtitle="Manage venue zones & event packages"
+                            onPress={() => navigation.navigate('VendorEventPackages')}
+                        />
+                        <MenuItem
+                            icon="scan-outline"
+                            label="LPR Camera & Rules"
+                            subtitle="Camera keys & plate access rules"
+                            onPress={() => navigation.navigate('LprSettings')}
+                        />
+                        <MenuItem
+                            icon="search-outline"
+                            label="Find Parking Spaces"
+                            subtitle="Explore & search public spots"
+                            onPress={() => navigation.navigate('Search')}
+                        />
+                        <MenuItem
+                            icon="calendar-outline"
+                            label="My Reservations"
+                            subtitle="Personal driver parking bookings"
+                            onPress={() => navigation.navigate('MyBookings')}
+                        />
+                        <MenuItem
+                            icon="checkmark-done-circle-outline"
+                            label="Incoming Host Bookings"
+                            subtitle="Manage reservations for your spaces"
+                            onPress={() => navigation.navigate('IncomingBookings')}
+                        />
+                        {isAdmin && (
+                            <MenuItem
+                                icon="shield-checkmark-outline"
+                                label="Admin Dashboard"
+                                subtitle="System overview & verification"
+                                onPress={() => navigation.navigate('AdminDashboard')}
+                            />
+                        )}
+                    </Card>
+                </>
+            )}
 
             {/* Communication & Garage */}
-            <Text style={styles.sectionHeader}>Garage & Messages</Text>
+            <Text style={styles.sectionHeader}>{isCorporate ? 'Communications & Passes' : 'Garage & Messages'}</Text>
             <Card style={styles.cardGroup}>
                 <MenuItem
                     icon="chatbubbles-outline"
@@ -255,48 +272,58 @@ const MenuScreen = ({ navigation }) => {
                     badge={notificationUnreadCount}
                     onPress={() => navigation.navigate('Notifications')}
                 />
-                <MenuItem
-                    icon="car-outline"
-                    label="My Vehicles"
-                    subtitle="Saved license plates & garage"
-                    onPress={() => navigation.navigate('Vehicles')}
-                />
-                <MenuItem
-                    icon="heart-outline"
-                    label="Favorites"
-                    subtitle="Saved parking facilities"
-                    onPress={() => navigation.navigate('Favorites')}
-                />
+                {!isCorporate && (
+                    <>
+                        <MenuItem
+                            icon="car-outline"
+                            label="My Vehicles"
+                            subtitle="Saved license plates & garage"
+                            onPress={() => navigation.navigate('Vehicles')}
+                        />
+                        <MenuItem
+                            icon="heart-outline"
+                            label="Favorites"
+                            subtitle="Saved parking facilities"
+                            onPress={() => navigation.navigate('Favorites')}
+                        />
+                    </>
+                )}
                 <MenuItem
                     icon="ticket-outline"
                     label="My Passes"
                     subtitle="Subscription & digital wallet passes"
                     onPress={() => navigation.navigate('MyPasses')}
                 />
-                <MenuItem
-                    icon="flame-outline"
-                    label="Event Parking Passes"
-                    subtitle="Browse & buy event tickets"
-                    onPress={() => navigation.navigate('EventPackages')}
-                />
+                {!isCorporate && (
+                    <MenuItem
+                        icon="flame-outline"
+                        label="Event Parking Passes"
+                        subtitle="Browse & buy event tickets"
+                        onPress={() => navigation.navigate('EventPackages')}
+                    />
+                )}
             </Card>
 
-            {/* Tools & Simulators */}
-            <Text style={styles.sectionHeader}>Tools & Simulators</Text>
-            <Card style={styles.cardGroup}>
-                <MenuItem
-                    icon="scan-circle-outline"
-                    label="LPR Simulator"
-                    subtitle="Simulate ticketless barrier entry/exit"
-                    onPress={() => navigation.navigate('LprSimulator')}
-                />
-                <MenuItem
-                    icon="flash-outline"
-                    label="EV Charge Simulator"
-                    subtitle="Simulate OCPP charging & fee settlement"
-                    onPress={() => navigation.navigate('EvChargeSimulator')}
-                />
-            </Card>
+            {/* Tools & Simulators - Marketplace only */}
+            {!isCorporate && (
+                <>
+                    <Text style={styles.sectionHeader}>Tools & Simulators</Text>
+                    <Card style={styles.cardGroup}>
+                        <MenuItem
+                            icon="scan-circle-outline"
+                            label="LPR Simulator"
+                            subtitle="Simulate ticketless barrier entry/exit"
+                            onPress={() => navigation.navigate('LprSimulator')}
+                        />
+                        <MenuItem
+                            icon="flash-outline"
+                            label="EV Charge Simulator"
+                            subtitle="Simulate OCPP charging & fee settlement"
+                            onPress={() => navigation.navigate('EvChargeSimulator')}
+                        />
+                    </Card>
+                </>
+            )}
 
             {/* Account & Security */}
             <Text style={styles.sectionHeader}>Account & Security</Text>

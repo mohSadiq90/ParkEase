@@ -38,13 +38,33 @@ const chatService = {
     /**
      * Send a message (creates conversation if needed)
      */
-    async sendMessage(parkingSpaceId, content) {
+    async sendMessage(parkingSpaceId, content, conversationId = null) {
         try {
-            const response = await apiClient.post('/chat/send', { parkingSpaceId, content });
+            const body = { parkingSpaceId, content };
+            if (conversationId) body.conversationId = conversationId;
+            const response = await apiClient.post('/chat/send', body);
             return response.data;
         } catch (error) {
             logger.error(TAG, 'Failed to send message', error);
             throw error;
+        }
+    },
+
+    /**
+     * Find existing conversation by parking space ID
+     */
+    async findConversationByParkingSpace(parkingSpaceId) {
+        try {
+            const result = await this.getConversations(1, 50);
+            const conversations = result?.data?.conversations || result?.data || [];
+            return (
+                conversations.find(
+                    (c) => String(c.parkingSpaceId || c.parkingId).toLowerCase() === String(parkingSpaceId).toLowerCase()
+                ) || null
+            );
+        } catch (error) {
+            logger.error(TAG, 'Failed to find conversation by parking space', error);
+            return null;
         }
     },
 

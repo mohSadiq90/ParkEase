@@ -9,6 +9,45 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Mobile Cross-Navigation, Dynamic Role Dashboards & Comprehensive Test Coverage (<@U06FVANTNHL>)
+- **Dynamic Role Dashboards & Bottom Tab Routing**:
+  - Enhanced `AppTabNavigator.js` with corporate channel awareness: dynamic switching to `CorporateDashboardScreen`, `CorporateBookingsScreen`, and dedicated `CorporateInventoryTab` (with `CorporateParkingSpaces` and `CorporateLeaseBrowse`).
+  - Added essential cross-navigation routes across `HomeStack`, `ProfileStack`, and `MenuStack` for seamless transitions (`Search`, `MyVehicles`, `ConversationList`, and corporate workflows).
+- **Marketplace vs Corporate Channel Menu Separation**:
+  - Updated `MenuScreen.js` to cleanly partition menu items according to user channel (`Corporate` vs `Marketplace`), preventing vendor/member clutter for corporate managers and hiding corporate fleet tools for retail drivers.
+- **Search & Discovery CTAs**:
+  - Implemented prominent "Find Parking" search bar CTA and interactive empty-state action on `MemberDashboardScreen.js`.
+  - Added personalized host greeting (`user?.firstName`) and "Find & Explore Parking" navigation on `VendorDashboardScreen.js`.
+  - Added "Explore Parking" empty-state action in `FavoritesScreen.js` and ensured robust parameter handling (`parkingId` / `id`) across `FavoritesScreen.js`, `Profile/FavoritesScreen.js`, and `ParkingDetailScreen.js`.
+- **Chat Service & Thread Resilience**:
+  - Enhanced `ChatScreen.js` to safely initialize when starting brand new conversations with `conversationId: null`, auto-linking the conversation upon first message dispatch.
+  - Added `findConversationByParkingSpace` and explicit `conversationId` dispatch to `chatService.js`.
+- **Automated Testing & Scope Verification**:
+  - Created dedicated unit test suites: `ChatScreen.test.js`, `FavoritesScreen.test.js`, and `MemberDashboardScreen.test.js`.
+  - Expanded `MenuScreen.test.js` validating both Marketplace and Corporate menu partition states.
+  - Executed ParkEase Mobile test suite (`npm test -- --watchAll=false` in `Mobile/`): **100% pass rate** (46/46 test suites, 213/213 unit tests passing).
+  - Maintained strict mobile-only scope: zero modifications to `backend/` or `frontend/`.
+- **Key Files Modified & Created**:
+  - `Mobile/src/navigation/AppTabNavigator.js`
+  - `Mobile/src/screens/Chat/ChatScreen.js`
+  - `Mobile/src/screens/Chat/__tests__/ChatScreen.test.js`
+  - `Mobile/src/screens/Favorites/FavoritesScreen.js`
+  - `Mobile/src/screens/Favorites/__tests__/FavoritesScreen.test.js`
+  - `Mobile/src/screens/Member/MemberDashboardScreen.js`
+  - `Mobile/src/screens/Member/__tests__/MemberDashboardScreen.test.js`
+  - `Mobile/src/screens/Menu/MenuScreen.js`
+  - `Mobile/src/screens/Menu/__tests__/MenuScreen.test.js`
+  - `Mobile/src/screens/Profile/FavoritesScreen.js`
+  - `Mobile/src/screens/Profile/MyVehiclesScreen.js`
+  - `Mobile/src/screens/Profile/ProfileScreen.js`
+  - `Mobile/src/screens/Search/ParkingDetailScreen.js`
+  - `Mobile/src/screens/Vendor/VendorDashboardScreen.js`
+  - `Mobile/src/services/chat/chatService.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 46 mobile test suites passing cleanly (213/213 tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-16] - Mobile Comprehensive Form Keyboard Avoidance & Viewport Protection (<@U06FVANTNHL>)
 - **Form Keyboard Avoidance & Field Visibility Audit**:
   - Conducted comprehensive audit of all forms, text inputs, and modals across ParkEase Mobile to guarantee fields, submit buttons, and action bars are never obscured when the virtual keyboard appears.

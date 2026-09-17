@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -99,6 +99,24 @@ const MemberDashboardScreen = ({ navigation }) => {
         ...(!data?.upcomingBookings?.length && !data?.recentBookings?.length ? [{ type: 'empty' }] : []),
     ];
 
+    const navigateToSearch = () => {
+        try {
+            const parent = navigation.getParent?.();
+            if (parent) {
+                parent.navigate('SearchTab', { screen: 'Search' });
+                return;
+            }
+        } catch (_) {}
+        try {
+            navigation.navigate('SearchTab', { screen: 'Search' });
+            return;
+        } catch (_) {}
+        try {
+            navigation.navigate('Search');
+            return;
+        } catch (_) {}
+    };
+
     const renderItem = ({ item }) => {
         switch (item.type) {
             case 'header':
@@ -107,6 +125,20 @@ const MemberDashboardScreen = ({ navigation }) => {
                         <View style={styles.heroContent}>
                             <Text style={styles.greeting}>Hello, {user?.firstName || 'there'} 👋</Text>
                             <Text style={styles.heroSubtitle}>Find your perfect parking spot</Text>
+
+                            <TouchableOpacity
+                                style={styles.searchBarCta}
+                                onPress={navigateToSearch}
+                                activeOpacity={0.85}
+                                accessibilityRole="button"
+                                accessibilityLabel="Find parking spaces"
+                            >
+                                <Ionicons name="search" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+                                <Text style={styles.searchBarPlaceholder}>Find & book parking spaces...</Text>
+                                <View style={styles.searchActionBtn}>
+                                    <Text style={styles.searchActionText}>Find Parking</Text>
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     </LinearGradient>
                 );
@@ -128,7 +160,15 @@ const MemberDashboardScreen = ({ navigation }) => {
                     />
                 );
             case 'empty':
-                return <EmptyState icon="car-outline" title="No bookings yet" message="Search for parking spaces and book your first spot!" />;
+                return (
+                    <EmptyState
+                        icon="car-outline"
+                        title="No bookings yet"
+                        message="Search for parking spaces and book your first spot!"
+                        actionLabel="Find Parking"
+                        onAction={navigateToSearch}
+                    />
+                );
             default:
                 return null;
         }
@@ -179,6 +219,33 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.screenHorizontal,
         marginTop: spacing.base,
         marginBottom: spacing.md,
+    },
+    searchBarCta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        paddingHorizontal: spacing.md,
+        paddingVertical: 10,
+        marginTop: spacing.md,
+        ...shadows.card,
+    },
+    searchBarPlaceholder: {
+        flex: 1,
+        ...typography.body,
+        color: colors.textTertiary,
+        fontSize: 14,
+    },
+    searchActionBtn: {
+        backgroundColor: colors.primary,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    searchActionText: {
+        color: colors.white,
+        fontSize: 13,
+        fontWeight: '600',
     },
 });
 

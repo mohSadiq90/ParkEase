@@ -22,11 +22,34 @@ const FavoritesScreen = ({ navigation }) => {
         dispatch(toggleFavoriteThunk(parkingSpaceId));
     };
 
+    const handleExploreParking = useCallback(() => {
+        try {
+            const parent = navigation.getParent?.();
+            if (parent) {
+                parent.navigate('SearchTab', { screen: 'Search' });
+                return;
+            }
+        } catch (_) {}
+        try {
+            navigation.navigate('SearchTab', { screen: 'Search' });
+            return;
+        } catch (_) {}
+        try {
+            navigation.navigate('Search');
+            return;
+        } catch (_) {}
+        try {
+            navigation.navigate('Dashboard');
+            return;
+        } catch (_) {}
+    }, [navigation]);
+
     const renderItem = ({ item }) => {
+        const spotId = item.id || item.parkingSpaceId;
         return (
             <TouchableOpacity 
                 style={styles.card}
-                onPress={() => navigation.navigate('ParkingDetail', { id: item.id })}
+                onPress={() => navigation.navigate('ParkingDetail', { parkingId: spotId, id: spotId })}
             >
                 {item.images && item.images.length > 0 ? (
                     <Image source={{ uri: item.images[0] }} style={styles.cardImage} />
@@ -44,7 +67,7 @@ const FavoritesScreen = ({ navigation }) => {
                         <Text style={styles.price}>${item.pricePerHour}/hr</Text>
                         <TouchableOpacity 
                             style={styles.favoriteButton}
-                            onPress={() => handleRemoveFavorite(item.id)}
+                            onPress={() => handleRemoveFavorite(spotId)}
                         >
                             <Ionicons name="heart" size={24} color={colors.error} />
                         </TouchableOpacity>
@@ -66,7 +89,7 @@ const FavoritesScreen = ({ navigation }) => {
 
             <FlatList
                 data={favorites}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => (item.id || item.parkingSpaceId || Math.random()).toString()}
                 renderItem={renderItem}
                 refreshControl={
                     <RefreshControl 
@@ -80,7 +103,7 @@ const FavoritesScreen = ({ navigation }) => {
                     <View style={styles.emptyContainer}>
                         <Ionicons name="heart-outline" size={64} color={colors.borderLight} />
                         <Text style={styles.emptyText}>You haven't saved any spots yet.</Text>
-                        <TouchableOpacity style={styles.exploreButton} onPress={() => navigation.navigate('SearchTab')}>
+                        <TouchableOpacity style={styles.exploreButton} onPress={handleExploreParking}>
                             <Text style={styles.exploreButtonText}>Explore Parking</Text>
                         </TouchableOpacity>
                     </View>

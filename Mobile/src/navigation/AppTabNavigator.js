@@ -106,13 +106,15 @@ const NOTIFICATION_ROUTE_TAB_MAP = {
 };
 
 const DynamicDashboardScreen = (props) => {
-    const { isVendor } = useAuth();
+    const { isVendor, isCorporate } = useAuth();
+    if (isCorporate) return <CorporateDashboardScreen {...props} />;
     if (isVendor) return <VendorDashboardScreen {...props} />;
     return <MemberDashboardScreen {...props} />;
 };
 
 const DynamicBookingsScreen = (props) => {
-    const { isVendor } = useAuth();
+    const { isVendor, isCorporate } = useAuth();
+    if (isCorporate) return <CorporateBookingsScreen {...props} />;
     if (isVendor) return <VendorBookingsScreen {...props} />;
     return <MyBookingsScreen {...props} />;
 };
@@ -121,6 +123,7 @@ const DynamicBookingsScreen = (props) => {
 const HomeStack = () => (
     <Stack.Navigator screenOptions={stackOptions}>
         <Stack.Screen name="Dashboard" component={DynamicDashboardScreen} />
+        <Stack.Screen name="Search" component={SearchScreen} />
         <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
         <Stack.Screen name="BookParking" component={BookingScreen} />
         <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
@@ -128,15 +131,23 @@ const HomeStack = () => (
         <Stack.Screen name="Favorites" component={FavoritesScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
+        <Stack.Screen name="MyVehicles" component={VehiclesScreen} />
         <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
         <Stack.Screen name="ReviewsList" component={ReviewsListScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="ConversationList" component={ConversationListScreen} />
         <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
         <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
         <Stack.Screen name="AccessPassScanner" component={AccessPassScannerScreen} />
         <Stack.Screen name="EventPackages" component={EventPackagesScreen} />
         <Stack.Screen name="VendorEventPackages" component={VendorEventPackagesScreen} />
         <Stack.Screen name="LprSettings" component={LprSettingsScreen} />
+        <Stack.Screen name="CorporateDashboard" component={CorporateDashboardScreen} />
+        <Stack.Screen name="CompanyManagement" component={CompanyManagementScreen} />
+        <Stack.Screen name="CorporateMembers" component={CorporateMembersScreen} />
+        <Stack.Screen name="CorporateAllocations" component={CorporateAllocationsScreen} />
+        <Stack.Screen name="CorporateBookings" component={CorporateBookingsScreen} />
+        <Stack.Screen name="CorporateInvoices" component={CorporateInvoicesScreen} />
         <Stack.Screen name="CorporateLeaseBrowse" component={CorporateLeaseBrowseScreen} />
         <Stack.Screen name="CorporateParkingSpaces" component={CorporateParkingSpacesScreen} />
         <Stack.Screen name="LprSimulator" component={LprSimulatorScreen} />
@@ -205,6 +216,7 @@ const ProfileStack = () => (
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
+        <Stack.Screen name="MyVehicles" component={VehiclesScreen} />
         <Stack.Screen name="Favorites" component={FavoritesScreen} />
         <Stack.Screen name="MyPasses" component={MyPassesScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
@@ -213,6 +225,8 @@ const ProfileStack = () => (
         <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
         <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="ConversationList" component={ConversationListScreen} />
+        <Stack.Screen name="Search" component={SearchScreen} />
         <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
     </Stack.Navigator>
 );
@@ -225,6 +239,7 @@ const MenuStack = () => (
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
+        <Stack.Screen name="MyVehicles" component={VehiclesScreen} />
         <Stack.Screen name="Favorites" component={FavoritesScreen} />
         <Stack.Screen name="MyPasses" component={MyPassesScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
@@ -259,10 +274,20 @@ const MenuStack = () => (
     </Stack.Navigator>
 );
 
+// ── Corporate Inventory Stack ──
+const CorporateInventoryStack = () => (
+    <Stack.Navigator screenOptions={stackOptions}>
+        <Stack.Screen name="CorporateParkingSpaces" component={CorporateParkingSpacesScreen} />
+        <Stack.Screen name="CorporateLeaseBrowse" component={CorporateLeaseBrowseScreen} />
+        <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
+        <Stack.Screen name="Search" component={SearchScreen} />
+    </Stack.Navigator>
+);
+
 const AppTabNavigator = ({ navigation }) => {
     const dispatch = useDispatch();
     const insets = useSafeAreaInsets();
-    const { isVendor } = useAuth();
+    const { isVendor, isCorporate } = useAuth();
     const { unreadCount: notificationUnreadCount } = useSelector((s) => s.notification);
     const { unreadCount: messageUnreadCount } = useSelector((s) => s.chat);
 
@@ -317,6 +342,7 @@ const AppTabNavigator = ({ navigation }) => {
                         ListingsTab: focused ? 'location' : 'location-outline',
                         MenuTab: focused ? 'grid' : 'grid-outline',
                         SearchTab: focused ? 'search' : 'search-outline',
+                        CorporateInventoryTab: focused ? 'business' : 'business-outline',
                     };
                     return (
                         <Ionicons
@@ -353,7 +379,22 @@ const AppTabNavigator = ({ navigation }) => {
                 options={{ tabBarLabel: 'Home' }} 
                 listeners={{ tabPress: refreshCounts }}
             />
-            {isVendor ? (
+            {isCorporate ? (
+                <>
+                    <Tab.Screen 
+                        name="CorporateInventoryTab" 
+                        component={CorporateInventoryStack} 
+                        options={{ tabBarLabel: 'Inventory' }} 
+                        listeners={{ tabPress: refreshCounts }}
+                    />
+                    <Tab.Screen 
+                        name="BookingsTab" 
+                        component={BookingsStack} 
+                        options={{ tabBarLabel: 'Bookings' }} 
+                        listeners={{ tabPress: refreshCounts }}
+                    />
+                </>
+            ) : isVendor ? (
                 <>
                     <Tab.Screen 
                         name="BookingsTab" 

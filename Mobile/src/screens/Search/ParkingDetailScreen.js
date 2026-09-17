@@ -40,7 +40,7 @@ const getBucketAvailability = (bucket) =>
     bucket.availableSpots ?? bucket.availableSlots ?? bucket.availableCount ?? bucket.remainingSpots;
 
 const ParkingDetailScreen = ({ navigation, route }) => {
-    const { parkingId } = route.params;
+    const parkingId = route?.params?.parkingId || route?.params?.id;
     const insets = useSafeAreaInsets();
     const dispatch = useDispatch();
     const { user } = useAuth();

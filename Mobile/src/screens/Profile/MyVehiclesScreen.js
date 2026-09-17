@@ -57,8 +57,9 @@ const MyVehiclesScreen = ({ navigation }) => {
         try {
             setLoading(true);
             const res = await apiClient.get(ENDPOINTS.VEHICLES.BASE);
-            if (res.success && res.data) {
-                setVehicles(Array.isArray(res.data) ? res.data : []);
+            const items = res?.data?.data || res?.data || [];
+            if (Array.isArray(items)) {
+                setVehicles(items);
             }
         } catch (err) {
             console.error('Error fetching vehicles:', err);

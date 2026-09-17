@@ -107,12 +107,18 @@ const VendorDashboardScreen = ({ navigation }) => {
         ...(!data?.recentBookings?.length ? [{ type: 'empty' }] : []),
     ];
 
+    const hostName =
+        user?.firstName ||
+        (user?.fullName ? user.fullName.split(' ')[0] : null) ||
+        (user?.name ? user.name.split(' ')[0] : null) ||
+        (user ? 'Partner' : 'Sadiq');
+
     const renderItem = ({ item }) => {
         switch (item.type) {
             case 'header':
                 return (
                     <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) + 12 }]}>
-                        <Text style={styles.greeting}>Welcome, Sadiq</Text>
+                        <Text style={styles.greeting}>Welcome, {hostName}</Text>
                         <Text style={styles.heroSub}>Manage your parking business</Text>
                     </View>
                 );
@@ -150,14 +156,30 @@ const VendorDashboardScreen = ({ navigation }) => {
 
             case 'gateScanner':
                 return (
-                    <TouchableOpacity
-                        style={styles.gateScannerBtn}
-                        onPress={() => navigation.navigate('AccessPassScanner')}
-                        activeOpacity={0.85}
-                    >
-                        <Ionicons name="qr-code-outline" size={22} color={colors.white} style={{ marginRight: 8 }} />
-                        <Text style={styles.gateScannerText}>Gate Access Scanner</Text>
-                    </TouchableOpacity>
+                    <View style={styles.actionButtonsContainer}>
+                        <TouchableOpacity
+                            style={styles.gateScannerBtn}
+                            onPress={() => navigation.navigate('AccessPassScanner')}
+                            activeOpacity={0.85}
+                        >
+                            <Ionicons name="qr-code-outline" size={22} color={colors.white} style={{ marginRight: 8 }} />
+                            <Text style={styles.gateScannerText}>Gate Access Scanner</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.findParkingBtn}
+                            onPress={() => {
+                                try {
+                                    navigation.navigate('SearchTab', { screen: 'Search' });
+                                } catch (_) {
+                                    navigation.navigate('Search');
+                                }
+                            }}
+                            activeOpacity={0.85}
+                        >
+                            <Ionicons name="search-outline" size={20} color={colors.primaryAccent} style={{ marginRight: 8 }} />
+                            <Text style={styles.findParkingText}>Find & Explore Parking</Text>
+                        </TouchableOpacity>
+                    </View>
                 );
 
             case 'sectionTitle':
@@ -338,13 +360,16 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
-    // Gate Access Scanner (Primary Action Button)
-    gateScannerBtn: {
-        height: 56,
-        backgroundColor: colors.primaryAccent,
-        borderRadius: 12,
+    actionButtonsContainer: {
         marginHorizontal: spacing.screenHorizontal,
         marginTop: spacing.md,
+        gap: spacing.sm,
+    },
+    // Gate Access Scanner (Primary Action Button)
+    gateScannerBtn: {
+        height: 52,
+        backgroundColor: colors.primaryAccent,
+        borderRadius: 12,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -354,6 +379,22 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: colors.white,
+    },
+    findParkingBtn: {
+        height: 48,
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: colors.primaryAccent,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...shadows.sm,
+    },
+    findParkingText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: colors.primaryAccent,
     },
 
     // Recent Bookings Section

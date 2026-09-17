@@ -24,8 +24,9 @@ const FavoritesScreen = ({ navigation }) => {
         try {
             setLoading(true);
             const res = await apiClient.get(ENDPOINTS.FAVORITES.BASE);
-            if (res.success && res.data) {
-                setFavorites(Array.isArray(res.data) ? res.data : []);
+            const items = res?.data?.data || res?.data || [];
+            if (Array.isArray(items)) {
+                setFavorites(items);
             }
         } catch (err) {
             console.error('Error fetching favorites:', err);
@@ -33,6 +34,28 @@ const FavoritesScreen = ({ navigation }) => {
             setLoading(false);
         }
     }, []);
+
+    const handleExploreParking = useCallback(() => {
+        try {
+            const parent = navigation.getParent?.();
+            if (parent) {
+                parent.navigate('SearchTab', { screen: 'Search' });
+                return;
+            }
+        } catch (_) {}
+        try {
+            navigation.navigate('SearchTab', { screen: 'Search' });
+            return;
+        } catch (_) {}
+        try {
+            navigation.navigate('Search');
+            return;
+        } catch (_) {}
+        try {
+            navigation.navigate('Dashboard');
+            return;
+        } catch (_) {}
+    }, [navigation]);
 
     useEffect(() => {
         fetchFavorites();
@@ -64,6 +87,8 @@ const FavoritesScreen = ({ navigation }) => {
                     icon="heart-outline"
                     title="No favorites saved"
                     message="Tap the heart icon on any parking spot to bookmark it here for fast access."
+                    actionLabel="Explore Parking"
+                    onAction={handleExploreParking}
                 />
             ) : (
                 <FlatList

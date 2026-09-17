@@ -12,15 +12,16 @@ describe('MenuScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('renders all sections and navigates correctly to operations, corporate, garage, and account screens', () => {
-    const { getByText } = renderWithProviders(
+  it('renders marketplace sections and hides corporate menu when channel is Marketplace', () => {
+    const { getByText, queryByText } = renderWithProviders(
       <MenuScreen navigation={mockNavigation} />
     );
 
     // Section headers
     expect(getByText('Operations & Listings')).toBeTruthy();
-    expect(getByText('Corporate & Fleet')).toBeTruthy();
+    expect(queryByText('Corporate & Fleet')).toBeNull();
     expect(getByText('Garage & Messages')).toBeTruthy();
+    expect(getByText('Tools & Simulators')).toBeTruthy();
     expect(getByText('Account & Security')).toBeTruthy();
 
     // Operations & Listings items
@@ -56,6 +57,77 @@ describe('MenuScreen', () => {
     fireEvent.press(getByText('Incoming Host Bookings'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('IncomingBookings');
 
+    // Garage & Messages
+    expect(getByText('Messages')).toBeTruthy();
+    fireEvent.press(getByText('Messages'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ConversationList');
+
+    expect(getByText('Notifications')).toBeTruthy();
+    fireEvent.press(getByText('Notifications'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Notifications');
+
+    expect(getByText('My Vehicles')).toBeTruthy();
+    fireEvent.press(getByText('My Vehicles'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Vehicles');
+
+    expect(getByText('Favorites')).toBeTruthy();
+    fireEvent.press(getByText('Favorites'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Favorites');
+
+    expect(getByText('My Passes')).toBeTruthy();
+    fireEvent.press(getByText('My Passes'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('MyPasses');
+
+    expect(getByText('Event Parking Passes')).toBeTruthy();
+    fireEvent.press(getByText('Event Parking Passes'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('EventPackages');
+
+    // Tools & Simulators
+    expect(getByText('LPR Simulator')).toBeTruthy();
+    fireEvent.press(getByText('LPR Simulator'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('LprSimulator');
+
+    expect(getByText('EV Charge Simulator')).toBeTruthy();
+    fireEvent.press(getByText('EV Charge Simulator'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('EvChargeSimulator');
+
+    // Account & Security
+    expect(getByText('Profile Details')).toBeTruthy();
+    fireEvent.press(getByText('Profile Details'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Profile');
+
+    expect(getByText('Edit Profile')).toBeTruthy();
+    fireEvent.press(getByText('Edit Profile'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('EditProfile');
+
+    expect(getByText('Change Password')).toBeTruthy();
+    fireEvent.press(getByText('Change Password'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ChangePassword');
+
+    expect(getByText('Log Out')).toBeTruthy();
+    expect(getByText('About & System')).toBeTruthy();
+    expect(getByText('Built With')).toBeTruthy();
+  });
+
+  it('renders corporate sections and hides marketplace operations when channel is Corporate', () => {
+    const { getByText, queryByText } = renderWithProviders(
+      <MenuScreen navigation={mockNavigation} />,
+      {
+        preloadedState: {
+          auth: {
+            channel: 'Corporate',
+            user: { firstName: 'Alice', lastName: 'Corp', email: 'alice@corp.com' },
+          },
+        },
+      }
+    );
+
+    // Corporate headers shown, Marketplace operations & tools hidden
+    expect(getByText('Corporate & Fleet')).toBeTruthy();
+    expect(getByText('Communications & Passes')).toBeTruthy();
+    expect(queryByText('Operations & Listings')).toBeNull();
+    expect(queryByText('Tools & Simulators')).toBeNull();
+
     // Corporate & Fleet items
     expect(getByText('Corporate Dashboard')).toBeTruthy();
     fireEvent.press(getByText('Corporate Dashboard'));
@@ -89,7 +161,7 @@ describe('MenuScreen', () => {
     fireEvent.press(getByText('Corporate Invoices'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('CorporateInvoices');
 
-    // Garage & Messages
+    // Communications & Passes
     expect(getByText('Messages')).toBeTruthy();
     fireEvent.press(getByText('Messages'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('ConversationList');
@@ -98,54 +170,17 @@ describe('MenuScreen', () => {
     fireEvent.press(getByText('Notifications'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('Notifications');
 
-    expect(getByText('My Vehicles')).toBeTruthy();
-    fireEvent.press(getByText('My Vehicles'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('Vehicles');
-
-    expect(getByText('Favorites')).toBeTruthy();
-    fireEvent.press(getByText('Favorites'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('Favorites');
-
     expect(getByText('My Passes')).toBeTruthy();
     fireEvent.press(getByText('My Passes'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('MyPasses');
 
-    expect(getByText('Event Parking Passes')).toBeTruthy();
-    fireEvent.press(getByText('Event Parking Passes'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('EventPackages');
-
-    // Tools & Simulators
-    expect(getByText('Tools & Simulators')).toBeTruthy();
-    expect(getByText('LPR Simulator')).toBeTruthy();
-    fireEvent.press(getByText('LPR Simulator'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('LprSimulator');
-
-    expect(getByText('EV Charge Simulator')).toBeTruthy();
-    fireEvent.press(getByText('EV Charge Simulator'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('EvChargeSimulator');
-
-    // Account & Security
-    expect(getByText('Profile Details')).toBeTruthy();
-    fireEvent.press(getByText('Profile Details'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('Profile');
-
-    expect(getByText('Edit Profile')).toBeTruthy();
-    fireEvent.press(getByText('Edit Profile'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('EditProfile');
-
-    expect(getByText('Change Password')).toBeTruthy();
-    fireEvent.press(getByText('Change Password'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('ChangePassword');
-
-    expect(getByText('Log Out')).toBeTruthy();
-
-    // About & System
-    expect(getByText('About & System')).toBeTruthy();
-    expect(getByText('Built With')).toBeTruthy();
+    // Marketplace garage items should not appear in Corporate
+    expect(queryByText('My Vehicles')).toBeNull();
+    expect(queryByText('Favorites')).toBeNull();
   });
 
   it('opens and closes the Built With modal with 25 technology tags', () => {
-    const { getByText, getByTestId, queryByText, getByLabelText } = renderWithProviders(
+    const { getByText, getByTestId, getByLabelText } = renderWithProviders(
       <MenuScreen navigation={mockNavigation} />
     );
 
