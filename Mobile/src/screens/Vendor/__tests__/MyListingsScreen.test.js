@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { fireEvent, renderWithProviders, waitFor } from '../../../utils/test-utils';
+import { fireEvent, renderWithProviders, waitFor, act } from '../../../utils/test-utils';
 import MyListingsScreen from '../MyListingsScreen';
 import apiClient from '../../../services/api/apiClient';
 
@@ -260,6 +260,123 @@ describe('MyListingsScreen', () => {
       expect(apiClient.post).toHaveBeenCalledWith(
         expect.stringContaining('space-1/toggle-active')
       );
+    });
+  });
+
+  it('immediately reflects switch toggle in UI before API response resolves and shows sync spinner', async () => {
+    let resolveApi;
+    apiClient.post.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveApi = resolve;
+        })
+    );
+
+    const { getByTestId, queryByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    const toggle = getByTestId('toggle-switch-space-1');
+    expect(toggle.props.value).toBe(true);
+
+    // Tap switch to disable
+    fireEvent(toggle, 'valueChange', false);
+
+    // UI immediately updates without waiting for network
+    expect(getByTestId('toggle-switch-space-1').props.value).toBe(false);
+    expect(getByTestId('toggle-sync-spinner-space-1')).toBeTruthy();
+
+    // Now API resolves in background
+    await act(async () => {
+      resolveApi({
+        data: { success: true, data: { ...sampleListings[0], isActive: false } },
+      });
+    });
+
+    await waitFor(() => {
+      expect(queryByTestId('toggle-sync-spinner-space-1')).toBeNull();
+    });
+    expect(getByTestId('toggle-switch-space-1').props.value).toBe(false);
+  });
+
+  it('reverts switch back to original state and alerts user when background toggle fails', async () => {
+    jest.spyOn(Alert, 'alert');
+    apiClient.post.mockRejectedValueOnce(new Error('Network connection timeout'));
+
+    const { getByTestId, queryByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    const toggle = getByTestId('toggle-switch-space-1');
+    expect(toggle.props.value).toBe(true);
+
+    // Tap switch to disable
+    fireEvent(toggle, 'valueChange', false);
+
+    // Optimistically changed immediately
+    expect(getByTestId('toggle-switch-space-1').props.value).toBe(false);
+
+    // When background service fails, revert and alert
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Status Update Failed',
+        expect.stringContaining('Network connection timeout')
+      );
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('toggle-switch-space-1').props.value).toBe(true);
+    });
+    expect(queryByTestId('toggle-sync-spinner-space-1')).toBeNull();
+  });
+
+  it('ignores duplicate switch taps while a background toggle is in flight', async () => {
+    let resolveApi;
+    apiClient.post.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveApi = resolve;
+        })
+    );
+
+    const { getByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    const toggle = getByTestId('toggle-switch-space-1');
+    fireEvent(toggle, 'valueChange', false);
+    fireEvent(toggle, 'valueChange', true);
+
+    expect(apiClient.post).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveApi({
+        data: { success: true, data: { ...sampleListings[0], isActive: false } },
+      });
     });
   });
 

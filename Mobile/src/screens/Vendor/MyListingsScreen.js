@@ -39,7 +39,7 @@ import { colors, spacing, typography, shadows } from '../../styles/globalStyles'
 import { formatCurrency } from '../../utils/formatters';
 import { ParkingTypeLabels } from '../../utils/constants';
 
-const ListingCard = ({ listing, onToggle, onEdit, onView, onDelete, onQuickEdit }) => {
+const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, onDelete, onQuickEdit }) => {
     const thumbnailUri =
         (typeof listing.imageUrl === 'string' && listing.imageUrl.trim() !== '') ? listing.imageUrl.trim() :
         (Array.isArray(listing.imageUrls) && listing.imageUrls.length > 0 && typeof listing.imageUrls[0] === 'string') ? listing.imageUrls[0] :
@@ -98,11 +98,19 @@ const ListingCard = ({ listing, onToggle, onEdit, onView, onDelete, onQuickEdit 
                 </View>
 
                 <View style={cardStyles.headerControls}>
+                    {isToggling && (
+                        <ActivityIndicator
+                            size="small"
+                            color={colors.primary}
+                            style={cardStyles.syncSpinner}
+                            testID={`toggle-sync-spinner-${listing.id}`}
+                        />
+                    )}
                     <Switch
                         value={Boolean(listing.isActive)}
                         disabled={isToggleDisabled}
                         onValueChange={() => {
-                            if (!isToggleDisabled) {
+                            if (!isToggleDisabled && !isToggling) {
                                 onToggle(listing.id);
                             }
                         }}
@@ -114,6 +122,8 @@ const ListingCard = ({ listing, onToggle, onEdit, onView, onDelete, onQuickEdit 
                                 ? `Listing ${listing.title} is pending approval and cannot be toggled`
                                 : isSuspended
                                 ? `Listing ${listing.title} is suspended and cannot be toggled`
+                                : isToggling
+                                ? `Updating active status for ${listing.title}`
                                 : `Toggle active status for ${listing.title}`
                         }
                         testID={`toggle-switch-${listing.id}`}
@@ -323,6 +333,9 @@ const cardStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+    },
+    syncSpinner: {
+        marginRight: 2,
     },
     quickEditBtn: {
         width: 32,
@@ -535,7 +548,7 @@ const FILTERS = [
 
 const MyListingsScreen = ({ navigation, route }) => {
     const dispatch = useDispatch();
-    const { myListings, listingsLoading } = useSelector((s) => s.parking);
+    const { myListings, listingsLoading, togglingListingIds = [] } = useSelector((s) => s.parking);
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -570,10 +583,26 @@ const MyListingsScreen = ({ navigation, route }) => {
     }, [dispatch]);
 
     const handleToggle = useCallback(
-        (id) => {
-            dispatch(toggleParkingActiveThunk(id));
+        async (id) => {
+            if (togglingListingIds?.includes(id)) {
+                return;
+            }
+            try {
+                const res = await dispatch(toggleParkingActiveThunk(id));
+                if (toggleParkingActiveThunk.rejected.match(res)) {
+                    Alert.alert(
+                        'Status Update Failed',
+                        res.payload || 'Failed to update listing status. Changes have been reverted.'
+                    );
+                }
+            } catch (err) {
+                Alert.alert(
+                    'Status Update Failed',
+                    err?.message || 'An unexpected error occurred. Changes have been reverted.'
+                );
+            }
         },
-        [dispatch]
+        [dispatch, togglingListingIds]
     );
 
     const handleEdit = useCallback(
@@ -685,9 +714,9 @@ const MyListingsScreen = ({ navigation, route }) => {
     const filteredListings = useMemo(() => {
         let list = Array.isArray(myListings) ? myListings : [];
         if (activeFilter === 'active') {
-            list = list.filter((item) => item.isActive !== false);
+            list = list.filter((item) => item.isActive !== false || (togglingListingIds && togglingListingIds.includes(item.id)));
         } else if (activeFilter === 'inactive') {
-            list = list.filter((item) => item.isActive === false);
+            list = list.filter((item) => item.isActive === false || (togglingListingIds && togglingListingIds.includes(item.id)));
         }
 
         if (searchQuery.trim()) {
@@ -700,7 +729,7 @@ const MyListingsScreen = ({ navigation, route }) => {
             );
         }
         return list;
-    }, [myListings, activeFilter, searchQuery]);
+    }, [myListings, activeFilter, searchQuery, togglingListingIds]);
 
     const getFilterBadgeCount = (filterId) => {
         if (filterId === 'active') return activeCount;
@@ -776,6 +805,7 @@ const MyListingsScreen = ({ navigation, route }) => {
                     renderItem={({ item }) => (
                         <ListingCard
                             listing={item}
+                            isToggling={Boolean(togglingListingIds?.includes(item.id))}
                             onToggle={handleToggle}
                             onEdit={handleEdit}
                             onView={handleView}

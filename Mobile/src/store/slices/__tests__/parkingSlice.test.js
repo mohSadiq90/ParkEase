@@ -1,6 +1,7 @@
 import reducer, {
   searchParkingThunk,
   getParkingDetailThunk,
+  toggleParkingActiveThunk,
   clearSearch,
   clearSelectedParking,
 } from '../parkingSlice';
@@ -111,6 +112,88 @@ describe('parkingSlice', () => {
       const state = reducer(initialState, action);
       
       expect(state.detailLoading).toBe(false);
+    });
+  });
+
+  describe('toggleParkingActiveThunk', () => {
+    const stateWithListing = {
+      ...initialState,
+      myListings: [
+        { id: 'space-1', title: 'Main Garage', isActive: true },
+        { id: 'space-2', title: 'Second Lot', isActive: false },
+      ],
+      togglingListingIds: [],
+    };
+
+    it('should optimistically invert isActive and track id in pending state', () => {
+      const action = {
+        type: toggleParkingActiveThunk.pending.type,
+        meta: { arg: 'space-1' },
+      };
+      const state = reducer(stateWithListing, action);
+
+      expect(state.myListings[0].isActive).toBe(false);
+      expect(state.myListings[1].isActive).toBe(false);
+      expect(state.togglingListingIds).toContain('space-1');
+    });
+
+    it('should reconcile updated listing and remove id in fulfilled state with object payload', () => {
+      const pendingState = {
+        ...stateWithListing,
+        myListings: [
+          { id: 'space-1', title: 'Main Garage', isActive: false },
+          { id: 'space-2', title: 'Second Lot', isActive: false },
+        ],
+        togglingListingIds: ['space-1'],
+      };
+      const action = {
+        type: toggleParkingActiveThunk.fulfilled.type,
+        payload: { id: 'space-1', title: 'Main Garage', isActive: false },
+        meta: { arg: 'space-1' },
+      };
+      const state = reducer(pendingState, action);
+
+      expect(state.myListings[0].isActive).toBe(false);
+      expect(state.togglingListingIds).not.toContain('space-1');
+    });
+
+    it('should reconcile updated listing and remove id in fulfilled state with boolean payload', () => {
+      const pendingState = {
+        ...stateWithListing,
+        myListings: [
+          { id: 'space-1', title: 'Main Garage', isActive: false },
+          { id: 'space-2', title: 'Second Lot', isActive: false },
+        ],
+        togglingListingIds: ['space-1'],
+      };
+      const action = {
+        type: toggleParkingActiveThunk.fulfilled.type,
+        payload: false,
+        meta: { arg: 'space-1' },
+      };
+      const state = reducer(pendingState, action);
+
+      expect(state.myListings[0].isActive).toBe(false);
+      expect(state.togglingListingIds).not.toContain('space-1');
+    });
+
+    it('should revert isActive back to original state upon rejected state', () => {
+      const pendingState = {
+        ...stateWithListing,
+        myListings: [
+          { id: 'space-1', title: 'Main Garage', isActive: false },
+          { id: 'space-2', title: 'Second Lot', isActive: false },
+        ],
+        togglingListingIds: ['space-1'],
+      };
+      const action = {
+        type: toggleParkingActiveThunk.rejected.type,
+        meta: { arg: 'space-1' },
+      };
+      const state = reducer(pendingState, action);
+
+      expect(state.myListings[0].isActive).toBe(true);
+      expect(state.togglingListingIds).not.toContain('space-1');
     });
   });
 });

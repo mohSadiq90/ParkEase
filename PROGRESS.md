@@ -9,6 +9,31 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Listing Enable/Disable Switch Immediate UI Response & Optimistic Rollback (<@U06FVANTNHL>)
+- **Immediate UI Reflection & Optimistic Update (`MyListingsScreen.js`, `parkingSlice.js`)**:
+  - Resolved issue where tapping the enable/disable active switch on listing cards did not respond visually for 30-40 seconds while waiting for network response.
+  - Implemented synchronous optimistic state update in Redux Toolkit `parkingSlice.js` upon `toggleParkingActiveThunk.pending`, flipping `isActive` immediately so the switch toggle, card styling, and filter counts respond instantly on user tap.
+  - Added subtle background sync spinner (`ActivityIndicator`) adjacent to the switch in `ListingCard` while the asynchronous background service call is executing.
+  - Added duplicate tap protection preventing redundant concurrent service calls while a toggle request is in-flight.
+  - Preserved in-flight optimistic switch transitions across filtered tabs (`active` / `inactive`) and background list refreshes (`getMyListingsThunk.fulfilled`).
+- **Failure Handling & State Restoration (`MyListingsScreen.js`, `parkingSlice.js`)**:
+  - Implemented automatic rollback in `toggleParkingActiveThunk.rejected`: records `optimisticOriginalMap` on pending and cleanly restores the listing's exact previous `isActive` state if the background service call fails.
+  - Added user feedback via `Alert.alert` notifying the host if a status update failed with reason and indicating changes have been reverted.
+- **Automated Testing Suite**:
+  - Added 4 unit tests in `Mobile/src/store/slices/__tests__/parkingSlice.test.js` verifying pending optimistic update, payload reconciliation on fulfilled, boolean reconciliation, and exact rollback on rejected.
+  - Added 3 unit tests in `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js` verifying immediate switch UI response before network resolution with sync spinner, automatic switch state rollback with user alert upon network failure, and duplicate tap debouncing.
+  - Verified 100% test pass rate across all 52 mobile test suites (312/312 tests passing cleanly).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Vendor/MyListingsScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`
+  - `Mobile/src/store/slices/parkingSlice.js`
+  - `Mobile/src/store/slices/__tests__/parkingSlice.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 52 test suites passing cleanly (312/312 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
+
 ### [2026-09-17] - Implement Animated Shimmer Skeletons for Chat, Conversations, Reviews, & All Screens (<@U06FVANTNHL>)
 - **Chat Screen & Conversation List Shimmer Skeletons (`ChatScreen.js`, `ConversationListScreen.js`, `ShimmerPlaceholder.js`)**:
   - Replaced the circular `ActivityIndicator` spinner loader on `ChatScreen` with `ChatThreadSkeleton`, an animated message thread skeleton featuring date divider pills, avatar placeholders, and alternating incoming and outgoing message bubbles.

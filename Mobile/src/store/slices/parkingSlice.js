@@ -304,6 +304,7 @@ const initialState = {
     mapLoading: false,
     forecast: null,
     forecastLoading: false,
+    togglingListingIds: [],
 };
 
 const parkingSlice = createSlice({
@@ -350,7 +351,21 @@ const parkingSlice = createSlice({
             })
             .addCase(getMyListingsThunk.fulfilled, (state, action) => {
                 state.listingsLoading = false;
-                state.myListings = action.payload || [];
+                const incoming = action.payload || [];
+                if (state.togglingListingIds && state.togglingListingIds.length > 0) {
+                    state.myListings = incoming.map((l) => {
+                        if (state.togglingListingIds.includes(l.id)) {
+                            const orig = state.optimisticOriginalMap?.[l.id];
+                            return {
+                                ...l,
+                                isActive: orig !== undefined ? !orig : l.isActive,
+                            };
+                        }
+                        return l;
+                    });
+                } else {
+                    state.myListings = incoming;
+                }
             })
             .addCase(getMyListingsThunk.rejected, (state) => {
                 state.listingsLoading = false;
@@ -380,10 +395,80 @@ const parkingSlice = createSlice({
             .addCase(updateParkingThunk.rejected, (state) => {
                 state.createLoading = false;
             })
+            // Toggle Parking Active (Optimistic update with rollback on failure)
+            .addCase(toggleParkingActiveThunk.pending, (state, action) => {
+                const id = typeof action.meta.arg === 'object' && action.meta.arg !== null
+                    ? action.meta.arg.id
+                    : action.meta.arg;
+
+                if (!state.togglingListingIds) state.togglingListingIds = [];
+                if (!state.optimisticOriginalMap) state.optimisticOriginalMap = {};
+
+                if (id && !state.togglingListingIds.includes(id)) {
+                    state.togglingListingIds.push(id);
+                }
+
+                // Optimistically flip isActive in myListings immediately
+                const idx = state.myListings.findIndex((l) => l.id === id);
+                if (idx !== -1) {
+                    if (state.optimisticOriginalMap[id] === undefined) {
+                        state.optimisticOriginalMap[id] = Boolean(state.myListings[idx].isActive);
+                    }
+                    state.myListings[idx] = {
+                        ...state.myListings[idx],
+                        isActive: !state.myListings[idx].isActive,
+                    };
+                }
+            })
             .addCase(toggleParkingActiveThunk.fulfilled, (state, action) => {
-                if (action.payload) {
-                    const idx = state.myListings.findIndex((l) => l.id === action.payload.id);
-                    if (idx !== -1) state.myListings[idx] = action.payload;
+                if (!state.togglingListingIds) state.togglingListingIds = [];
+                if (!state.optimisticOriginalMap) state.optimisticOriginalMap = {};
+                const id = typeof action.meta.arg === 'object' && action.meta.arg !== null
+                    ? action.meta.arg.id
+                    : action.meta.arg;
+
+                if (id) {
+                    state.togglingListingIds = state.togglingListingIds.filter((tId) => tId !== id);
+                    delete state.optimisticOriginalMap[id];
+                }
+
+                const targetId = (action.payload && typeof action.payload === 'object' && action.payload.id)
+                    ? action.payload.id
+                    : id;
+
+                const idx = state.myListings.findIndex((l) => l.id === targetId);
+                if (idx !== -1) {
+                    if (action.payload && typeof action.payload === 'object') {
+                        state.myListings[idx] = {
+                            ...state.myListings[idx],
+                            ...action.payload,
+                        };
+                    } else if (typeof action.payload === 'boolean') {
+                        state.myListings[idx].isActive = action.payload;
+                    }
+                }
+            })
+            .addCase(toggleParkingActiveThunk.rejected, (state, action) => {
+                if (!state.togglingListingIds) state.togglingListingIds = [];
+                if (!state.optimisticOriginalMap) state.optimisticOriginalMap = {};
+                const id = typeof action.meta.arg === 'object' && action.meta.arg !== null
+                    ? action.meta.arg.id
+                    : action.meta.arg;
+
+                const originalState = id ? state.optimisticOriginalMap[id] : undefined;
+
+                if (id) {
+                    state.togglingListingIds = state.togglingListingIds.filter((tId) => tId !== id);
+                    delete state.optimisticOriginalMap[id];
+                }
+
+                // Revert isActive back to original state upon failure
+                const idx = state.myListings.findIndex((l) => l.id === id);
+                if (idx !== -1) {
+                    state.myListings[idx] = {
+                        ...state.myListings[idx],
+                        isActive: originalState !== undefined ? originalState : !state.myListings[idx].isActive,
+                    };
                 }
             })
             // Delete Parking
