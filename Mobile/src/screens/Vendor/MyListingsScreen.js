@@ -15,11 +15,12 @@ import {
     TextInput,
     Image,
     Platform,
+    Alert,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getMyListingsThunk, toggleParkingActiveThunk } from '../../store/slices/parkingSlice';
+import { getMyListingsThunk, toggleParkingActiveThunk, deleteParkingThunk } from '../../store/slices/parkingSlice';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import EmptyState from '../../components/Common/EmptyState';
@@ -29,7 +30,7 @@ import { colors, spacing, typography, shadows } from '../../styles/globalStyles'
 import { formatCurrency } from '../../utils/formatters';
 import { ParkingTypeLabels } from '../../utils/constants';
 
-const ListingCard = ({ listing, onToggle, onEdit, onView }) => {
+const ListingCard = ({ listing, onToggle, onEdit, onView, onDelete }) => {
     const thumbnail = listing.imageUrl || (Array.isArray(listing.imageUrls) && listing.imageUrls[0]);
     const typeLabel = ParkingTypeLabels[listing.parkingType] || 'Standard';
 
@@ -73,6 +74,19 @@ const ListingCard = ({ listing, onToggle, onEdit, onView }) => {
                         testID={`quick-edit-${listing.id}`}
                     >
                         <Ionicons name="pencil" size={15} color={colors.primary} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={cardStyles.quickDeleteBtn}
+                        onPress={(e) => {
+                            e?.stopPropagation?.();
+                            onDelete(listing);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete ${listing.title}`}
+                        testID={`quick-delete-${listing.id}`}
+                    >
+                        <Ionicons name="trash-outline" size={15} color={colors.error || '#EF4444'} />
                     </TouchableOpacity>
 
                     <Switch
@@ -155,7 +169,7 @@ const ListingCard = ({ listing, onToggle, onEdit, onView }) => {
                 </View>
             </View>
 
-            {/* Action Buttons: View Details & Edit Listing */}
+            {/* Action Buttons: View Details, Edit Listing & Delete Listing */}
             <View style={cardStyles.actionRow}>
                 <TouchableOpacity
                     style={cardStyles.viewBtn}
@@ -182,7 +196,21 @@ const ListingCard = ({ listing, onToggle, onEdit, onView }) => {
                     testID={`edit-listing-btn-${listing.id}`}
                 >
                     <Ionicons name="create-outline" size={16} color={colors.white} />
-                    <Text style={cardStyles.editBtnText}>Edit Listing</Text>
+                    <Text style={cardStyles.editBtnText}>Edit</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={cardStyles.deleteBtn}
+                    onPress={(e) => {
+                        e?.stopPropagation?.();
+                        onDelete(listing);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${listing.title}`}
+                    testID={`delete-listing-btn-${listing.id}`}
+                >
+                    <Ionicons name="trash-outline" size={16} color={colors.error || '#EF4444'} />
+                    <Text style={cardStyles.deleteBtnText}>Delete</Text>
                 </TouchableOpacity>
             </View>
         </Card>
@@ -240,6 +268,14 @@ const cardStyles = StyleSheet.create({
         height: 32,
         borderRadius: 16,
         backgroundColor: colors.primarySoft || '#EEF2FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    quickDeleteBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#FEF2F2',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -336,7 +372,7 @@ const cardStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
+        gap: 4,
         paddingVertical: 10,
         borderRadius: 10,
         borderWidth: 1,
@@ -349,11 +385,11 @@ const cardStyles = StyleSheet.create({
         color: colors.textSecondary,
     },
     editBtn: {
-        flex: 1.3,
+        flex: 1.2,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
+        gap: 4,
         paddingVertical: 10,
         borderRadius: 10,
         backgroundColor: colors.primary,
@@ -363,6 +399,23 @@ const cardStyles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
         color: colors.white,
+    },
+    deleteBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        backgroundColor: '#FEF2F2',
+    },
+    deleteBtnText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.error || '#EF4444',
     },
 });
 
@@ -419,6 +472,31 @@ const MyListingsScreen = ({ navigation, route }) => {
             navigation.navigate('ParkingDetail', { parkingId: listing.id, isOwnListing: true });
         },
         [navigation]
+    );
+
+    const handleDelete = useCallback(
+        (listing) => {
+            Alert.alert(
+                'Delete Parking Space',
+                `Are you sure you want to permanently delete "${listing.title}"?`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => {
+                            const res = await dispatch(deleteParkingThunk(listing.id));
+                            if (!res.error) {
+                                Alert.alert('Deleted', 'Parking space has been deleted.');
+                            } else {
+                                Alert.alert('Error', res.payload || 'Failed to delete listing.');
+                            }
+                        },
+                    },
+                ]
+            );
+        },
+        [dispatch]
     );
 
     const handleAdd = useCallback(() => {
@@ -536,6 +614,7 @@ const MyListingsScreen = ({ navigation, route }) => {
                             onToggle={handleToggle}
                             onEdit={handleEdit}
                             onView={handleView}
+                            onDelete={handleDelete}
                         />
                     )}
                     contentContainerStyle={styles.listContent}

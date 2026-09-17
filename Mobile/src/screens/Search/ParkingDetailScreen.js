@@ -13,7 +13,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getParkingDetailThunk, getParkingForecastThunk } from '../../store/slices/parkingSlice';
+import { getParkingDetailThunk, getParkingForecastThunk, deleteParkingThunk } from '../../store/slices/parkingSlice';
 import { getReviewsThunk, respondToReviewThunk } from '../../store/slices/reviewSlice';
 import { toggleFavoriteThunk } from '../../store/slices/favoriteSlice';
 import { useAuth } from '../../hooks/useAuth';
@@ -131,6 +131,40 @@ const ParkingDetailScreen = ({ navigation, route }) => {
             (parking?.vendorId && String(parking.vendorId).trim().toLowerCase() === String(user.id).trim().toLowerCase())
         ))
     );
+
+    const handleDeleteListing = useCallback(() => {
+        if (!parking?.id) return;
+        Alert.alert(
+            'Delete Parking Space',
+            `Are you sure you want to permanently delete "${parking.title}"?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const res = await dispatch(deleteParkingThunk(parking.id));
+                        if (!res.error) {
+                            Alert.alert('Deleted', 'Parking space has been deleted.', [
+                                {
+                                    text: 'OK',
+                                    onPress: () => {
+                                        if (navigation?.canGoBack?.()) {
+                                            navigation.goBack();
+                                        } else {
+                                            navigation.navigate('MyListings');
+                                        }
+                                    },
+                                },
+                            ]);
+                        } else {
+                            Alert.alert('Error', res.payload || 'Failed to delete listing.');
+                        }
+                    },
+                },
+            ]
+        );
+    }, [dispatch, parking, navigation]);
 
     const handleToggleFavorite = useCallback(async () => {
         setFavLoading(true);
@@ -310,15 +344,26 @@ const ParkingDetailScreen = ({ navigation, route }) => {
 
                     <View style={[styles.heroTopRight, { top: insets.top + 8 }]}>
                         {isOwnListing && (
-                            <TouchableOpacity
-                                style={styles.heroBtn}
-                                onPress={() => navigation.navigate('CreateParking', { editData: parking })}
-                                accessibilityRole="button"
-                                accessibilityLabel="Edit Listing"
-                                testID="hero-edit-listing-btn"
-                            >
-                                <Ionicons name="create-outline" size={20} color={colors.white} />
-                            </TouchableOpacity>
+                            <>
+                                <TouchableOpacity
+                                    style={styles.heroBtn}
+                                    onPress={() => navigation.navigate('CreateParking', { editData: parking })}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Edit Listing"
+                                    testID="hero-edit-listing-btn"
+                                >
+                                    <Ionicons name="create-outline" size={20} color={colors.white} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.heroBtn, { backgroundColor: 'rgba(239, 68, 68, 0.85)' }]}
+                                    onPress={handleDeleteListing}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Delete Listing"
+                                    testID="hero-delete-listing-btn"
+                                >
+                                    <Ionicons name="trash-outline" size={20} color={colors.white} />
+                                </TouchableOpacity>
+                            </>
                         )}
                         <TouchableOpacity style={styles.heroBtn} onPress={handleShare}>
                             <Ionicons name="share-outline" size={20} color={colors.white} />
@@ -382,16 +427,28 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                                 <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
                                 <Text style={styles.ownerBannerText}>This is your listing</Text>
                             </View>
-                            <TouchableOpacity
-                                style={styles.ownerBannerEditBtn}
-                                onPress={() => navigation.navigate('CreateParking', { editData: parking })}
-                                accessibilityRole="button"
-                                accessibilityLabel="Edit Space"
-                                testID="owner-banner-edit-btn"
-                            >
-                                <Ionicons name="create-outline" size={14} color={colors.primary} />
-                                <Text style={styles.ownerBannerEditBtnText}>Edit Space</Text>
-                            </TouchableOpacity>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <TouchableOpacity
+                                    style={styles.ownerBannerEditBtn}
+                                    onPress={() => navigation.navigate('CreateParking', { editData: parking })}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Edit Space"
+                                    testID="owner-banner-edit-btn"
+                                >
+                                    <Ionicons name="create-outline" size={14} color={colors.primary} />
+                                    <Text style={styles.ownerBannerEditBtnText}>Edit Space</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.ownerBannerDeleteBtn}
+                                    onPress={handleDeleteListing}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Delete Space"
+                                    testID="owner-banner-delete-btn"
+                                >
+                                    <Ionicons name="trash-outline" size={14} color={colors.error || '#EF4444'} />
+                                    <Text style={styles.ownerBannerDeleteBtnText}>Delete</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     )}
 
@@ -622,14 +679,24 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                             <Text style={styles.bottomPriceLabel}>Your Listing</Text>
                         </View>
                         <TouchableOpacity
-                            style={[styles.bookBtn, { backgroundColor: colors.textPrimary }]}
+                            style={[styles.bookBtn, styles.bottomEditBtn]}
                             onPress={() => navigation.navigate('CreateParking', { editData: parking })}
                             accessibilityRole="button"
                             accessibilityLabel="Edit Listing"
                             testID="edit-listing-bottom-button"
                         >
                             <Ionicons name="create-outline" size={18} color={colors.white} style={{ marginRight: 6 }} />
-                            <Text style={styles.bookBtnText}>Edit Listing</Text>
+                            <Text style={styles.bookBtnText}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.bottomDeleteBtn}
+                            onPress={handleDeleteListing}
+                            accessibilityRole="button"
+                            accessibilityLabel="Delete Listing"
+                            testID="delete-listing-bottom-button"
+                        >
+                            <Ionicons name="trash-outline" size={18} color={colors.error || '#EF4444'} style={{ marginRight: 4 }} />
+                            <Text style={styles.bottomDeleteBtnText}>Delete</Text>
                         </TouchableOpacity>
                     </>
                 ) : (
@@ -919,6 +986,22 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: colors.primary,
     },
+    ownerBannerDeleteBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        backgroundColor: '#FEF2F2',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#FECACA',
+    },
+    ownerBannerDeleteBtnText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.error || '#EF4444',
+    },
     // Owner Card
     ownerCard: {
         flexDirection: 'row',
@@ -1104,6 +1187,27 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         paddingVertical: 16,
         paddingHorizontal: 40,
+    },
+    bottomEditBtn: {
+        backgroundColor: colors.textPrimary,
+        paddingHorizontal: 24,
+    },
+    bottomDeleteBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 52,
+        borderRadius: 14,
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        paddingHorizontal: 16,
+        marginLeft: spacing.sm,
+    },
+    bottomDeleteBtnText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: colors.error || '#EF4444',
     },
     bookBtnText: {
         fontSize: 16,

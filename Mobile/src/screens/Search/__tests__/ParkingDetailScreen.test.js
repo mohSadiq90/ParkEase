@@ -1,5 +1,6 @@
 import React from 'react';
-import { renderWithProviders, fireEvent } from '../../../utils/test-utils';
+import { Alert } from 'react-native';
+import { renderWithProviders, fireEvent, waitFor } from '../../../utils/test-utils';
 import ParkingDetailScreen from '../ParkingDetailScreen';
 import apiClient from '../../../services/api/apiClient';
 
@@ -137,12 +138,85 @@ describe('ParkingDetailScreen', () => {
 
     expect(getByText('This is your listing')).toBeTruthy();
     expect(getByTestId('hero-edit-listing-btn')).toBeTruthy();
+    expect(getByTestId('hero-delete-listing-btn')).toBeTruthy();
     expect(getByTestId('owner-banner-edit-btn')).toBeTruthy();
+    expect(getByTestId('owner-banner-delete-btn')).toBeTruthy();
     expect(getByTestId('edit-listing-bottom-button')).toBeTruthy();
+    expect(getByTestId('delete-listing-bottom-button')).toBeTruthy();
 
     fireEvent.press(getByTestId('edit-listing-bottom-button'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {
       editData: mockParking.data,
+    });
+  });
+
+  it('triggers delete confirmation and deletes parking space when tapping delete in owner banner or bottom bar', async () => {
+    jest.spyOn(Alert, 'alert');
+    apiClient.delete.mockResolvedValueOnce({
+      data: { success: true },
+    });
+
+    const mockParking = {
+      data: {
+        id: 'spot-888',
+        title: 'Host Listing To Delete',
+        address: '999 Delete Ave',
+        city: 'Metro City',
+        state: 'CA',
+        averageRating: 4.5,
+        totalReviews: 2,
+        parkingType: 0,
+        availableSpots: 1,
+        totalSpots: 5,
+        hourlyRate: 10,
+        ownerId: 'user-host-1',
+      },
+    };
+
+    apiClient.get.mockImplementation((url) => {
+      if (url.includes('forecast')) {
+        return Promise.resolve({ success: true, data: {} });
+      }
+      if (url.includes('reviews')) {
+        return Promise.resolve({ data: { reviews: [] } });
+      }
+      return Promise.resolve({ data: { data: mockParking.data } });
+    });
+
+    const { findByText, getByTestId } = renderWithProviders(
+      <ParkingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { parkingId: 'spot-888', isOwnListing: true } }}
+      />,
+      {
+        preloadedState: {
+          auth: {
+            user: { id: 'user-host-1', name: 'Host User' },
+            isAuthenticated: true,
+          },
+        },
+      }
+    );
+
+    await findByText('Host Listing To Delete');
+
+    const deleteBtn = getByTestId('delete-listing-bottom-button');
+    fireEvent.press(deleteBtn);
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Delete Parking Space',
+      expect.stringContaining('Host Listing To Delete'),
+      expect.any(Array)
+    );
+
+    const alertButtons = Alert.alert.mock.calls[0][2];
+    const confirmBtn = alertButtons.find((b) => b.text === 'Delete');
+    await confirmBtn.onPress();
+
+    await waitFor(() => {
+      expect(apiClient.delete).toHaveBeenCalledWith(
+        expect.stringContaining('spot-888')
+      );
     });
   });
 });

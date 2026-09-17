@@ -109,4 +109,47 @@ describe('CreateParkingScreen', () => {
       expect(apiClient.put).toHaveBeenCalled();
     });
   });
+
+  it('allows deleting parking space via header delete icon in edit mode', async () => {
+    apiClient.delete.mockResolvedValueOnce({
+      data: { success: true },
+    });
+
+    const editData = {
+      id: 'space-delete-456',
+      title: 'Listing To Delete',
+      address: '123 River Rd',
+      city: 'Metropolis',
+      totalSpots: 10,
+      hourlyRate: 12,
+    };
+
+    const { getByTestId } = renderWithProviders(
+      <CreateParkingScreen
+        navigation={mockNavigation}
+        route={{ params: { editData } }}
+      />
+    );
+
+    const headerDeleteBtn = getByTestId('header-delete-listing-btn');
+    expect(headerDeleteBtn).toBeTruthy();
+
+    fireEvent.press(headerDeleteBtn);
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Delete Parking Space',
+      'Are you sure you want to permanently delete this parking space?',
+      expect.any(Array)
+    );
+
+    const alertButtons = Alert.alert.mock.calls[0][2];
+    const confirmBtn = alertButtons.find((b) => b.text === 'Delete');
+    await confirmBtn.onPress();
+
+    await waitFor(() => {
+      expect(apiClient.delete).toHaveBeenCalledWith(
+        expect.stringContaining('space-delete-456')
+      );
+    });
+  });
 });

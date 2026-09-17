@@ -338,17 +338,31 @@ const CreateParkingScreen = ({ navigation, route }) => {
                             Step {activeStep} of 4 • {STEPS[activeStep - 1]?.label}
                         </Text>
                     </View>
-                    <TouchableOpacity
-                        onPress={() => setViewMode((m) => (m === 'steps' ? 'all' : 'steps'))}
-                        style={styles.viewModeToggle}
-                    >
-                        <Ionicons
-                            name={viewMode === 'steps' ? 'list-outline' : 'albums-outline'}
-                            size={18}
-                            color={colors.primary}
-                        />
-                        <Text style={styles.viewModeText}>{viewMode === 'steps' ? 'All' : 'Steps'}</Text>
-                    </TouchableOpacity>
+                    <View style={styles.headerRightActions}>
+                        <TouchableOpacity
+                            onPress={() => setViewMode((m) => (m === 'steps' ? 'all' : 'steps'))}
+                            style={styles.viewModeToggle}
+                        >
+                            <Ionicons
+                                name={viewMode === 'steps' ? 'list-outline' : 'albums-outline'}
+                                size={18}
+                                color={colors.primary}
+                            />
+                            <Text style={styles.viewModeText}>{viewMode === 'steps' ? 'All' : 'Steps'}</Text>
+                        </TouchableOpacity>
+
+                        {isEditing && (
+                            <TouchableOpacity
+                                onPress={handleDelete}
+                                style={styles.headerDeleteBtn}
+                                accessibilityRole="button"
+                                accessibilityLabel="Delete Parking Space"
+                                testID="header-delete-listing-btn"
+                            >
+                                <Ionicons name="trash-outline" size={18} color={colors.error || '#EF4444'} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
 
                 {/* Apple HIG Segmented Step Bar */}
@@ -1054,6 +1068,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                     variant="danger"
                                     style={{ marginTop: spacing.sm }}
                                     icon={<Ionicons name="trash-outline" size={20} color={colors.white} />}
+                                    testID="delete-parking-space-button"
                                 />
                             )}
                         </View>
@@ -1130,6 +1145,21 @@ const styles = StyleSheet.create({
         ...typography.caption,
         color: colors.textTertiary,
         marginTop: 2,
+    },
+    headerRightActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    headerDeleteBtn: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        backgroundColor: '#FEF2F2',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#FECACA',
     },
     viewModeToggle: {
         flexDirection: 'row',

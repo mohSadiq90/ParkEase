@@ -9,6 +9,39 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Missing Option to Delete Parking Space Listings (<@U06FVANTNHL>)
+- **Comprehensive Listing Deletion Across Host Management**:
+  - Investigated issue reported by `<@U06FVANTNHL>`: hosts had no option to delete their parking listings from `MyListingsScreen.js`, `ParkingDetailScreen.js`, or the early steps of `CreateParkingScreen.js`.
+  - Implemented comprehensive listing delete options across `MyListingsScreen.js`:
+    - Added dedicated **"Delete"** action button (`testID={`delete-listing-btn-${listing.id}`}`) in the listing card action row with destructive styling.
+    - Added quick-access trash icon button (`testID={`quick-delete-${listing.id}`}`) directly in the listing card header alongside the quick-edit button and active status switch.
+    - Added `handleDelete(listing)` with confirmation dialog (`Alert.alert('Delete Parking Space', ...)`) confirming permanent removal before dispatching `deleteParkingThunk(listing.id)`.
+  - Implemented quick header deletion on `CreateParkingScreen.js`:
+    - Added top-right header delete trash icon button (`testID="header-delete-listing-btn"`) when in edit mode (`isEditing === true`), enabling immediate listing deletion from any step (1 to 4) without navigating through the entire stepper wizard.
+    - Added `testID="delete-parking-space-button"` to the review step danger button.
+  - Implemented ownership-aware listing deletion on `ParkingDetailScreen.js`:
+    - Added top-right hero trash button (`testID="hero-delete-listing-btn"`) when `isOwnListing` is true.
+    - Added "Delete" action button (`testID="owner-banner-delete-btn"`) in the host ownership banner.
+    - Added "Delete" action button (`testID="delete-listing-bottom-button"`) in the sticky bottom navigation bar alongside "Edit Listing".
+    - Added `handleDeleteListing()` confirming deletion before calling `deleteParkingThunk(parking.id)` and returning back to `MyListings`.
+- **Automated Testing & Scope Verification**:
+  - Updated `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`: added 2 unit tests verifying that pressing the card action "Delete" button and header quick delete button opens the confirmation alert and dispatches `deleteParkingThunk`.
+  - Updated `Mobile/src/screens/Vendor/__tests__/CreateParkingScreen.test.js`: added unit test verifying header delete icon appears in edit mode and triggers deletion confirmation.
+  - Updated `Mobile/src/screens/Search/__tests__/ParkingDetailScreen.test.js`: asserted existence of all owner delete buttons (`hero-delete-listing-btn`, `owner-banner-delete-btn`, `delete-listing-bottom-button`) and verified confirmation & deletion flow.
+  - Executed full Mobile test suite (`npm test -- --watchAll=false` in `Mobile/`): **100% pass rate** (49/49 test suites, 252/252 unit tests passing).
+  - Maintained strict mobile-only scope: zero modifications to `backend/` or `frontend/`.
+- **Key Files Modified**:
+  - `Mobile/src/screens/Vendor/MyListingsScreen.js`
+  - `Mobile/src/screens/Vendor/CreateParkingScreen.js`
+  - `Mobile/src/screens/Search/ParkingDetailScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`
+  - `Mobile/src/screens/Vendor/__tests__/CreateParkingScreen.test.js`
+  - `Mobile/src/screens/Search/__tests__/ParkingDetailScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 49 mobile test suites passing cleanly (252/252 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Missing Option to Edit Parking Space Listings (<@U06FVANTNHL>)
 - **Prominent Listing Edit Actions & Intuitive Space Management**:
   - Investigated issue reported by `<@U06FVANTNHL>`: hosts had no option to edit their parking listings. On `MyListingsScreen.js`, `onEdit` was passed as an unused no-op arrow function `() => {}` and `ListingCard` completely omitted any edit controls, buttons, or touchable actions.

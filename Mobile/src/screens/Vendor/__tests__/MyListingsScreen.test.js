@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { fireEvent, renderWithProviders, waitFor } from '../../../utils/test-utils';
 import MyListingsScreen from '../MyListingsScreen';
 import apiClient from '../../../services/api/apiClient';
@@ -288,5 +289,81 @@ describe('MyListingsScreen', () => {
     fireEvent.press(addBtn);
 
     expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking');
+  });
+
+  it('triggers delete confirmation and calls deleteParkingThunk when pressing Delete button', async () => {
+    jest.spyOn(Alert, 'alert');
+    apiClient.delete.mockResolvedValueOnce({
+      data: { success: true },
+    });
+
+    const { getByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    const deleteBtn = getByTestId('delete-listing-btn-space-1');
+    fireEvent.press(deleteBtn);
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Delete Parking Space',
+      expect.stringContaining('Downtown Secure Garage'),
+      expect.any(Array)
+    );
+
+    const alertButtons = Alert.alert.mock.calls[0][2];
+    const confirmBtn = alertButtons.find((b) => b.text === 'Delete');
+    await confirmBtn.onPress();
+
+    await waitFor(() => {
+      expect(apiClient.delete).toHaveBeenCalledWith(
+        expect.stringContaining('space-1')
+      );
+    });
+  });
+
+  it('triggers delete confirmation and calls deleteParkingThunk when pressing quick delete button in header', async () => {
+    jest.spyOn(Alert, 'alert');
+    apiClient.delete.mockResolvedValueOnce({
+      data: { success: true },
+    });
+
+    const { getByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    const quickDeleteBtn = getByTestId('quick-delete-space-1');
+    fireEvent.press(quickDeleteBtn);
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Delete Parking Space',
+      expect.stringContaining('Downtown Secure Garage'),
+      expect.any(Array)
+    );
+
+    const alertButtons = Alert.alert.mock.calls[0][2];
+    const confirmBtn = alertButtons.find((b) => b.text === 'Delete');
+    await confirmBtn.onPress();
+
+    await waitFor(() => {
+      expect(apiClient.delete).toHaveBeenCalledWith(
+        expect.stringContaining('space-1')
+      );
+    });
   });
 });
