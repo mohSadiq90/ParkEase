@@ -152,3 +152,54 @@ jest.mock('expo-web-browser', () => ({
   maybeCompleteAuthSession: jest.fn(),
 }));
 
+// Mock expo-image-picker
+jest.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: jest.fn().mockResolvedValue({
+    canceled: false,
+    assets: [
+      {
+        uri: 'file:///mock/image-library.jpg',
+        fileName: 'image-library.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 102400,
+        width: 1080,
+        height: 720,
+      },
+    ],
+  }),
+  launchCameraAsync: jest.fn().mockResolvedValue({
+    canceled: false,
+    assets: [
+      {
+        uri: 'file:///mock/camera-photo.jpg',
+        fileName: 'camera-photo.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 102400,
+        width: 1080,
+        height: 720,
+      },
+    ],
+  }),
+  requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({
+    status: 'granted',
+    granted: true,
+  }),
+  requestCameraPermissionsAsync: jest.fn().mockResolvedValue({
+    status: 'granted',
+    granted: true,
+  }),
+  getMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({
+    status: 'granted',
+    granted: true,
+  }),
+  getCameraPermissionsAsync: jest.fn().mockResolvedValue({
+    status: 'granted',
+    granted: true,
+  }),
+  MediaTypeOptions: {
+    All: 'All',
+    Videos: 'Videos',
+    Images: 'Images',
+  },
+}));
+

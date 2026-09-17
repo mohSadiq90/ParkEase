@@ -16,10 +16,14 @@ import {
     KeyboardAvoidingView,
     Platform,
     Switch,
+    ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { createParkingThunk, updateParkingThunk, deleteParkingThunk } from '../../store/slices/parkingSlice';
+import { fileUploadService } from '../../services/api/fileUploadService';
+import logger from '../../utils/logger';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import Button from '../../components/Common/Button';
@@ -127,6 +131,8 @@ const CreateParkingScreen = ({ navigation, route }) => {
     });
 
     const [photoInput, setPhotoInput] = useState('');
+    const [showUrlInput, setShowUrlInput] = useState(false);
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
     useEffect(() => {
         if (editData) {
@@ -184,6 +190,91 @@ const CreateParkingScreen = ({ navigation, route }) => {
                 ? prev.amenities.filter((a) => a !== amenity)
                 : [...prev.amenities, amenity],
         }));
+    };
+
+    const handlePickFromLibrary = async () => {
+        try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert(
+                    'Permission Required',
+                    'Permission to access your photo library is required to upload listing photos.'
+                );
+                return;
+            }
+
+            setIsUploadingPhoto(true);
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? ['images'],
+                allowsMultipleSelection: true,
+                selectionLimit: 10,
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const newUris = result.assets
+                    .map((asset) => asset.uri)
+                    .filter(Boolean);
+                if (newUris.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        imageUrls: [...prev.imageUrls, ...newUris],
+                    }));
+                }
+            }
+        } catch (error) {
+            logger.warn('CreateParkingScreen', 'Photo library pick error', error);
+            Alert.alert('Upload Error', 'Failed to pick photos from your library. Please try again.');
+        } finally {
+            setIsUploadingPhoto(false);
+        }
+    };
+
+    const handleTakePhoto = async () => {
+        try {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert(
+                    'Permission Required',
+                    'Camera permission is required to take photos of your parking space.'
+                );
+                return;
+            }
+
+            setIsUploadingPhoto(true);
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? ['images'],
+                quality: 0.8,
+                allowsEditing: false,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const newUri = result.assets[0]?.uri;
+                if (newUri) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        imageUrls: [...prev.imageUrls, newUri],
+                    }));
+                }
+            }
+        } catch (error) {
+            logger.warn('CreateParkingScreen', 'Camera capture error', error);
+            Alert.alert('Camera Error', 'Failed to take photo. Please try again.');
+        } finally {
+            setIsUploadingPhoto(false);
+        }
+    };
+
+    const handleUploadPrompt = () => {
+        Alert.alert(
+            'Upload Listing Photos',
+            'Choose how you would like to upload photos for your parking space:',
+            [
+                { text: 'Take Photo', onPress: handleTakePhoto },
+                { text: 'Choose from Library', onPress: handlePickFromLibrary },
+                { text: 'Cancel', style: 'cancel' },
+            ]
+        );
     };
 
     const handleAddPhoto = () => {
@@ -301,7 +392,22 @@ const CreateParkingScreen = ({ navigation, route }) => {
             imageUrl: (Array.isArray(formData.imageUrls) && formData.imageUrls[0]) || formData.imageUrl || '',
         };
 
+        const localFiles = (formData.imageUrls || [])
+            .filter((uri) => typeof uri === 'string' && (uri.startsWith('file:') || uri.startsWith('content:') || uri.startsWith('ph:') || uri.startsWith('blob:')))
+            .map((uri, index) => ({
+                uri,
+                name: `parking_space_${Date.now()}_${index}.jpg`,
+                type: 'image/jpeg',
+            }));
+
         if (isEditing) {
+            if (localFiles.length > 0 && editData?.id) {
+                try {
+                    await fileUploadService.uploadMultipart(editData.id, localFiles);
+                } catch (uploadErr) {
+                    logger.warn('CreateParkingScreen', 'Multipart upload during edit failed/deferred', uploadErr);
+                }
+            }
             const result = await dispatch(updateParkingThunk({ id: editData.id, data: payload }));
             if (!result.error) {
                 posthogService.trackEvent(AnalyticsEvents.LISTING_UPDATED, {
@@ -317,6 +423,14 @@ const CreateParkingScreen = ({ navigation, route }) => {
         } else {
             const result = await dispatch(createParkingThunk(payload));
             if (!result.error) {
+                const newSpaceId = result.payload?.id || result.payload?.data?.id;
+                if (localFiles.length > 0 && newSpaceId) {
+                    try {
+                        await fileUploadService.uploadMultipart(newSpaceId, localFiles);
+                    } catch (uploadErr) {
+                        logger.warn('CreateParkingScreen', 'Multipart upload after create failed/deferred', uploadErr);
+                    }
+                }
                 posthogService.trackEvent(AnalyticsEvents.LISTING_CREATED, {
                     title: payload.title,
                     city: payload.city,
@@ -1063,48 +1177,144 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                         <Ionicons name="images-outline" size={20} color={colors.primary} />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={styles.sectionTitle}>Listing Photos</Text>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <Text style={styles.sectionTitle}>Listing Photos</Text>
+                                            {formData.imageUrls.length > 0 && (
+                                                <View style={styles.photoCountBadge}>
+                                                    <Text style={styles.photoCountBadgeText}>
+                                                        {formData.imageUrls.length} {formData.imageUrls.length === 1 ? 'photo' : 'photos'}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </View>
                                         <Text style={styles.sectionSubtitle}>Add high-resolution photos so drivers can locate your space</Text>
                                     </View>
                                 </View>
 
-                                <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
-                                    <Input
-                                        value={photoInput}
-                                        onChangeText={setPhotoInput}
-                                        placeholder="Paste image URL (https://...)"
-                                        style={{ flex: 1, marginBottom: 0 }}
-                                    />
-                                    <Button
-                                        title="Add"
-                                        onPress={handleAddPhoto}
-                                        size="sm"
-                                        variant="secondary"
-                                    />
+                                {/* Action Buttons for Photo Upload */}
+                                <View style={styles.photoActionsRow}>
+                                    <TouchableOpacity
+                                        testID="upload-photos-btn"
+                                        style={styles.photoUploadPrimaryBtn}
+                                        onPress={handleUploadPrompt}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="cloud-upload-outline" size={18} color={colors.white} style={{ marginRight: 6 }} />
+                                        <Text style={styles.photoUploadPrimaryBtnText}>Upload Photos</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        testID="choose-from-library-btn"
+                                        style={styles.photoUploadSecondaryBtn}
+                                        onPress={handlePickFromLibrary}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="images-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+                                        <Text style={styles.photoUploadSecondaryBtnText}>Gallery</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        testID="take-photo-btn"
+                                        style={styles.photoUploadSecondaryBtn}
+                                        onPress={handleTakePhoto}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="camera-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+                                        <Text style={styles.photoUploadSecondaryBtnText}>Camera</Text>
+                                    </TouchableOpacity>
                                 </View>
 
-                                {formData.imageUrls.length > 0 ? (
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.md }}>
-                                        {formData.imageUrls.map((url, idx) => (
-                                            <View key={idx} style={styles.photoThumbContainer}>
-                                                <Image source={{ uri: url }} style={styles.photoThumb} />
-                                                <TouchableOpacity
-                                                    onPress={() => handleRemovePhoto(idx)}
-                                                    style={styles.photoDeleteBtn}
-                                                >
-                                                    <Ionicons name="close" size={14} color={colors.white} />
-                                                </TouchableOpacity>
-                                            </View>
-                                        ))}
-                                    </ScrollView>
-                                ) : (
-                                    <View style={styles.emptyPhotoBox}>
-                                        <Ionicons name="camera-outline" size={28} color={colors.textTertiary} />
-                                        <Text style={styles.emptyPhotoText}>
-                                            No photos added yet. Listings with photos receive 3x more bookings!
-                                        </Text>
+                                {isUploadingPhoto && (
+                                    <View style={styles.photoLoadingIndicator}>
+                                        <ActivityIndicator size="small" color={colors.primary} />
+                                        <Text style={styles.photoLoadingText}>Processing photos...</Text>
                                     </View>
                                 )}
+
+                                {formData.imageUrls.length > 0 ? (
+                                    <View style={{ marginTop: spacing.md }}>
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4 }}>
+                                            {formData.imageUrls.map((url, idx) => (
+                                                <View key={idx} testID={`photo-preview-item-${idx}`} style={styles.photoThumbContainer}>
+                                                    <Image
+                                                        testID={`photo-preview-${idx}`}
+                                                        source={{ uri: url }}
+                                                        style={styles.photoThumb}
+                                                    />
+                                                    {idx === 0 && (
+                                                        <View style={styles.coverBadge}>
+                                                            <Ionicons name="star" size={10} color={colors.white} />
+                                                            <Text style={styles.coverBadgeText}>Cover</Text>
+                                                        </View>
+                                                    )}
+                                                    <TouchableOpacity
+                                                        testID={`remove-photo-btn-${idx}`}
+                                                        onPress={() => handleRemovePhoto(idx)}
+                                                        style={styles.photoDeleteBtn}
+                                                        accessibilityLabel={`Remove photo ${idx + 1}`}
+                                                    >
+                                                        <Ionicons name="close" size={14} color={colors.white} />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            ))}
+                                        </ScrollView>
+                                        <Text style={styles.photoTipText}>
+                                            Tip: The first photo will be used as the primary cover photo in search listings.
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        testID="empty-photo-upload-box"
+                                        style={styles.emptyPhotoBox}
+                                        onPress={handleUploadPrompt}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={styles.emptyPhotoIconCircle}>
+                                            <Ionicons name="camera-outline" size={28} color={colors.primary} />
+                                        </View>
+                                        <Text style={styles.emptyPhotoHeading}>Upload photos of your parking space</Text>
+                                        <Text style={styles.emptyPhotoText}>
+                                            Tap to take a photo or select from your gallery. Listings with photos receive 3x more bookings!
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* Subtle secondary option for URL if needed */}
+                                <View style={styles.photoUrlToggleContainer}>
+                                    <TouchableOpacity
+                                        testID="toggle-url-input-btn"
+                                        onPress={() => setShowUrlInput(!showUrlInput)}
+                                        style={styles.photoUrlToggleBtn}
+                                    >
+                                        <Ionicons
+                                            name={showUrlInput ? 'chevron-up-outline' : 'link-outline'}
+                                            size={14}
+                                            color={colors.textSecondary}
+                                        />
+                                        <Text style={styles.photoUrlToggleText}>
+                                            {showUrlInput ? 'Hide photo URL input' : 'Or add via photo URL'}
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    {showUrlInput && (
+                                        <View style={styles.urlInputRow}>
+                                            <Input
+                                                testID="photo-url-input"
+                                                value={photoInput}
+                                                onChangeText={setPhotoInput}
+                                                placeholder="Paste image URL (https://...)"
+                                                style={{ flex: 1, marginBottom: 0 }}
+                                            />
+                                            <Button
+                                                testID="add-photo-url-btn"
+                                                title="Add"
+                                                onPress={handleAddPhoto}
+                                                size="sm"
+                                                variant="secondary"
+                                            />
+                                        </View>
+                                    )}
+                                </View>
                             </Card>
 
                             {/* Amenities */}
@@ -1634,6 +1844,68 @@ const styles = StyleSheet.create({
     },
 
     // Photos
+    photoCountBadge: {
+        backgroundColor: '#EFF6FF',
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        borderRadius: spacing.radius.full,
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+    },
+    photoCountBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.primary,
+    },
+    photoActionsRow: {
+        flexDirection: 'row',
+        gap: spacing.xs,
+        marginTop: spacing.xs,
+    },
+    photoUploadPrimaryBtn: {
+        flex: 1.3,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.primary,
+        paddingVertical: spacing.sm + 2,
+        borderRadius: spacing.radius.md,
+        ...shadows.sm,
+    },
+    photoUploadPrimaryBtnText: {
+        ...typography.button,
+        fontSize: 13,
+        color: colors.white,
+        fontWeight: '600',
+    },
+    photoUploadSecondaryBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F1F5F9',
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        paddingVertical: spacing.sm + 2,
+        borderRadius: spacing.radius.md,
+    },
+    photoUploadSecondaryBtnText: {
+        ...typography.caption,
+        fontSize: 13,
+        color: colors.primaryDark,
+        fontWeight: '600',
+    },
+    photoLoadingIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.xs,
+        marginTop: spacing.sm,
+    },
+    photoLoadingText: {
+        ...typography.caption,
+        color: colors.textSecondary,
+    },
     photoThumbContainer: {
         position: 'relative',
         marginRight: spacing.sm,
@@ -1643,6 +1915,29 @@ const styles = StyleSheet.create({
         height: 80,
         borderRadius: spacing.radius.md,
         backgroundColor: colors.borderLight,
+    },
+    coverBadge: {
+        position: 'absolute',
+        bottom: 4,
+        left: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    coverBadgeText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: colors.white,
+    },
+    photoTipText: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        fontSize: 11,
+        marginTop: spacing.xs,
     },
     photoDeleteBtn: {
         position: 'absolute',
@@ -1665,13 +1960,53 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
         borderRadius: spacing.radius.lg,
         marginTop: spacing.md,
+        backgroundColor: '#F8FAFC',
+    },
+    emptyPhotoIconCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#EFF6FF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing.xs,
+    },
+    emptyPhotoHeading: {
+        ...typography.body,
+        fontWeight: '600',
+        color: colors.textPrimary,
+        marginBottom: 2,
+        textAlign: 'center',
     },
     emptyPhotoText: {
         ...typography.caption,
         color: colors.textTertiary,
         textAlign: 'center',
-        marginTop: spacing.xs,
         lineHeight: 18,
+    },
+    photoUrlToggleContainer: {
+        marginTop: spacing.md,
+        borderTopWidth: 1,
+        borderTopColor: colors.borderLight,
+        paddingTop: spacing.xs,
+    },
+    photoUrlToggleBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        paddingVertical: 4,
+    },
+    photoUrlToggleText: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        fontSize: 12,
+    },
+    urlInputRow: {
+        flexDirection: 'row',
+        gap: spacing.sm,
+        alignItems: 'center',
+        marginTop: spacing.xs,
     },
 
     // Amenities

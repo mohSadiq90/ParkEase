@@ -9,6 +9,41 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Listing Photos Missing Upload Option & Add Mobile Photo Upload Flow (<@U06FVANTNHL>)
+- **Mobile-First Photo Upload Workflow for Parking Space Creation & Editing**:
+  - Investigated issue reported by `<@U06FVANTNHL>`: hosts creating or editing parking spaces had no option to upload photos from their phone, with only an impractical URL text paste input.
+  - Implemented modern, mobile-native photo upload interface in `CreateParkingScreen.js`:
+    - Added primary **"Upload Photos"** action button (`testID="upload-photos-btn"`) with action prompt sheet allowing hosts to take a photo or choose from library.
+    - Added dedicated quick-action buttons: **"Gallery"** (`testID="choose-from-library-btn"`) and **"Camera"** (`testID="take-photo-btn"`).
+    - Added interactive empty upload box (`testID="empty-photo-upload-box"`) with clear iconography and messaging ("Upload photos of your parking space - Tap to take a photo or select from your gallery").
+    - Integrated `expo-image-picker` with permission checks (`requestMediaLibraryPermissionsAsync`, `requestCameraPermissionsAsync`) and polite alerts if permissions are denied.
+    - Added multi-image selection support (up to 10 photos) and direct camera photo capture with automated quality optimization (0.8 quality).
+    - Added dynamic photo count badge (`3 photos`) and **"Cover"** badge on the primary photo (first thumbnail) to indicate which photo appears in search listings.
+    - Added quick delete action button (`testID={`remove-photo-btn-${idx}`}`) on each thumbnail preview.
+    - Kept URL input as an unobtrusive secondary option tucked under a collapsible toggle (`testID="toggle-url-input-btn"`) to preserve backward compatibility without interfering with the primary mobile upload experience.
+    - Connected photo upload on submit: automatically batches newly selected local photos for multipart upload via `fileUploadService.uploadMultipart`.
+  - Added `expo-image-picker` mock configuration in `Mobile/jest.setup.js` ensuring standard test harness coverage.
+- **Automated Testing & Scope Verification**:
+  - Added 7 unit tests in `Mobile/src/screens/Vendor/__tests__/CreateParkingScreen.test.js` covering:
+    1. Rendering upload buttons and interactive empty upload box.
+    2. Prompting user with photo source options when clicking "Upload Photos".
+    3. Uploading photos from gallery/library and displaying photo preview with "Cover" badge.
+    4. Capturing photos directly via device camera and rendering preview.
+    5. Removing uploaded photos from listing draft.
+    6. Handling media library permission denial gracefully with user alert.
+    7. Toggling secondary photo URL input and adding photo via URL fallback.
+  - Executed full Mobile test suite (`npm test -- --watchAll=false` in `Mobile/`): **100% pass rate** (49/49 test suites, 263/263 unit tests passing).
+  - Maintained strict mobile-only scope: zero modifications to `backend/` or `frontend/`.
+- **Key Files Modified**:
+  - `Mobile/src/screens/Vendor/CreateParkingScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/CreateParkingScreen.test.js`
+  - `Mobile/jest.setup.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 49 mobile test suites passing cleanly (263/263 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
+
 ### [2026-09-17] - Fix New Parking Space Form Steps vs All Toggle, Step Scrolling & Duplicate Buttons (<@U06FVANTNHL>)
 - **Steps vs All View Mode Toggle & Smooth Step Scrolling**:
   - Investigated issues reported by `<@U06FVANTNHL>`:

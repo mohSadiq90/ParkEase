@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { fireEvent, renderWithProviders, waitFor } from '../../../utils/test-utils';
 import CreateParkingScreen from '../CreateParkingScreen';
 import apiClient from '../../../services/api/apiClient';
@@ -248,5 +249,142 @@ describe('CreateParkingScreen', () => {
     // Tap step 4 tab
     fireEvent.press(getByTestId('step-tab-4'));
     expect(getByText(/All Sections • Step 4 of 4/)).toBeTruthy();
+  });
+
+  it('renders photo upload buttons and interactive empty upload box', () => {
+    const { getByTestId, getByText } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    expect(getByTestId('upload-photos-btn')).toBeTruthy();
+    expect(getByTestId('choose-from-library-btn')).toBeTruthy();
+    expect(getByTestId('take-photo-btn')).toBeTruthy();
+    expect(getByTestId('empty-photo-upload-box')).toBeTruthy();
+    expect(getByText('Upload photos of your parking space')).toBeTruthy();
+    expect(getByText(/Listings with photos receive 3x more bookings!/)).toBeTruthy();
+  });
+
+  it('prompts user with photo source options when pressing Upload Photos button', () => {
+    const { getByTestId } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    fireEvent.press(getByTestId('upload-photos-btn'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Upload Listing Photos',
+      expect.stringContaining('Choose how you would like to upload photos'),
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Take Photo' }),
+        expect.objectContaining({ text: 'Choose from Library' }),
+        expect.objectContaining({ text: 'Cancel' }),
+      ])
+    );
+  });
+
+  it('allows uploading photos from gallery/library and displays photo preview with cover badge', async () => {
+    ImagePicker.launchImageLibraryAsync.mockResolvedValueOnce({
+      canceled: false,
+      assets: [
+        { uri: 'file:///data/parkingspace1.jpg', fileName: 'parkingspace1.jpg' },
+      ],
+    });
+
+    const { getByTestId, getByText } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    fireEvent.press(getByTestId('choose-from-library-btn'));
+
+    await waitFor(() => {
+      expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalled();
+      expect(getByTestId('photo-preview-0')).toBeTruthy();
+    });
+
+    expect(getByText('Cover')).toBeTruthy();
+    expect(getByText('1 photo')).toBeTruthy();
+  });
+
+  it('allows taking photos using camera and displays preview', async () => {
+    ImagePicker.launchCameraAsync.mockResolvedValueOnce({
+      canceled: false,
+      assets: [
+        { uri: 'file:///data/camera-shot.jpg', fileName: 'camera-shot.jpg' },
+      ],
+    });
+
+    const { getByTestId } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    fireEvent.press(getByTestId('take-photo-btn'));
+
+    await waitFor(() => {
+      expect(ImagePicker.launchCameraAsync).toHaveBeenCalled();
+      expect(getByTestId('photo-preview-0')).toBeTruthy();
+    });
+  });
+
+  it('allows removing an uploaded photo', async () => {
+    const editData = {
+      id: 'space-with-photo',
+      title: 'Space with photo',
+      address: '123 Main',
+      city: 'NY',
+      totalSpots: 5,
+      hourlyRate: 10,
+      imageUrls: ['https://example.com/existing-photo.jpg'],
+    };
+
+    const { getByTestId, queryByTestId } = renderWithProviders(
+      <CreateParkingScreen
+        navigation={mockNavigation}
+        route={{ params: { editData } }}
+      />
+    );
+
+    expect(getByTestId('photo-preview-0')).toBeTruthy();
+    expect(getByTestId('remove-photo-btn-0')).toBeTruthy();
+
+    fireEvent.press(getByTestId('remove-photo-btn-0'));
+
+    expect(queryByTestId('photo-preview-0')).toBeNull();
+    expect(getByTestId('empty-photo-upload-box')).toBeTruthy();
+  });
+
+  it('shows alert when media library permission is denied', async () => {
+    ImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValueOnce({
+      status: 'denied',
+      granted: false,
+    });
+
+    const { getByTestId } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    fireEvent.press(getByTestId('choose-from-library-btn'));
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Permission Required',
+        expect.stringContaining('Permission to access your photo library is required')
+      );
+    });
+  });
+
+  it('allows toggling secondary photo URL input and adding photo via URL', () => {
+    const { getByTestId, queryByTestId } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    expect(queryByTestId('photo-url-input')).toBeNull();
+
+    fireEvent.press(getByTestId('toggle-url-input-btn'));
+    expect(getByTestId('photo-url-input')).toBeTruthy();
+
+    fireEvent.changeText(getByTestId('photo-url-input'), 'https://example.com/url-photo.jpg');
+    fireEvent.press(getByTestId('add-photo-url-btn'));
+
+    expect(getByTestId('photo-preview-0')).toBeTruthy();
   });
 });
