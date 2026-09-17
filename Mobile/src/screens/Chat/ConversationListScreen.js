@@ -19,18 +19,15 @@ const ConversationListScreen = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    useFocusEffect(
-        useCallback(() => {
-            loadConversations();
-        }, [])
-    );
-
     const loadConversations = async () => {
         try {
             setLoading(true);
             const result = await chatService.getConversations();
-            if (result.success) {
-                setConversations(result.data?.conversations || []);
+            if (result && (result.success || Array.isArray(result.data) || Array.isArray(result))) {
+                const list = Array.isArray(result.data)
+                    ? result.data
+                    : (result.data?.conversations || result.conversations || (Array.isArray(result) ? result : []));
+                setConversations(list);
             }
         } catch (error) {
             console.error('Failed to load conversations:', error);
@@ -38,6 +35,16 @@ const ConversationListScreen = ({ navigation }) => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        loadConversations();
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadConversations();
+        }, [])
+    );
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -48,6 +55,7 @@ const ConversationListScreen = ({ navigation }) => {
     const formatTime = (dateStr) => {
         if (!dateStr) return '';
         const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return '';
         const now = new Date();
         const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
         if (diffDays === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -56,44 +64,55 @@ const ConversationListScreen = ({ navigation }) => {
         return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
-    const renderConversation = ({ item }) => (
-        <TouchableOpacity
-            style={styles.conversationItem}
-            onPress={() => navigation.navigate('ChatScreen', {
-                conversationId: item.id,
-                parkingSpaceId: item.parkingSpaceId,
-                participantName: item.otherParticipantName,
-                parkingTitle: item.parkingSpaceTitle,
-            })}
-        >
-            <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                    {item.otherParticipantName?.charAt(0)?.toUpperCase() || '?'}
-                </Text>
-            </View>
-            <View style={styles.conversationContent}>
-                <View style={styles.conversationHeader}>
-                    <Text style={styles.participantName} numberOfLines={1}>
-                        {item.otherParticipantName}
+    const renderConversation = ({ item }) => {
+        const id = item.id || item.Id;
+        const spaceId = item.parkingSpaceId || item.ParkingSpaceId || item.parkingId || item.ParkingId;
+        const name = item.otherParticipantName || item.OtherParticipantName || 'Host / Driver';
+        const title = item.parkingSpaceTitle || item.ParkingSpaceTitle || 'Parking Space';
+        const preview = item.lastMessagePreview || item.LastMessagePreview || 'No messages yet';
+        const timestamp = item.lastMessageAt || item.LastMessageAt || item.createdAt || item.CreatedAt;
+        const unread = item.unreadCount || item.UnreadCount || 0;
+
+        return (
+            <TouchableOpacity
+                testID={`conversation-item-${id}`}
+                style={styles.conversationItem}
+                onPress={() => navigation.navigate('ChatScreen', {
+                    conversationId: id,
+                    parkingSpaceId: spaceId,
+                    participantName: name,
+                    parkingTitle: title,
+                })}
+            >
+                <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                        {name?.charAt(0)?.toUpperCase() || '?'}
                     </Text>
-                    <Text style={styles.timestamp}>{formatTime(item.lastMessageAt)}</Text>
                 </View>
-                <Text style={styles.parkingTitle} numberOfLines={1}>
-                    🅿️ {item.parkingSpaceTitle}
-                </Text>
-                <View style={styles.previewRow}>
-                    <Text style={styles.preview} numberOfLines={1}>
-                        {item.lastMessagePreview || 'No messages yet'}
+                <View style={styles.conversationContent}>
+                    <View style={styles.conversationHeader}>
+                        <Text style={styles.participantName} numberOfLines={1}>
+                            {name}
+                        </Text>
+                        <Text style={styles.timestamp}>{formatTime(timestamp)}</Text>
+                    </View>
+                    <Text style={styles.parkingTitle} numberOfLines={1}>
+                        🅿️ {title}
                     </Text>
-                    {item.unreadCount > 0 && (
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{item.unreadCount}</Text>
-                        </View>
-                    )}
+                    <View style={styles.previewRow}>
+                        <Text style={styles.preview} numberOfLines={1}>
+                            {preview}
+                        </Text>
+                        {unread > 0 && (
+                            <View style={styles.badge} testID={`unread-badge-${id}`}>
+                                <Text style={styles.badgeText}>{unread}</Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        );
+    };
 
     if (loading) {
         return (

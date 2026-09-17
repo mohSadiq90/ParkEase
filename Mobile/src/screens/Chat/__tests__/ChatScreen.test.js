@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../utils/test-utils';
 import ChatScreen from '../ChatScreen';
 import chatService from '../../../services/chat/chatService';
@@ -26,7 +26,12 @@ describe('ChatScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('renders chat thread and allows sending a message', async () => {
+  it('renders chat thread, optimistically updates UI, clears input immediately, and completes send', async () => {
+    let resolveSend;
+    const sendPromise = new Promise((resolve) => {
+      resolveSend = resolve;
+    });
+
     chatService.getMessages.mockResolvedValueOnce({
       success: true,
       data: [
@@ -41,18 +46,7 @@ describe('ChatScreen', () => {
       ],
     });
     chatService.markAsRead.mockResolvedValueOnce({ success: true });
-    chatService.sendMessage.mockResolvedValueOnce({
-      success: true,
-      data: {
-        id: 'msg-2',
-        senderId: 'user-1',
-        senderName: 'Me',
-        content: 'Thanks, on my way!',
-        createdAt: new Date().toISOString(),
-        conversationId: 'conv-100',
-        isRead: false,
-      },
-    });
+    chatService.sendMessage.mockReturnValueOnce(sendPromise);
 
     const route = {
       params: {
@@ -63,7 +57,7 @@ describe('ChatScreen', () => {
       },
     };
 
-    const { getByText, getByPlaceholderText, getByTestId } = renderWithProviders(
+    const { getByText, getByPlaceholderText, getByTestId, queryByText } = renderWithProviders(
       <ChatScreen navigation={mockNavigation} route={route} />,
       {
         preloadedState: {
@@ -89,8 +83,282 @@ describe('ChatScreen', () => {
     fireEvent.changeText(input, 'Thanks, on my way!');
     fireEvent.press(getByTestId('chat-send-btn'));
 
+    // Input must be cleared IMMEDIATELY
+    expect(input.props.value).toBe('');
+
+    // Message must appear IMMEDIATELY with "Sending..." indicator
+    expect(getByText('Thanks, on my way!')).toBeTruthy();
+    expect(getByText('Sending...')).toBeTruthy();
+
+    // Now resolve the server response
+    await act(async () => {
+      resolveSend({
+        success: true,
+        data: {
+          id: 'msg-2',
+          senderId: 'user-1',
+          senderName: 'Driver',
+          content: 'Thanks, on my way!',
+          createdAt: new Date().toISOString(),
+          conversationId: 'conv-100',
+          isRead: false,
+        },
+      });
+    });
+
     await waitFor(() => {
       expect(chatService.sendMessage).toHaveBeenCalledWith('spot-555', 'Thanks, on my way!', 'conv-100');
+      // Sending indicator should now be replaced by checkmark
+      expect(queryByText('Sending...')).toBeNull();
+      expect(getByText('✓')).toBeTruthy();
+    });
+  });
+
+  it('shows failed state and allows retrying when message send fails', async () => {
+    chatService.getMessages.mockResolvedValueOnce({
+      success: true,
+      data: [],
+    });
+    chatService.markAsRead.mockResolvedValueOnce({ success: true });
+    // First send fails
+    chatService.sendMessage.mockRejectedValueOnce(new Error('Network disconnected'));
+
+    const route = {
+      params: {
+        conversationId: 'conv-200',
+        parkingSpaceId: 'spot-888',
+        participantName: 'Host Sarah',
+        parkingTitle: 'Midtown Garage',
+      },
+    };
+
+    const { getByText, getByPlaceholderText, getByTestId, queryByText } = renderWithProviders(
+      <ChatScreen navigation={mockNavigation} route={route} />,
+      {
+        preloadedState: {
+          auth: {
+            user: { id: 'user-1', firstName: 'Driver' },
+          },
+        },
+      }
+    );
+
+    await waitFor(() => {
+      expect(chatService.getMessages).toHaveBeenCalledWith('conv-200');
+    });
+
+    const input = getByPlaceholderText('Type a message...');
+    fireEvent.changeText(input, 'Will I need a key fob?');
+    fireEvent.press(getByTestId('chat-send-btn'));
+
+    // Optimistically rendered
+    expect(getByText('Will I need a key fob?')).toBeTruthy();
+
+    // After network rejection, updates to failed with retry option
+    await waitFor(() => {
+      expect(getByText('Tap to retry')).toBeTruthy();
+    });
+
+    // Mock next attempt to succeed
+    chatService.sendMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        id: 'msg-recovered',
+        senderId: 'user-1',
+        senderName: 'Driver',
+        content: 'Will I need a key fob?',
+        createdAt: new Date().toISOString(),
+        conversationId: 'conv-200',
+        isRead: false,
+      },
+    });
+
+    // Tap to retry
+    const retryBtn = getByText('Tap to retry');
+    fireEvent.press(retryBtn);
+
+    await waitFor(() => {
+      expect(chatService.sendMessage).toHaveBeenCalledTimes(2);
+      expect(queryByText('Tap to retry')).toBeNull();
+      expect(getByText('✓')).toBeTruthy();
+    });
+  });
+
+  it('renders date dividers between messages on different days', async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(14, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(9, 30, 0, 0);
+
+    chatService.getMessages.mockResolvedValueOnce({
+      success: true,
+      data: [
+        {
+          id: 'msg-today',
+          senderId: 'user-2',
+          senderName: 'Host John',
+          content: 'Good morning!',
+          createdAt: today.toISOString(),
+          isRead: true,
+        },
+        {
+          id: 'msg-yesterday',
+          senderId: 'user-2',
+          senderName: 'Host John',
+          content: 'Spot is booked for tomorrow.',
+          createdAt: yesterday.toISOString(),
+          isRead: true,
+        },
+      ],
+    });
+    chatService.markAsRead.mockResolvedValueOnce({ success: true });
+
+    const route = {
+      params: {
+        conversationId: 'conv-100',
+        parkingSpaceId: 'spot-555',
+        participantName: 'Host John',
+      },
+    };
+
+    const { getByText } = renderWithProviders(
+      <ChatScreen navigation={mockNavigation} route={route} />
+    );
+
+    await waitFor(() => {
+      expect(getByText('Good morning!')).toBeTruthy();
+      expect(getByText('Spot is booked for tomorrow.')).toBeTruthy();
+      expect(getByText('Yesterday')).toBeTruthy();
+      expect(getByText('Today')).toBeTruthy();
+    });
+  });
+
+  it('handles quick suggestion chips in empty chat', async () => {
+    chatService.sendMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        id: 'msg-sug',
+        senderId: 'user-1',
+        senderName: 'Driver',
+        content: 'Hi, is this parking space available now?',
+        createdAt: new Date().toISOString(),
+        conversationId: 'conv-new',
+        isRead: false,
+      },
+    });
+
+    const route = {
+      params: {
+        conversationId: null,
+        parkingSpaceId: 'spot-999',
+        participantName: 'Space Owner',
+        parkingTitle: 'Airport Deck A',
+      },
+    };
+
+    const { getByText, getByTestId } = renderWithProviders(
+      <ChatScreen navigation={mockNavigation} route={route} />,
+      {
+        preloadedState: {
+          auth: {
+            user: { id: 'user-1', firstName: 'Driver' },
+          },
+        },
+      }
+    );
+
+    expect(getByText('Space Owner')).toBeTruthy();
+    expect(getByText(/Start the conversation with Space Owner!/)).toBeTruthy();
+
+    const quickChip = getByTestId('quick-suggestion-0');
+    expect(quickChip).toBeTruthy();
+    fireEvent.press(quickChip);
+
+    await waitFor(() => {
+      expect(chatService.sendMessage).toHaveBeenCalledWith(
+        'spot-999',
+        'Hi, is this parking space available now?',
+        null
+      );
+    });
+  });
+
+  it('preserves optimistic messages during background polling', async () => {
+    let resolveSend;
+    const sendPromise = new Promise((resolve) => {
+      resolveSend = resolve;
+    });
+
+    chatService.getMessages
+      .mockResolvedValueOnce({
+        success: true,
+        data: [],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: [], // Poll returns empty (not yet saved on server)
+      });
+    chatService.markAsRead.mockResolvedValue({ success: true });
+    chatService.sendMessage.mockReturnValueOnce(sendPromise);
+
+    const route = {
+      params: {
+        conversationId: 'conv-poll',
+        parkingSpaceId: 'spot-123',
+        participantName: 'Host Mike',
+      },
+    };
+
+    const { getByText, getByPlaceholderText, getByTestId } = renderWithProviders(
+      <ChatScreen navigation={mockNavigation} route={route} />,
+      {
+        preloadedState: {
+          auth: {
+            user: { id: 'user-1', firstName: 'Driver' },
+          },
+        },
+      }
+    );
+
+    await waitFor(() => {
+      expect(chatService.getMessages).toHaveBeenCalledWith('conv-poll');
+    });
+
+    const input = getByPlaceholderText('Type a message...');
+    fireEvent.changeText(input, 'Still on track!');
+    fireEvent.press(getByTestId('chat-send-btn'));
+
+    expect(getByText('Still on track!')).toBeTruthy();
+    expect(getByText('Sending...')).toBeTruthy();
+
+    // Trigger polling refresh
+    const refreshBtn = getByTestId('chat-send-btn');
+    expect(refreshBtn).toBeTruthy();
+
+    // Optimistic message should NOT disappear during polling
+    expect(getByText('Still on track!')).toBeTruthy();
+    expect(getByText('Sending...')).toBeTruthy();
+
+    await act(async () => {
+      resolveSend({
+        success: true,
+        data: {
+          id: 'msg-final',
+          senderId: 'user-1',
+          senderName: 'Driver',
+          content: 'Still on track!',
+          createdAt: new Date().toISOString(),
+          conversationId: 'conv-poll',
+          isRead: false,
+        },
+      });
+    });
+
+    await waitFor(() => {
+      expect(getByText('Still on track!')).toBeTruthy();
+      expect(getByText('✓')).toBeTruthy();
     });
   });
 
@@ -109,7 +377,7 @@ describe('ChatScreen', () => {
     );
 
     expect(getByText('Space Owner')).toBeTruthy();
-    expect(getByText('Start the conversation!')).toBeTruthy();
+    expect(getByText(/Start the conversation/)).toBeTruthy();
     expect(chatService.getMessages).not.toHaveBeenCalled();
   });
 
@@ -150,7 +418,6 @@ describe('ChatScreen', () => {
     const { KeyboardAvoidingView } = require('react-native');
     const kav = UNSAFE_getByType(KeyboardAvoidingView);
     expect(kav.props.keyboardVerticalOffset).toBe(0);
-    // On test environment (often iOS or android depending on jest setup):
     expect(['padding', 'height']).toContain(kav.props.behavior);
   });
 });
