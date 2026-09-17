@@ -98,8 +98,8 @@ describe('MyListingsScreen', () => {
     });
   });
 
-  it('navigates to CreateParking with editData when tapping quick edit icon in card header', () => {
-    const { getByTestId } = renderWithProviders(
+  it('does not render redundant edit and delete buttons in the card header', () => {
+    const { queryByTestId, getByTestId } = renderWithProviders(
       <MyListingsScreen navigation={mockNavigation} route={{}} />,
       {
         preloadedState: {
@@ -111,12 +111,9 @@ describe('MyListingsScreen', () => {
       }
     );
 
-    const quickEditBtn = getByTestId('quick-edit-space-1');
-    fireEvent.press(quickEditBtn);
-
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {
-      editData: sampleListings[0],
-    });
+    expect(queryByTestId('quick-edit-space-1')).toBeNull();
+    expect(queryByTestId('quick-delete-space-1')).toBeNull();
+    expect(getByTestId('toggle-switch-space-1')).toBeTruthy();
   });
 
   it('navigates to CreateParking with editData when tapping listing card body', () => {
@@ -329,42 +326,20 @@ describe('MyListingsScreen', () => {
     });
   });
 
-  it('triggers delete confirmation and calls deleteParkingThunk when pressing quick delete button in header', async () => {
-    jest.spyOn(Alert, 'alert');
-    apiClient.delete.mockResolvedValueOnce({
-      data: { success: true },
-    });
-
+  it('renders shimmer skeleton placeholders when listings are loading', () => {
     const { getByTestId } = renderWithProviders(
       <MyListingsScreen navigation={mockNavigation} route={{}} />,
       {
         preloadedState: {
           parking: {
-            myListings: sampleListings,
-            listingsLoading: false,
+            myListings: [],
+            listingsLoading: true,
           },
         },
       }
     );
 
-    const quickDeleteBtn = getByTestId('quick-delete-space-1');
-    fireEvent.press(quickDeleteBtn);
-
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Delete Parking Space',
-      expect.stringContaining('Downtown Secure Garage'),
-      expect.any(Array)
-    );
-
-    const alertButtons = Alert.alert.mock.calls[0][2];
-    const confirmBtn = alertButtons.find((b) => b.text === 'Delete');
-    await confirmBtn.onPress();
-
-    await waitFor(() => {
-      expect(apiClient.delete).toHaveBeenCalledWith(
-        expect.stringContaining('space-1')
-      );
-    });
+    expect(getByTestId('listings-shimmer-loading')).toBeTruthy();
   });
 
   it('renders square thumbnail when image is available and placeholder when absent', () => {

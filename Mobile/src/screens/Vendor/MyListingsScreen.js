@@ -33,6 +33,7 @@ import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import EmptyState from '../../components/Common/EmptyState';
 import LoadingScreen from '../../components/Common/LoadingScreen';
+import { ListSkeleton } from '../../components/Common/ShimmerPlaceholder';
 import StarRating from '../../components/Common/StarRating';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency } from '../../utils/formatters';
@@ -97,32 +98,6 @@ const ListingCard = ({ listing, onToggle, onEdit, onView, onDelete, onQuickEdit 
                 </View>
 
                 <View style={cardStyles.headerControls}>
-                    <TouchableOpacity
-                        style={cardStyles.quickEditBtn}
-                        onPress={(e) => {
-                            e?.stopPropagation?.();
-                            onEdit(listing);
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Quick edit ${listing.title}`}
-                        testID={`quick-edit-${listing.id}`}
-                    >
-                        <Ionicons name="pencil" size={15} color={colors.primary} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={cardStyles.quickDeleteBtn}
-                        onPress={(e) => {
-                            e?.stopPropagation?.();
-                            onDelete(listing);
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Delete ${listing.title}`}
-                        testID={`quick-delete-${listing.id}`}
-                    >
-                        <Ionicons name="trash-outline" size={15} color={colors.error || '#EF4444'} />
-                    </TouchableOpacity>
-
                     <Switch
                         value={Boolean(listing.isActive)}
                         disabled={isToggleDisabled}
@@ -793,7 +768,7 @@ const MyListingsScreen = ({ navigation, route }) => {
             )}
 
             {listingsLoading && !refreshing && totalCount === 0 ? (
-                <LoadingScreen />
+                <ListSkeleton count={3} testID="listings-shimmer-loading" />
             ) : (
                 <FlatList
                     data={filteredListings}

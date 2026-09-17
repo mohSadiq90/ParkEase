@@ -227,7 +227,7 @@ const VendorDashboardScreen = ({ navigation }) => {
         }
     }, [navigation]);
 
-    if (loading && !data) return <LoadingScreen />;
+    if (loading && !data) return <LoadingScreen type="dashboard" message="Loading Host Control Center..." />;
 
     const pendingApprovalsCount = data?.pendingBookings ??
         data?.pendingApprovals ??

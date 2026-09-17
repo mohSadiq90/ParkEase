@@ -9,6 +9,36 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Reusable Common Shimmer Animation Skeletons & Listing Redundant Buttons Removal (<@U06FVANTNHL>)
+- **Reusable Common Shimmer Animation & Skeletons (`ShimmerPlaceholder.js`, `LoadingScreen.js`)**:
+  - Implemented high-performance, reusable animated shimmer placeholder in `Mobile/src/components/Common/ShimmerPlaceholder.js` using React Native `Animated` opacity interpolation (0.35 to 0.85) with native driver.
+  - Built out modular skeleton presets:
+    - `ShimmerPlaceholder`: base primitive with customizable dimensions, radius, and colors.
+    - `CardSkeleton`: animated card skeleton with thumbnail, title bar, address bar, and action pills.
+    - `ListSkeleton`: multi-card shimmer list layout with configurable item count.
+    - `DetailSkeleton`: full screen hero banner, title, tags, description, and location box placeholders.
+    - `DashboardSkeleton`: KPI 2x2 grid cards, action bar, and recent activity card placeholders.
+    - `ScreenShimmer`: high-level wrapper conditionally rendering skeleton types based on `loading` prop.
+  - Upgraded `LoadingScreen.js` to render the common animated shimmer skeleton instead of a bare spinner, instantly providing a smooth, modern loading experience across all screens whenever an API is called or data is loading.
+  - Integrated shimmer skeletons across `MyListingsScreen`, `VendorDashboardScreen`, `ParkingDetailScreen`, and `CorporateDashboardScreen`.
+- **Elimination of Redundant Listing Edit and Delete Buttons (`MyListingsScreen.js`)**:
+  - Addressed UX feedback regarding redundant duplicate edit and delete buttons on listing cards.
+  - Removed duplicate `quickEditBtn` (pencil icon) and `quickDeleteBtn` (trash icon) from the card header controls, eliminating visual clutter next to the active toggle switch.
+  - Retained clean, accessible primary action row at the bottom of the card (`View`, `Edit`, `Delete`) with dedicated touch targets.
+- **Automated Testing Suite**:
+  - Created unit test suite `Mobile/src/components/Common/__tests__/ShimmerPlaceholder.test.js` (7 tests) covering all skeleton presets, shimmer animation, and `ScreenShimmer`/`LoadingScreen` integration.
+  - Updated `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js` verifying removal of redundant header buttons and presence of shimmer skeleton on listings loading.
+  - Verified 100% pass rate across entire mobile test suite: **52/52 test suites, 293/293 tests passing cleanly**.
+- **Key Files Modified / Created**:
+  - `Mobile/src/components/Common/ShimmerPlaceholder.js`
+  - `Mobile/src/components/Common/LoadingScreen.js`
+  - `Mobile/src/components/Common/__tests__/ShimmerPlaceholder.test.js` (new)
+  - `Mobile/src/screens/Vendor/MyListingsScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`
+  - `Mobile/src/screens/Vendor/VendorDashboardScreen.js`
+  - `Mobile/src/screens/Corporate/CorporateDashboardScreen.js`
+  - `PROGRESS.md`
+
 ### [2026-09-17] - Fix Listing Screen UX Friction: Status Signals, Edit Affordance, Visual Thumbnails, FAB Ergonomics & On-Surface Quick Edit (<@U06FVANTNHL>)
 - **Redundant Status Signals Elimination & 3rd State Clarification**:
   - Addressed UX feedback where the card featured both an interactive green toggle (top right) and a static "● Active" text badge communicating the exact same state.

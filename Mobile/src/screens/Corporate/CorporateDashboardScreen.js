@@ -7,6 +7,7 @@ import { fetchMyCompanies } from '../../store/slices/corporateSlice';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import Button from '../../components/Common/Button';
+import LoadingScreen from '../../components/Common/LoadingScreen';
 import { globalStyles, colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -86,6 +87,10 @@ const CorporateDashboardScreen = () => {
             loadDashboard();
         }
     }, [activeCompanyId, loadDashboard]);
+
+    if (reduxLoading && myCompanies.length === 0) {
+        return <LoadingScreen type="dashboard" message="Loading Corporate Portal..." />;
+    }
 
     // Empty State: User doesn't belong to any company
     if (myCompanies.length === 0 && !reduxLoading) {
