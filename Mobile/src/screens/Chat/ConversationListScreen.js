@@ -13,9 +13,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/globalStyles';
 import chatService from '../../services/chat/chatService';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
+import { useAuth } from '../../hooks/useAuth';
 
 const ConversationListScreen = ({ navigation }) => {
+    const { user } = useAuth();
+    const currentUserId = user?.id || user?.userId || null;
     const [conversations, setConversations] = useState([]);
+    const [receipts, setReceipts] = useState({});
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -28,6 +32,48 @@ const ConversationListScreen = ({ navigation }) => {
                     ? result.data
                     : (result.data?.conversations || result.conversations || (Array.isArray(result) ? result : []));
                 setConversations(list);
+
+                // Update receipt state from chatService cache if available
+                if (chatService?.getAllReceipts) {
+                    const allReceipts = chatService.getAllReceipts() || {};
+                    if (allReceipts && typeof allReceipts === 'object') {
+                        setReceipts(allReceipts);
+                    }
+                }
+
+                // Background resolution for conversations whose last message sender is unknown
+                if (chatService?.resolveLatestReceipts && currentUserId) {
+                    const missing = list
+                        .filter((c) => {
+                            const cId = c.id || c.Id;
+                            const unread = c.unreadCount || c.UnreadCount || 0;
+                            const preview = c.lastMessagePreview || c.LastMessagePreview;
+                            return (
+                                unread === 0 &&
+                                preview &&
+                                preview !== 'No messages yet' &&
+                                !chatService.getLastMessageReceipt?.(cId)
+                            );
+                        })
+                        .map((c) => c.id || c.Id);
+
+                    if (missing.length > 0) {
+                        try {
+                            const resPromise = chatService.resolveLatestReceipts(missing, currentUserId);
+                            if (resPromise?.then) {
+                                resPromise
+                                    .then((updated) => {
+                                        if (updated && Object.keys(updated).length > 0) {
+                                            setReceipts((prev) => ({ ...(prev || {}), ...updated }));
+                                        }
+                                    })
+                                    .catch(() => {});
+                            }
+                        } catch {
+                            // Non-critical background resolution failure
+                        }
+                    }
+                }
             }
         } catch (error) {
             console.error('Failed to load conversations:', error);
@@ -73,6 +119,42 @@ const ConversationListScreen = ({ navigation }) => {
         const timestamp = item.lastMessageAt || item.LastMessageAt || item.createdAt || item.CreatedAt;
         const unread = item.unreadCount || item.UnreadCount || 0;
 
+        const receipt = (receipts && receipts[id]) || (chatService?.getLastMessageReceipt ? chatService.getLastMessageReceipt(id) : null);
+
+        // Check if last message was sent by current user:
+        // Must have 0 unread messages (as unread indicates incoming messages from the other user)
+        const isMine =
+            unread === 0 &&
+            Boolean(
+                item.isLastMessageMine === true ||
+                item.IsLastMessageMine === true ||
+                (item.lastMessageSenderId && (item.lastMessageSenderId === currentUserId || item.lastMessageSenderId === 'me')) ||
+                (item.LastMessageSenderId && (item.LastMessageSenderId === currentUserId || item.LastMessageSenderId === 'me')) ||
+                (item.lastMessage?.senderId && (item.lastMessage.senderId === currentUserId || item.lastMessage.senderId === 'me')) ||
+                (item.senderId && (item.senderId === currentUserId || item.senderId === 'me')) ||
+                (receipt && (receipt.isMine || (receipt.senderId && (receipt.senderId === currentUserId || receipt.senderId === 'me'))))
+            );
+
+        const isRead = Boolean(
+            item.lastMessageIsRead ||
+            item.LastMessageIsRead ||
+            item.isRead ||
+            item.IsRead ||
+            item.lastMessage?.isRead ||
+            receipt?.isRead
+        );
+
+        const isDelivered = Boolean(
+            item.isDelivered ||
+            item.IsDelivered ||
+            item.lastMessageIsDelivered ||
+            item.lastMessageStatus === 'delivered' ||
+            item.status === 'delivered' ||
+            receipt?.isDelivered ||
+            receipt?.status === 'delivered' ||
+            isRead
+        );
+
         return (
             <TouchableOpacity
                 testID={`conversation-item-${id}`}
@@ -100,9 +182,23 @@ const ConversationListScreen = ({ navigation }) => {
                         🅿️ {title}
                     </Text>
                     <View style={styles.previewRow}>
-                        <Text style={styles.preview} numberOfLines={1}>
-                            {preview}
-                        </Text>
+                        <View style={styles.previewTextContainer}>
+                            {isMine && preview !== 'No messages yet' && (
+                                <Text
+                                    testID={`conversation-receipt-${id}`}
+                                    style={[
+                                        styles.previewReceipt,
+                                        isRead && styles.previewReceiptRead,
+                                        isDelivered && !isRead && styles.previewReceiptDelivered,
+                                    ]}
+                                >
+                                    {isDelivered || isRead ? '✓✓' : '✓'}
+                                </Text>
+                            )}
+                            <Text style={styles.preview} numberOfLines={1}>
+                                {preview}
+                            </Text>
+                        </View>
                         {unread > 0 && (
                             <View style={styles.badge} testID={`unread-badge-${id}`}>
                                 <Text style={styles.badgeText}>{unread}</Text>
@@ -139,7 +235,7 @@ const ConversationListScreen = ({ navigation }) => {
                 <FlatList
                     data={conversations}
                     renderItem={renderConversation}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item, index) => (item?.id || item?.Id ? String(item.id || item.Id) : `conv-${index}`)}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}
@@ -180,7 +276,20 @@ const styles = StyleSheet.create({
     timestamp: { fontSize: 12, color: colors.textTertiary },
     parkingTitle: { fontSize: 12, color: colors.textSecondary, marginBottom: 2 },
     previewRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    preview: { fontSize: 14, color: colors.textTertiary, flex: 1, marginRight: 8 },
+    previewTextContainer: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
+    previewReceipt: {
+        fontSize: 13,
+        color: colors.textTertiary,
+        marginRight: 4,
+        fontWeight: '700',
+    },
+    previewReceiptDelivered: {
+        color: colors.textSecondary,
+    },
+    previewReceiptRead: {
+        color: colors.primary,
+    },
+    preview: { fontSize: 14, color: colors.textTertiary, flex: 1 },
     badge: {
         backgroundColor: colors.primary, borderRadius: 10,
         paddingHorizontal: 8, paddingVertical: 2, minWidth: 20, alignItems: 'center',

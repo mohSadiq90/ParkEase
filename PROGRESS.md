@@ -9,6 +9,35 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Chat Screen Fake Presence Indicator & Implement Recent Chats Delivery Receipt Checkmarks (<@U06FVANTNHL>)
+- **Removal of Misleading Fake Online Green Dot (`ChatScreen.js`)**:
+  - Investigated the green dot below the participant name in the `ChatScreen` header (`onlineDot`).
+  - Confirmed the dot was a hardcoded static green dot (`#10B981`) with zero real-time presence detection or online tracking backend support, misleading users into believing the other party is actively online.
+  - In accordance with user guidance ("If it is working like that, then it's fine. Otherwise I think we need to remove that or at least hide it"), completely removed the hardcoded `onlineDot` indicator and style definition, keeping the header clean and accurate.
+- **Recent Chats Delivery Receipt Checkmarks (`ConversationListScreen.js`, `chatService.js`)**:
+  - Implemented sent (`✓`) and delivered / read (`✓✓`) receipt checkmarks in front of the message preview on the recent conversations screen (`ConversationListScreen.js`), aligning with modern chat UX (WhatsApp, Telegram).
+  - Added robust detection for outbound user messages via `isLastMessageMine`, `lastMessageSenderId`, and client-side cached receipts.
+  - If the last message was sent by the current user:
+    - Displays double checkmark (`✓✓`) when confirmed delivered or read (with distinct primary/accent tint for read).
+    - Displays single checkmark (`✓`) when sent.
+  - If the last message is incoming or unread (`unreadCount > 0`), no receipt checkmark is shown, maintaining clean visual hierarchy alongside the unread count badge.
+  - Implemented in-memory receipt cache and non-blocking background receipt resolution in `chatService.js` to preserve and propagate delivery receipts across navigation transitions.
+  - Updated `ChatScreen.js` to support delivered status (`✓✓`) and automatically synchronize outbound message receipts into `chatService`.
+- **Automated Testing Suite**:
+  - Added 4 new unit tests in `Mobile/src/screens/Chat/__tests__/ConversationListScreen.test.js` covering double checkmark (`✓✓`) for delivered/read messages, single checkmark (`✓`) for sent messages, incoming message checkmark omission, and cached receipt retrieval.
+  - Added 2 new unit tests in `Mobile/src/screens/Chat/__tests__/ChatScreen.test.js` verifying removal of `onlineDot` and double checkmark rendering for delivered messages.
+  - Executed full Mobile automated test suite: **100% pass rate** (52/52 test suites, 298/298 tests passing cleanly).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Chat/ChatScreen.js`
+  - `Mobile/src/screens/Chat/ConversationListScreen.js`
+  - `Mobile/src/screens/Chat/__tests__/ChatScreen.test.js`
+  - `Mobile/src/screens/Chat/__tests__/ConversationListScreen.test.js`
+  - `Mobile/src/services/chat/chatService.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 52 test suites passing cleanly (298/298 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Reusable Common Shimmer Animation Skeletons & Listing Redundant Buttons Removal (<@U06FVANTNHL>)
 - **Reusable Common Shimmer Animation & Skeletons (`ShimmerPlaceholder.js`, `LoadingScreen.js`)**:
   - Implemented high-performance, reusable animated shimmer placeholder in `Mobile/src/components/Common/ShimmerPlaceholder.js` using React Native `Animated` opacity interpolation (0.35 to 0.85) with native driver.

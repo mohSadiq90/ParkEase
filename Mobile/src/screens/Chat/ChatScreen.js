@@ -128,6 +128,19 @@ const ChatScreen = ({ route, navigation }) => {
 
                     return [...serverMsgs, ...unresolved];
                 });
+
+                if (serverMsgs.length > 0 && convId && chatService?.setLastMessageReceipt) {
+                    const latest = serverMsgs[serverMsgs.length - 1];
+                    chatService.setLastMessageReceipt(convId, {
+                        senderId: latest.senderId,
+                        isMine: latest.senderId === user?.id || latest.senderId === 'me',
+                        content: latest.content,
+                        createdAt: latest.createdAt,
+                        isRead: Boolean(latest.isRead),
+                        isDelivered: true,
+                        status: latest.isRead ? 'read' : 'delivered',
+                    });
+                }
             }
         } catch (error) {
             console.error('Failed to load messages:', error);
@@ -209,6 +222,18 @@ const ChatScreen = ({ route, navigation }) => {
                             : m
                     )
                 );
+                const convKey = confirmedMsg.conversationId || currentConvId;
+                if (chatService?.setLastMessageReceipt && convKey) {
+                    chatService.setLastMessageReceipt(convKey, {
+                        senderId: user?.id || 'me',
+                        isMine: true,
+                        content: confirmedMsg.content || content,
+                        createdAt: confirmedMsg.createdAt,
+                        isRead: Boolean(confirmedMsg.isRead),
+                        isDelivered: true,
+                        status: confirmedMsg.isRead ? 'read' : 'delivered',
+                    });
+                }
                 if (confirmedMsg.conversationId && !currentConvId) {
                     setCurrentConvId(confirmedMsg.conversationId);
                 }
@@ -394,7 +419,7 @@ const ChatScreen = ({ route, navigation }) => {
                                         </TouchableOpacity>
                                     ) : (
                                         <Text testID={`status-receipt-${item.id}`} style={styles.readReceipt}>
-                                            {item.isRead ? '✓✓' : '✓'}
+                                            {item.isRead || item.isDelivered || item.status === 'delivered' ? '✓✓' : '✓'}
                                         </Text>
                                     )}
                                 </View>
@@ -433,7 +458,6 @@ const ChatScreen = ({ route, navigation }) => {
                         {participantName || 'Host / Driver'}
                     </Text>
                     <View style={styles.subtitleRow}>
-                        <View style={styles.onlineDot} />
                         <Text style={styles.headerSubtitle} numberOfLines={1}>
                             🅿️ {parkingTitle || 'Parking Space'}
                         </Text>
@@ -591,10 +615,6 @@ const styles = StyleSheet.create({
     headerInfo: { flex: 1 },
     headerName: { fontSize: 16, fontWeight: '700', color: colors.textPrimary || '#1E293B' },
     subtitleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 1 },
-    onlineDot: {
-        width: 6, height: 6, borderRadius: 3,
-        backgroundColor: '#10B981', marginRight: 5,
-    },
     headerSubtitle: { fontSize: 12, color: colors.textSecondary, flex: 1 },
     headerSyncStatus: { paddingHorizontal: 8 },
     refreshBtn: { padding: 8 },

@@ -420,4 +420,76 @@ describe('ChatScreen', () => {
     expect(kav.props.keyboardVerticalOffset).toBe(0);
     expect(['padding', 'height']).toContain(kav.props.behavior);
   });
+
+  it('does not render misleading online presence green dot in the header', () => {
+    const route = {
+      params: {
+        conversationId: null,
+        parkingSpaceId: 'spot-1',
+        participantName: 'Host Jessica',
+        parkingTitle: 'Reserved Garage 2B',
+      },
+    };
+
+    const { getByText, queryByTestId } = renderWithProviders(
+      <ChatScreen navigation={mockNavigation} route={route} />
+    );
+
+    expect(getByText('Host Jessica')).toBeTruthy();
+    expect(getByText('🅿️ Reserved Garage 2B')).toBeTruthy();
+    // Verify no presence / online indicator is rendered
+    expect(queryByTestId('online-indicator')).toBeNull();
+  });
+
+  it('renders double checkmark (✓✓) when message is delivered or read', async () => {
+    chatService.getMessages.mockReset();
+    chatService.getMessages.mockResolvedValueOnce({
+      success: true,
+      data: [
+        {
+          id: 'msg-delivered',
+          senderId: 'user-1',
+          senderName: 'Driver',
+          content: 'I have arrived safely.',
+          createdAt: new Date().toISOString(),
+          isRead: false,
+          isDelivered: true,
+        },
+        {
+          id: 'msg-read',
+          senderId: 'user-1',
+          senderName: 'Driver',
+          content: 'Can you see my car?',
+          createdAt: new Date().toISOString(),
+          isRead: true,
+        },
+      ],
+    });
+    chatService.markAsRead.mockResolvedValueOnce({ success: true });
+
+    const route = {
+      params: {
+        conversationId: 'conv-receipts',
+        parkingSpaceId: 'spot-77',
+        participantName: 'Host Mike',
+      },
+    };
+
+    const { getAllByText } = renderWithProviders(
+      <ChatScreen navigation={mockNavigation} route={route} />,
+      {
+        preloadedState: {
+          auth: {
+            user: { id: 'user-1', firstName: 'Driver' },
+          },
+        },
+      }
+    );
+
+    await waitFor(() => {
+      expect(chatService.getMessages).toHaveBeenCalledWith('conv-receipts');
+      const doubleCheckmarks = getAllByText('✓✓');
+      expect(doubleCheckmarks.length).toBe(2);
+    });
+  });
 });
