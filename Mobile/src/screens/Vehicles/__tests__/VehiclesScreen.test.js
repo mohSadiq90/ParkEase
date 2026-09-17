@@ -117,4 +117,50 @@ describe('VehiclesScreen', () => {
             );
         });
     });
+
+    it('renders horizontally scrollable vehicle category pills and allows selecting category', async () => {
+        vehicleService.addVehicle.mockResolvedValueOnce({
+            success: true,
+            data: { id: 'veh-4', make: 'Zero', model: 'SR/F', licensePlate: 'KA01EV9999', type: 1 },
+        });
+
+        const { getByTestId, getByText, getByPlaceholderText } = renderWithProviders(
+            <VehiclesScreen navigation={mockNavigation} />
+        );
+
+        await waitFor(() => {
+            expect(getByTestId('toggle-add-vehicle-btn')).toBeTruthy();
+        });
+
+        fireEvent.press(getByTestId('toggle-add-vehicle-btn'));
+
+        // Verify vehicle category pills exist
+        expect(getByText('Vehicle Category')).toBeTruthy();
+        expect(getByTestId('vehicle-category-pill-0')).toBeTruthy(); // Car
+        expect(getByTestId('vehicle-category-pill-1')).toBeTruthy(); // Motorcycle
+        expect(getByTestId('vehicle-category-pill-2')).toBeTruthy(); // SUV
+        expect(getByTestId('vehicle-category-pill-3')).toBeTruthy(); // Truck
+        expect(getByTestId('vehicle-category-pill-4')).toBeTruthy(); // Van
+        expect(getByTestId('vehicle-category-pill-5')).toBeTruthy(); // Electric
+
+        // Select Motorcycle
+        fireEvent.press(getByTestId('vehicle-category-pill-1'));
+
+        fireEvent.changeText(getByPlaceholderText('Make (e.g. Toyota, Tesla)'), 'Zero');
+        fireEvent.changeText(getByPlaceholderText('Model (e.g. Camry, Model 3)'), 'SR/F');
+        fireEvent.changeText(getByPlaceholderText('Plate (e.g. MH02AB1234)'), 'KA01EV9999');
+
+        fireEvent.press(getByText('Save to Garage'));
+
+        await waitFor(() => {
+            expect(vehicleService.addVehicle).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    make: 'Zero',
+                    model: 'SR/F',
+                    licensePlate: 'KA01EV9999',
+                    type: 1,
+                })
+            );
+        });
+    });
 });

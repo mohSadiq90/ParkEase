@@ -148,4 +148,46 @@ describe('BookingDetailScreen', () => {
     const refundText = await findByText(/Refund Status: Automatic refund initiated/i);
     expect(refundText).toBeTruthy();
   });
+
+  it('renders horizontally scrollable extension hour pills in extend modal', async () => {
+    const mockBooking = {
+      data: {
+        data: {
+          id: 'booking-inprogress-uuid',
+          bookingReference: 'PE-BK-INPROGRESS',
+          parkingSpaceTitle: 'Grand Central Hub',
+          status: 2, // InProgress
+          totalAmount: 180,
+          startDateTime: '2026-08-18T10:00:00Z',
+          endDateTime: '2026-08-18T14:00:00Z',
+          pricingType: 0,
+          vehicleType: 0,
+        },
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockBooking);
+
+    const { findByText, getByText, getByTestId } = renderWithProviders(
+      <BookingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { bookingId: 'booking-inprogress-uuid' } }}
+      />
+    );
+
+    const extendBtn = await findByText('Extend Booking');
+    const { fireEvent } = require('../../../utils/test-utils');
+    fireEvent.press(extendBtn);
+
+    // Verify extension hour pills exist
+    expect(getByTestId('extension-hour-pill-1')).toBeTruthy();
+    expect(getByTestId('extension-hour-pill-2')).toBeTruthy();
+    expect(getByTestId('extension-hour-pill-3')).toBeTruthy();
+    expect(getByTestId('extension-hour-pill-4')).toBeTruthy();
+    expect(getByTestId('extension-hour-pill-6')).toBeTruthy();
+    expect(getByTestId('extension-hour-pill-12')).toBeTruthy();
+
+    // Select +3 hrs
+    fireEvent.press(getByTestId('extension-hour-pill-3'));
+  });
 });

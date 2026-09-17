@@ -9,6 +9,42 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Horizontally Scrollable Pills for Vehicle Categories, Booking Filters, & Modals (<@U06FVANTNHL>)
+- **Vehicle Category Pills Horizontal Scroll (`VehiclesScreen.js`, `MyVehiclesScreen.js`)**:
+  - Resolved UI overflow bug where vehicle category pills (Car, Motorcycle, SUV, Truck, Van, Electric) overflowed the right edge of the screen without horizontal scrolling on the Add Vehicle form.
+  - Implemented `ScrollView` with `horizontal`, `showsHorizontalScrollIndicator={false}`, and proper padding in `contentContainerStyle` across `VehiclesScreen.js` and `MyVehiclesScreen.js`.
+  - Added full Category selection support and test IDs for all vehicle category pills.
+- **Booking Status Filter Tabs Horizontal Scroll (`MyBookingsScreen.js`, `VendorBookingsScreen.js`)**:
+  - Resolved UI overflow bug where the top booking filter pills (All, Pending, Active, Completed, Cancelled) clipped past the right screen boundary on phone screens.
+  - Wrapped filter tabs in horizontal `ScrollView` with `showsHorizontalScrollIndicator={false}` and `flexGrow: 0`, enabling smooth horizontal scrolling across all filter statuses.
+- **App-Wide Horizontal Pill Consistency (`BookingScreen.js`, `BookingDetailScreen.js`, `MyListingsScreen.js`)**:
+  - Audited and converted all similar pill selections to horizontally scrollable rails:
+    - `BookingScreen.js`: Made Pricing Type (Hourly, Daily, Weekly, Monthly) and Vehicle Category pills horizontally scrollable.
+    - `BookingDetailScreen.js`: Made extension duration chips (+1 hr, +2 hrs, +3 hrs, +4 hrs, +6 hrs, +12 hrs) in the Extend Booking modal horizontally scrollable.
+    - `MyListingsScreen.js`: Wrapped listing status filter tabs in horizontal `ScrollView` for consistency.
+- **Automated Testing Suite**:
+  - Added unit test in `Mobile/src/screens/Vehicles/__tests__/VehiclesScreen.test.js` verifying horizontally scrollable category pills and category selection.
+  - Added unit test in `Mobile/src/screens/Booking/__tests__/BookingScreen.test.js` verifying horizontally scrollable pricing and vehicle category pills.
+  - Added unit test in `Mobile/src/screens/Booking/__tests__/BookingDetailScreen.test.js` verifying extension hour pills in extend modal.
+  - Added unit test in `Mobile/src/screens/Profile/__tests__/ProfileScreens.test.js` verifying Add Vehicle modal category pills.
+  - Executed full Mobile test suite: **100% pass rate** (52/52 test suites, 316/316 tests passing cleanly).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Booking/BookingDetailScreen.js`
+  - `Mobile/src/screens/Booking/BookingScreen.js`
+  - `Mobile/src/screens/Booking/MyBookingsScreen.js`
+  - `Mobile/src/screens/Booking/__tests__/BookingDetailScreen.test.js`
+  - `Mobile/src/screens/Booking/__tests__/BookingScreen.test.js`
+  - `Mobile/src/screens/Profile/MyVehiclesScreen.js`
+  - `Mobile/src/screens/Profile/__tests__/ProfileScreens.test.js`
+  - `Mobile/src/screens/Vehicles/VehiclesScreen.js`
+  - `Mobile/src/screens/Vehicles/__tests__/VehiclesScreen.test.js`
+  - `Mobile/src/screens/Vendor/MyListingsScreen.js`
+  - `Mobile/src/screens/Vendor/VendorBookingsScreen.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 52 test suites passing cleanly (316/316 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Listing Enable/Disable Switch Immediate UI Response & Optimistic Rollback (<@U06FVANTNHL>)
 - **Immediate UI Reflection & Optimistic Update (`MyListingsScreen.js`, `parkingSlice.js`)**:
   - Resolved issue where tapping the enable/disable active switch on listing cards did not respond visually for 30-40 seconds while waiting for network response.

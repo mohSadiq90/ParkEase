@@ -19,6 +19,7 @@ import {
     Modal,
     KeyboardAvoidingView,
     ActivityIndicator,
+    ScrollView,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
@@ -774,7 +775,12 @@ const MyListingsScreen = ({ navigation, route }) => {
 
             {/* Filter Tabs */}
             {totalCount > 0 && (
-                <View style={styles.filterTabsContainer}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterTabsContainer}
+                    style={styles.filterTabsScroll}
+                >
                     {FILTERS.map((f) => {
                         const isSelected = activeFilter === f.id;
                         const count = getFilterBadgeCount(f.id);
@@ -793,7 +799,7 @@ const MyListingsScreen = ({ navigation, route }) => {
                             </TouchableOpacity>
                         );
                     })}
-                </View>
+                </ScrollView>
             )}
 
             {listingsLoading && !refreshing && totalCount === 0 ? (
@@ -1076,11 +1082,15 @@ const styles = StyleSheet.create({
         color: colors.textPrimary,
         padding: 0,
     },
+    filterTabsScroll: {
+        flexGrow: 0,
+        marginBottom: spacing.md,
+    },
     filterTabsContainer: {
         flexDirection: 'row',
-        marginHorizontal: spacing.screenHorizontal,
-        marginBottom: spacing.md,
+        paddingHorizontal: spacing.screenHorizontal,
         gap: spacing.xs,
+        alignItems: 'center',
     },
     filterTab: {
         paddingVertical: 6,

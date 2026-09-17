@@ -431,10 +431,16 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         </Text>
 
                         {/* Quick hour selection chips */}
-                        <View style={styles.chipRow}>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.chipRow}
+                            style={styles.chipRowScroll}
+                        >
                             {EXTENSION_HOUR_OPTIONS.map((hrs) => (
                                 <TouchableOpacity
                                     key={hrs}
+                                    testID={`extension-hour-pill-${hrs}`}
                                     onPress={() => setExtendHours(hrs)}
                                     style={[
                                         styles.hourChip,
@@ -446,7 +452,7 @@ const BookingDetailScreen = ({ navigation, route }) => {
                                     </Text>
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                        </ScrollView>
 
                         {/* Summary Box */}
                         <View style={styles.extendSummaryBox}>
@@ -576,7 +582,8 @@ const styles = StyleSheet.create({
     modalTitle: { ...typography.h3, color: colors.textPrimary },
     modalCloseBtn: { padding: spacing.xs },
     modalSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginBottom: spacing.md },
-    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+    chipRowScroll: { flexGrow: 0, marginBottom: spacing.lg },
+    chipRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
     hourChip: { paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: spacing.radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
     hourChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
     hourChipText: { ...typography.label, color: colors.textPrimary },

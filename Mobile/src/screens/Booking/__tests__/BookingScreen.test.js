@@ -123,4 +123,35 @@ describe('BookingScreen', () => {
       expect(mockNavigation.goBack).not.toHaveBeenCalled();
     });
   });
+
+  it('renders horizontally scrollable pricing type and vehicle category pills and handles selection', async () => {
+    apiClient.post.mockImplementation((url) => {
+      return Promise.resolve({
+        data: { success: true, data: { basePrice: 20, discount: 0, totalPrice: 20 } }
+      });
+    });
+
+    const { getByTestId, getByText } = renderWithProviders(
+      <BookingScreen navigation={mockNavigation} route={mockRoute} />,
+      { preloadedState }
+    );
+
+    // Verify pricing type pills
+    expect(getByText('Pricing Type')).toBeTruthy();
+    expect(getByTestId('pricing-type-pill-0')).toBeTruthy();
+    expect(getByTestId('pricing-type-pill-1')).toBeTruthy();
+
+    // Select daily pricing
+    fireEvent.press(getByTestId('pricing-type-pill-1'));
+
+    // Verify vehicle category pills
+    expect(getByText('Vehicle Category')).toBeTruthy();
+    expect(getByTestId('booking-vehicle-type-pill-0')).toBeTruthy();
+    expect(getByTestId('booking-vehicle-type-pill-1')).toBeTruthy();
+    expect(getByTestId('booking-vehicle-type-pill-2')).toBeTruthy();
+    expect(getByTestId('booking-vehicle-type-pill-5')).toBeTruthy();
+
+    // Select Electric category
+    fireEvent.press(getByTestId('booking-vehicle-type-pill-5'));
+  });
 });

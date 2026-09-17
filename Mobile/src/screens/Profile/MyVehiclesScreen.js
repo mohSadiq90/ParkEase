@@ -15,6 +15,7 @@ import Input from '../../components/Common/Input';
 import EmptyState from '../../components/Common/EmptyState';
 import LoadingScreen from '../../components/Common/LoadingScreen';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
+import { VehicleType, VehicleTypeLabels } from '../../utils/constants';
 
 const VehicleCard = ({ vehicle, onEdit, onDelete }) => (
     <Card style={styles.vehicleCard}>
@@ -51,6 +52,7 @@ const MyVehiclesScreen = ({ navigation }) => {
     const [make, setMake] = useState('');
     const [model, setModel] = useState('');
     const [color, setColor] = useState('');
+    const [vehicleType, setVehicleType] = useState(0);
     const [submitting, setSubmitting] = useState(false);
 
     const fetchVehicles = useCallback(async () => {
@@ -79,12 +81,14 @@ const MyVehiclesScreen = ({ navigation }) => {
             setMake(vehicle.make || '');
             setModel(vehicle.model || '');
             setColor(vehicle.color || '');
+            setVehicleType(vehicle.type ?? vehicle.vehicleType ?? 0);
         } else {
             setEditingVehicle(null);
             setPlate('');
             setMake('');
             setModel('');
             setColor('');
+            setVehicleType(0);
         }
         setModalVisible(true);
     };
@@ -101,7 +105,7 @@ const MyVehiclesScreen = ({ navigation }) => {
                 make: make.trim(),
                 model: model.trim(),
                 color: color.trim(),
-                vehicleType: 0,
+                vehicleType: Number(vehicleType) || 0,
             };
 
             if (editingVehicle) {
@@ -145,7 +149,7 @@ const MyVehiclesScreen = ({ navigation }) => {
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.screenTitle}>My Garage</Text>
-                <TouchableOpacity onPress={() => handleOpenModal()} style={styles.addBtn}>
+                <TouchableOpacity testID="add-vehicle-btn" onPress={() => handleOpenModal()} style={styles.addBtn}>
                     <Ionicons name="add" size={24} color={colors.white} />
                 </TouchableOpacity>
             </View>
@@ -193,6 +197,28 @@ const MyVehiclesScreen = ({ navigation }) => {
                         >
                             <Text style={styles.modalTitle}>{editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}</Text>
                             
+                            {/* Vehicle Type selection */}
+                            <Text style={styles.inputLabel}>Vehicle Category</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.typeRow}
+                                style={styles.typeRowScroll}
+                            >
+                                {Object.entries(VehicleTypeLabels).map(([val, label]) => (
+                                    <TouchableOpacity
+                                        key={val}
+                                        testID={`my-vehicle-category-pill-${val}`}
+                                        onPress={() => setVehicleType(Number(val))}
+                                        style={[styles.typeChip, vehicleType === Number(val) && styles.typeChipActive]}
+                                    >
+                                        <Text style={[styles.typeChipText, vehicleType === Number(val) && styles.typeChipTextActive]}>
+                                            {label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+
                             <Input
                                 label="License Plate Number"
                                 placeholder="e.g. MH02AB1234"
@@ -290,7 +316,43 @@ const styles = StyleSheet.create({
         maxHeight: '85%',
     },
     modalTitle: { ...typography.h3, color: colors.textPrimary, marginBottom: spacing.lg },
-    modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg }
+    modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
+    inputLabel: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        marginBottom: 6,
+        fontWeight: '600',
+    },
+    typeRowScroll: {
+        marginBottom: 12,
+    },
+    typeRow: {
+        flexDirection: 'row',
+        gap: 8,
+        alignItems: 'center',
+        paddingVertical: 2,
+    },
+    typeChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+    },
+    typeChipActive: {
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primary,
+    },
+    typeChipText: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        fontWeight: '500',
+    },
+    typeChipTextActive: {
+        color: colors.primary,
+        fontWeight: '700',
+    },
 });
 
 export default MyVehiclesScreen;

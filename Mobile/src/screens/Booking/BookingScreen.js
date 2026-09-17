@@ -444,33 +444,45 @@ const BookingScreen = ({ navigation, route }) => {
                     {/* Pricing Type */}
                     <Card>
                         <Text style={styles.sectionTitle}>Pricing Type</Text>
-                        <View style={styles.chipRow}>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.chipRow}
+                            style={styles.chipRowScroll}
+                        >
                             {Object.entries(PricingTypeLabels).map(([value, label]) => (
                                 <TouchableOpacity
                                     key={value}
+                                    testID={`pricing-type-pill-${value}`}
                                     onPress={() => setPricingType(Number(value))}
                                     style={[styles.chip, pricingType === Number(value) && styles.chipActive]}
                                 >
                                     <Text style={[styles.chipText, pricingType === Number(value) && styles.chipTextActive]}>{label}</Text>
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                        </ScrollView>
                     </Card>
 
                     {/* Vehicle Type */}
                     <Card>
                         <Text style={styles.sectionTitle}>Vehicle Category</Text>
-                        <View style={styles.chipRow}>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.chipRow}
+                            style={styles.chipRowScroll}
+                        >
                             {Object.entries(VehicleTypeLabels).map(([value, label]) => (
                                 <TouchableOpacity
                                     key={value}
+                                    testID={`booking-vehicle-type-pill-${value}`}
                                     onPress={() => setVehicleType(Number(value))}
                                     style={[styles.chip, vehicleType === Number(value) && styles.chipActive]}
                                 >
                                     <Text style={[styles.chipText, vehicleType === Number(value) && styles.chipTextActive]}>{label}</Text>
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                        </ScrollView>
                     </Card>
 
                     {/* Add-on Services (Ancillary Catalog) */}
@@ -628,7 +640,8 @@ const styles = StyleSheet.create({
     modalDone: { ...typography.body, color: colors.primary, fontWeight: '600' },
 
     // Chips
-    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    chipRowScroll: { flexGrow: 0, paddingVertical: 2 },
+    chipRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
     chip: { paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: spacing.radius.full, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
     chipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
     chipText: { ...typography.caption, color: colors.textSecondary, fontWeight: '500' },

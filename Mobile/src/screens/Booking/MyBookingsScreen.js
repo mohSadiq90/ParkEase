@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useCallback, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ScrollView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyBookingsThunk } from '../../store/slices/bookingSlice';
@@ -128,7 +128,12 @@ const MyBookingsScreen = ({ navigation, route }) => {
             </View>
 
             {/* Filter Tabs */}
-            <View style={styles.filterRow}>
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterRow}
+                style={styles.filterRowScroll}
+            >
                 {FILTERS.map((filter, idx) => (
                     <TouchableOpacity
                         key={idx}
@@ -141,7 +146,7 @@ const MyBookingsScreen = ({ navigation, route }) => {
                         </Text>
                     </TouchableOpacity>
                 ))}
-            </View>
+            </ScrollView>
 
             {/* List */}
             {myBookingsLoading && !refreshing ? (
@@ -164,7 +169,8 @@ const MyBookingsScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     header: { paddingTop: spacing.sm, paddingHorizontal: spacing.screenHorizontal, paddingBottom: spacing.md },
     screenTitle: { ...typography.h2, color: colors.textPrimary },
-    filterRow: { flexDirection: 'row', paddingHorizontal: spacing.screenHorizontal, gap: spacing.sm, marginBottom: spacing.md },
+    filterRowScroll: { flexGrow: 0, marginBottom: spacing.md },
+    filterRow: { flexDirection: 'row', paddingHorizontal: spacing.screenHorizontal, gap: spacing.sm, alignItems: 'center' },
     filterTab: { paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: spacing.radius.full, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
     filterTabActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
     filterTabText: { ...typography.caption, color: colors.textSecondary, fontWeight: '500' },

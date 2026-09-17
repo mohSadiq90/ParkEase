@@ -191,10 +191,16 @@ const VehiclesScreen = ({ navigation }) => {
                         
                         {/* Vehicle Type selection */}
                         <Text style={styles.inputLabel}>Vehicle Category</Text>
-                        <View style={styles.typeRow}>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.typeRow}
+                            style={styles.typeRowScroll}
+                        >
                             {Object.entries(VehicleTypeLabels).map(([val, label]) => (
                                 <TouchableOpacity
                                     key={val}
+                                    testID={`vehicle-category-pill-${val}`}
                                     onPress={() => setNewType(Number(val))}
                                     style={[styles.typeChip, newType === Number(val) && styles.typeChipActive]}
                                 >
@@ -203,7 +209,7 @@ const VehiclesScreen = ({ navigation }) => {
                                     </Text>
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                        </ScrollView>
 
                         <TextInput
                             style={styles.input}
@@ -427,10 +433,14 @@ const styles = StyleSheet.create({
         marginBottom: 6,
         fontWeight: '600',
     },
+    typeRowScroll: {
+        marginBottom: 12,
+    },
     typeRow: {
         flexDirection: 'row',
         gap: 8,
-        marginBottom: 12,
+        alignItems: 'center',
+        paddingVertical: 2,
     },
     typeChip: {
         paddingHorizontal: 12,

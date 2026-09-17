@@ -54,6 +54,26 @@ describe('Mobile Profile Extension Screens', () => {
       const emptyTitle = await findByText('No vehicles in garage');
       expect(emptyTitle).toBeTruthy();
     });
+
+    it('opens Add Vehicle modal and renders horizontally scrollable vehicle category pills', async () => {
+      apiClient.get.mockResolvedValueOnce({ success: true, data: [] });
+
+      const { findByTestId, getByText, getByTestId } = renderWithProviders(
+        <MyVehiclesScreen navigation={mockNavigation} />
+      );
+
+      const addBtn = await findByTestId('add-vehicle-btn');
+      fireEvent.press(addBtn);
+
+      expect(getByText('Vehicle Category')).toBeTruthy();
+      expect(getByTestId('my-vehicle-category-pill-0')).toBeTruthy();
+      expect(getByTestId('my-vehicle-category-pill-1')).toBeTruthy();
+      expect(getByTestId('my-vehicle-category-pill-2')).toBeTruthy();
+      expect(getByTestId('my-vehicle-category-pill-5')).toBeTruthy();
+
+      // Tap pill
+      fireEvent.press(getByTestId('my-vehicle-category-pill-5'));
+    });
   });
 
   describe('FavoritesScreen', () => {
