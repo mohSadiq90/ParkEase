@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/globalStyles';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
+import LoadingScreen from '../../components/Common/LoadingScreen';
 import { fetchFavoritesThunk, toggleFavoriteThunk } from '../../store/slices/favoriteSlice';
 
 const FavoritesScreen = ({ navigation }) => {
@@ -76,6 +77,10 @@ const FavoritesScreen = ({ navigation }) => {
             </TouchableOpacity>
         );
     };
+
+    if (isLoading && (!favorites || favorites.length === 0)) {
+        return <LoadingScreen message="Loading favorite parking spaces..." testID="favorites-loading" />;
+    }
 
     return (
         <ScreenLayout style={styles.container}>

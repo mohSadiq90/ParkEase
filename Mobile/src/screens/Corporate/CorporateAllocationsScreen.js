@@ -9,6 +9,7 @@ import Input from '../../components/Common/Input';
 import { globalStyles, colors, spacing, typography } from '../../styles/globalStyles';
 import { EventBus } from '../../utils/EventBus';
 import { Ionicons } from '@expo/vector-icons';
+import LoadingScreen from '../../components/Common/LoadingScreen';
 
 const CorporateAllocationsScreen = () => {
     const { activeCompanyId } = useSelector((state) => state.corporate);
@@ -93,6 +94,10 @@ const CorporateAllocationsScreen = () => {
                 </View>
             </ScreenLayout>
         );
+    }
+
+    if (isLoading && (!allocations || allocations.length === 0)) {
+        return <LoadingScreen message="Loading allocations..." testID="allocations-loading" />;
     }
 
     return (

@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyPassesThunk, createPassThunk } from '../../store/slices/passSlice';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
+import LoadingScreen from '../../components/Common/LoadingScreen';
 import Card from '../../components/Common/Card';
 import Button from '../../components/Common/Button';
 import EmptyState from '../../components/Common/EmptyState';
@@ -158,6 +159,10 @@ const MyPassesScreen = ({ navigation }) => {
             Alert.alert('Purchase Failed', res.payload || 'Could not process pass purchase.');
         }
     };
+
+    if (loading && (!passes || passes.length === 0) && !refreshing) {
+        return <LoadingScreen message="Loading parking passes..." testID="passes-loading" />;
+    }
 
     return (
         <ScreenLayout>

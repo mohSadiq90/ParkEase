@@ -10,6 +10,7 @@ import Button from '../../components/Common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import apiClient from '../../services/api/apiClient';
 import ENDPOINTS from '../../services/api/endpoints';
+import { ReviewListSkeleton } from '../../components/Common/ShimmerPlaceholder';
 
 const ReviewsListScreen = ({ route, navigation }) => {
     const parkingSpaceId = route?.params?.parkingSpaceId || route?.params?.id;
@@ -124,9 +125,7 @@ const ReviewsListScreen = ({ route, navigation }) => {
             </View>
 
             {loading ? (
-                <View style={styles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                </View>
+                <ReviewListSkeleton count={4} testID="reviews-list-shimmer" />
             ) : error ? (
                 <View style={styles.centerContainer}>
                     <Text style={styles.errorText}>{error}</Text>

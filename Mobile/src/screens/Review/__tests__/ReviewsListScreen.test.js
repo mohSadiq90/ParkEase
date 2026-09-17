@@ -104,4 +104,45 @@ describe('ReviewsListScreen', () => {
             expect(Alert.alert).toHaveBeenCalledWith('Success', 'Your reply has been posted.');
         });
     });
+
+    it('renders ReviewListSkeleton shimmer animation while loading reviews', async () => {
+        let resolveReviews;
+        const reviewsPromise = new Promise((resolve) => {
+            resolveReviews = resolve;
+        });
+        apiClient.get.mockReturnValueOnce(reviewsPromise);
+
+        const { getByTestId, queryByTestId, getByText } = renderWithProviders(
+            <ReviewsListScreen
+                route={{ params: { parkingSpaceId: 'space-shimmer' } }}
+                navigation={mockNavigation}
+            />
+        );
+
+        // Verify review shimmer skeleton is visible
+        expect(getByTestId('reviews-list-shimmer')).toBeTruthy();
+
+        // Resolve reviews
+        const { act } = require('@testing-library/react-native');
+        await act(async () => {
+            resolveReviews({
+                data: {
+                    data: [
+                        {
+                            id: 'rev-shimmer-done',
+                            rating: 5,
+                            comment: 'Super convenient parking space.',
+                            user: { firstName: 'Sam', lastName: 'Taylor' },
+                            createdAt: new Date().toISOString(),
+                        },
+                    ],
+                },
+            });
+        });
+
+        await waitFor(() => {
+            expect(queryByTestId('reviews-list-shimmer')).toBeNull();
+            expect(getByText('Super convenient parking space.')).toBeTruthy();
+        });
+    });
 });

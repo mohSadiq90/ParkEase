@@ -15,6 +15,7 @@ import { colors } from '../../styles/globalStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import chatService from '../../services/chat/chatService';
+import { ChatThreadSkeleton } from '../../components/Common/ShimmerPlaceholder';
 
 const QUICK_SUGGESTIONS = [
     'Hi, is this parking space available now?',
@@ -485,8 +486,8 @@ const ChatScreen = ({ route, navigation }) => {
 
             {/* Messages */}
             {loading ? (
-                <View style={styles.centered}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                <View style={styles.listWrapper} testID="chat-loading-shimmer">
+                    <ChatThreadSkeleton testID="chat-thread-skeleton" />
                 </View>
             ) : (
                 <View style={styles.listWrapper}>

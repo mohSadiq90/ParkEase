@@ -9,6 +9,7 @@ import Input from '../../components/Common/Input';
 import { globalStyles, colors, spacing, typography } from '../../styles/globalStyles';
 import { EventBus } from '../../utils/EventBus';
 import { Ionicons } from '@expo/vector-icons';
+import LoadingScreen from '../../components/Common/LoadingScreen';
 
 const CorporateMembersScreen = () => {
     const { activeCompanyId } = useSelector((state) => state.corporate);
@@ -108,6 +109,10 @@ const CorporateMembersScreen = () => {
                 </View>
             </ScreenLayout>
         );
+    }
+
+    if (isLoading && (!members || members.length === 0)) {
+        return <LoadingScreen message="Loading company members..." testID="corporate-members-loading" />;
     }
 
     return (

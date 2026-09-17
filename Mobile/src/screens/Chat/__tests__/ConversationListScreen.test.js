@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../utils/test-utils';
 import ConversationListScreen from '../ConversationListScreen';
 import chatService from '../../../services/chat/chatService';
@@ -219,6 +219,46 @@ describe('ConversationListScreen', () => {
     await waitFor(() => {
       expect(getByText('No conversations yet')).toBeTruthy();
       expect(getByText('Start chatting from a parking listing')).toBeTruthy();
+    });
+  });
+
+  it('renders ConversationListSkeleton shimmer animation while loading conversations', async () => {
+    let resolveConvs;
+    const convsPromise = new Promise((resolve) => {
+      resolveConvs = resolve;
+    });
+    chatService.getConversations.mockReturnValueOnce(convsPromise);
+
+    const { getByTestId, queryByTestId, getByText } = renderWithProviders(
+      <ConversationListScreen navigation={mockNavigation} />
+    );
+
+    // Verify shimmer skeleton is visible
+    expect(getByTestId('conversation-list-shimmer')).toBeTruthy();
+
+    // Resolve conversations
+    await act(async () => {
+      resolveConvs({
+        success: true,
+        data: {
+          conversations: [
+            {
+              id: 'conv-shimmer-done',
+              parkingSpaceTitle: 'Grand Station Parking',
+              otherParticipantName: 'Alice Host',
+              lastMessagePreview: 'Your pass has been activated.',
+              lastMessageAt: new Date().toISOString(),
+              unreadCount: 0,
+            },
+          ],
+        },
+      });
+    });
+
+    await waitFor(() => {
+      expect(queryByTestId('conversation-list-shimmer')).toBeNull();
+      expect(getByText('Alice Host')).toBeTruthy();
+      expect(getByText('🅿️ Grand Station Parking')).toBeTruthy();
     });
   });
 });

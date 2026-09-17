@@ -14,6 +14,7 @@ import { colors, typography } from '../../styles/globalStyles';
 import chatService from '../../services/chat/chatService';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import { useAuth } from '../../hooks/useAuth';
+import { ConversationListSkeleton } from '../../components/Common/ShimmerPlaceholder';
 
 const ConversationListScreen = ({ navigation }) => {
     const { user } = useAuth();
@@ -212,9 +213,12 @@ const ConversationListScreen = ({ navigation }) => {
 
     if (loading) {
         return (
-            <View style={styles.centered}>
-                <ActivityIndicator size="large" color={colors.primary} />
-            </View>
+            <ScreenLayout edges={['top', 'bottom']}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>💬 Messages</Text>
+                </View>
+                <ConversationListSkeleton count={6} testID="conversation-list-shimmer" />
+            </ScreenLayout>
         );
     }
 

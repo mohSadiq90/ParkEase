@@ -9,6 +9,7 @@ import Input from '../../components/Common/Input';
 import { globalStyles, colors, spacing, typography } from '../../styles/globalStyles';
 import { EventBus } from '../../utils/EventBus';
 import { Ionicons } from '@expo/vector-icons';
+import LoadingScreen from '../../components/Common/LoadingScreen';
 
 const CorporateBookingsScreen = () => {
     const { activeCompanyId } = useSelector((state) => state.corporate);
@@ -118,6 +119,10 @@ const CorporateBookingsScreen = () => {
                 </View>
             </ScreenLayout>
         );
+    }
+
+    if (isLoading && (!bookings || bookings.length === 0)) {
+        return <LoadingScreen message="Loading corporate bookings..." testID="corporate-bookings-loading" />;
     }
 
     return (

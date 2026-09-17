@@ -9,6 +9,42 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Implement Animated Shimmer Skeletons for Chat, Conversations, Reviews, & All Screens (<@U06FVANTNHL>)
+- **Chat Screen & Conversation List Shimmer Skeletons (`ChatScreen.js`, `ConversationListScreen.js`, `ShimmerPlaceholder.js`)**:
+  - Replaced the circular `ActivityIndicator` spinner loader on `ChatScreen` with `ChatThreadSkeleton`, an animated message thread skeleton featuring date divider pills, avatar placeholders, and alternating incoming and outgoing message bubbles.
+  - Replaced the full-screen centered `ActivityIndicator` on `ConversationListScreen` with `ConversationListSkeleton`, rendering animated conversation rows with avatar circles, participant titles, timestamp bars, and message previews.
+  - Upgraded `ScreenShimmer` and `ShimmerPlaceholder.js` with modular skeletons: `ChatThreadSkeleton`, `ConversationItemSkeleton`, `ConversationListSkeleton`, `ReviewItemSkeleton`, and `ReviewListSkeleton`.
+- **App-Wide Shimmer Skeleton Loading Audit & Standardized Coverage**:
+  - Audited all screens across the mobile application for loader/spinner usage and missing shimmer skeletons.
+  - Integrated `ReviewListSkeleton` into `ReviewsListScreen.js`, replacing the bare centered `ActivityIndicator` spinner.
+  - Integrated `LoadingScreen` (with animated shimmer skeletons) across screens previously lacking shimmer during initial API data fetch: `CompanyManagementScreen.js`, `CorporateAllocationsScreen.js`, `CorporateBookingsScreen.js`, `CorporateMembersScreen.js`, `FavoritesScreen.js`, `MyPassesScreen.js`, and `VehiclesScreen.js`.
+- **Automated Testing Suite**:
+  - Added 4 unit tests in `Mobile/src/components/Common/__tests__/ShimmerPlaceholder.test.js` testing `ChatThreadSkeleton`, `ConversationListSkeleton`, `ReviewListSkeleton`, and `ScreenShimmer` types.
+  - Added unit test in `Mobile/src/screens/Chat/__tests__/ChatScreen.test.js` verifying `ChatThreadSkeleton` shimmer animation displays during message fetching.
+  - Added unit test in `Mobile/src/screens/Chat/__tests__/ConversationListScreen.test.js` verifying `ConversationListSkeleton` shimmer animation displays during conversation list loading.
+  - Added unit test in `Mobile/src/screens/Review/__tests__/ReviewsListScreen.test.js` verifying `ReviewListSkeleton` shimmer animation displays during review loading.
+  - Executed full Mobile automated test suite: **100% pass rate** (52/52 test suites, 305/305 tests passing cleanly).
+- **Key Files Modified**:
+  - `Mobile/src/components/Common/ShimmerPlaceholder.js`
+  - `Mobile/src/components/Common/__tests__/ShimmerPlaceholder.test.js`
+  - `Mobile/src/screens/Chat/ChatScreen.js`
+  - `Mobile/src/screens/Chat/ConversationListScreen.js`
+  - `Mobile/src/screens/Chat/__tests__/ChatScreen.test.js`
+  - `Mobile/src/screens/Chat/__tests__/ConversationListScreen.test.js`
+  - `Mobile/src/screens/Corporate/CompanyManagementScreen.js`
+  - `Mobile/src/screens/Corporate/CorporateAllocationsScreen.js`
+  - `Mobile/src/screens/Corporate/CorporateBookingsScreen.js`
+  - `Mobile/src/screens/Corporate/CorporateMembersScreen.js`
+  - `Mobile/src/screens/Favorites/FavoritesScreen.js`
+  - `Mobile/src/screens/Passes/MyPassesScreen.js`
+  - `Mobile/src/screens/Review/ReviewsListScreen.js`
+  - `Mobile/src/screens/Review/__tests__/ReviewsListScreen.test.js`
+  - `Mobile/src/screens/Vehicles/VehiclesScreen.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 52 test suites passing cleanly (305/305 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Chat Screen Fake Presence Indicator & Implement Recent Chats Delivery Receipt Checkmarks (<@U06FVANTNHL>)
 - **Removal of Misleading Fake Online Green Dot (`ChatScreen.js`)**:
   - Investigated the green dot below the participant name in the `ChatScreen` header (`onlineDot`).

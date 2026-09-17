@@ -492,4 +492,50 @@ describe('ChatScreen', () => {
       expect(doubleCheckmarks.length).toBe(2);
     });
   });
+
+  it('renders ChatThreadSkeleton shimmer animation while loading messages', async () => {
+    let resolveMessages;
+    const messagesPromise = new Promise((resolve) => {
+      resolveMessages = resolve;
+    });
+    chatService.getMessages.mockReturnValueOnce(messagesPromise);
+
+    const route = {
+      params: {
+        conversationId: 'conv-shimmer-test',
+        parkingSpaceId: 'spot-99',
+        participantName: 'Host Liam',
+        parkingTitle: 'North Lot',
+      },
+    };
+
+    const { getByTestId, queryByTestId, getByText } = renderWithProviders(
+      <ChatScreen navigation={mockNavigation} route={route} />
+    );
+
+    // Verify shimmer skeleton is visible during loading
+    expect(getByTestId('chat-loading-shimmer')).toBeTruthy();
+    expect(getByTestId('chat-thread-skeleton')).toBeTruthy();
+
+    // Now resolve messages
+    await act(async () => {
+      resolveMessages({
+        success: true,
+        data: [
+          {
+            id: 'msg-shimmer-done',
+            senderId: 'user-2',
+            senderName: 'Host Liam',
+            content: 'Welcome to the parking lot!',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(queryByTestId('chat-thread-skeleton')).toBeNull();
+      expect(getByText('Welcome to the parking lot!')).toBeTruthy();
+    });
+  });
 });

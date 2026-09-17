@@ -7,6 +7,11 @@ import {
   ListSkeleton,
   DetailSkeleton,
   DashboardSkeleton,
+  ChatThreadSkeleton,
+  ConversationItemSkeleton,
+  ConversationListSkeleton,
+  ReviewItemSkeleton,
+  ReviewListSkeleton,
   ScreenShimmer,
 } from '../ShimmerPlaceholder';
 import LoadingScreen from '../LoadingScreen';
@@ -95,5 +100,49 @@ describe('ShimmerPlaceholder Component & Skeletons', () => {
     expect(getByTestId('app-loading-screen')).toBeTruthy();
     expect(getByText('Fetching parking data...')).toBeTruthy();
     expect(getByTestId('loading-shimmer')).toBeTruthy();
+  });
+
+  it('renders ChatThreadSkeleton with date divider, avatars, and message bubbles', () => {
+    const { getByTestId } = render(<ChatThreadSkeleton testID="test-chat-thread" />);
+
+    expect(getByTestId('test-chat-thread')).toBeTruthy();
+    expect(getByTestId('test-chat-thread-date')).toBeTruthy();
+    expect(getByTestId('test-chat-thread-avatar-0')).toBeTruthy();
+    expect(getByTestId('test-chat-thread-avatar-1')).toBeTruthy();
+    expect(getByTestId('test-chat-thread-avatar-2')).toBeTruthy();
+  });
+
+  it('renders ConversationListSkeleton with rows of avatar, header, and preview bars', () => {
+    const { getByTestId } = render(<ConversationListSkeleton count={3} testID="test-conv-list" />);
+
+    expect(getByTestId('test-conv-list')).toBeTruthy();
+    expect(getByTestId('conv-item-0-avatar')).toBeTruthy();
+    expect(getByTestId('conv-item-0-name')).toBeTruthy();
+    expect(getByTestId('conv-item-0-preview')).toBeTruthy();
+    expect(getByTestId('conv-item-1-avatar')).toBeTruthy();
+    expect(getByTestId('conv-item-2-avatar')).toBeTruthy();
+  });
+
+  it('renders ReviewListSkeleton with reviewer avatars and star placeholders', () => {
+    const { getByTestId } = render(<ReviewListSkeleton count={2} testID="test-review-list" />);
+
+    expect(getByTestId('test-review-list')).toBeTruthy();
+    expect(getByTestId('review-item-0-avatar')).toBeTruthy();
+    expect(getByTestId('review-item-0-name')).toBeTruthy();
+    expect(getByTestId('review-item-0-stars')).toBeTruthy();
+    expect(getByTestId('review-item-1-avatar')).toBeTruthy();
+  });
+
+  it('renders ScreenShimmer with chat, conversation, and review types', () => {
+    const { getByTestId, rerender } = render(
+      <ScreenShimmer loading={true} type="chat" testID="chat-shimmer" />
+    );
+    expect(getByTestId('chat-shimmer')).toBeTruthy();
+
+    rerender(<ScreenShimmer loading={true} type="conversation" testID="conv-shimmer" />);
+    expect(getByTestId('conv-shimmer')).toBeTruthy();
+
+    rerender(<ScreenShimmer loading={true} type="review" testID="review-shimmer" />);
+    expect(getByTestId('review-shimmer')).toBeTruthy();
   });
 });

@@ -10,6 +10,7 @@ import Input from '../../components/Common/Input';
 import { globalStyles, colors, spacing, typography } from '../../styles/globalStyles';
 import { EventBus } from '../../utils/EventBus';
 import { Ionicons } from '@expo/vector-icons';
+import LoadingScreen from '../../components/Common/LoadingScreen';
 
 const CompanyManagementScreen = () => {
     const dispatch = useDispatch();
@@ -89,6 +90,10 @@ const CompanyManagementScreen = () => {
             </Card>
         );
     };
+
+    if (isLoading && (!myCompanies || myCompanies.length === 0)) {
+        return <LoadingScreen message="Loading companies..." testID="companies-loading" />;
+    }
 
     return (
         <ScreenLayout scrollable={false} edges={['top']}>

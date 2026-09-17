@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Ale
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../../styles/globalStyles';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
+import LoadingScreen from '../../components/Common/LoadingScreen';
 import { vehicleService } from '../../services/api/vehicleService';
 import { VehicleType, VehicleTypeLabels } from '../../utils/constants';
 import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
@@ -160,6 +161,10 @@ const VehiclesScreen = ({ navigation }) => {
             </View>
         );
     };
+
+    if (loading && (!vehicles || vehicles.length === 0) && !isAdding) {
+        return <LoadingScreen message="Loading vehicles..." testID="vehicles-loading" />;
+    }
 
     return (
         <ScreenLayout style={styles.container}>
