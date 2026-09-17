@@ -58,15 +58,6 @@ export const VENDOR_FEATURE_TILES = [
         params: { initialTab: 'all' },
     },
     {
-        id: 'gate_scanner',
-        title: 'Gate Scanner',
-        subtitle: 'Scan driver QR pass',
-        icon: 'qr-code-outline',
-        color: '#0D9488',
-        screen: 'AccessPassScanner',
-        params: {},
-    },
-    {
         id: 'event_packages',
         title: 'Event Packages',
         subtitle: 'Venue zones & passes',
@@ -92,15 +83,6 @@ export const VENDOR_FEATURE_TILES = [
         color: '#EC4899',
         screen: 'ConversationList',
         params: {},
-    },
-    {
-        id: 'find_parking',
-        title: 'Explore Spots',
-        subtitle: 'Marketplace parking',
-        icon: 'search-outline',
-        color: '#0284C7',
-        screen: 'Search',
-        params: { focusSearch: true },
     },
     {
         id: 'lpr_simulator',
@@ -200,6 +182,35 @@ const VendorDashboardScreen = ({ navigation }) => {
         ]);
     }, [dispatch]);
 
+    const handleFindParking = useCallback(() => {
+        try {
+            const parent = navigation?.getParent?.();
+            const parentRouteNames = parent?.getState?.()?.routeNames;
+            if (parentRouteNames?.includes('SearchTab')) {
+                parent.navigate('SearchTab', { screen: 'Search', params: { focusSearch: true } });
+                return;
+            }
+        } catch (_) {}
+
+        try {
+            if (navigation?.navigate) {
+                navigation.navigate('Search', { focusSearch: true });
+                return;
+            }
+        } catch (_) {}
+
+        try {
+            navigation?.navigate?.('Search', { focusSearch: true });
+            return;
+        } catch (_) {}
+
+        try {
+            navigation?.navigate?.('MenuTab', { screen: 'Search', params: { focusSearch: true } });
+        } catch (err) {
+            console.warn('Navigation to Search failed:', err);
+        }
+    }, [navigation]);
+
     if (loading && !data) return <LoadingScreen />;
 
     const pendingApprovalsCount = data?.pendingBookings ??
@@ -285,6 +296,7 @@ const VendorDashboardScreen = ({ navigation }) => {
                     </View>
                 );
 
+            case 'actionButtons':
             case 'gateScanner':
                 return (
                     <View style={styles.actionButtonsContainer}>
@@ -292,20 +304,19 @@ const VendorDashboardScreen = ({ navigation }) => {
                             style={styles.gateScannerBtn}
                             onPress={() => navigation?.navigate?.('AccessPassScanner')}
                             activeOpacity={0.85}
+                            accessibilityRole="button"
+                            accessibilityLabel="Gate Access Scanner"
                         >
                             <Ionicons name="qr-code-outline" size={22} color={colors.white} style={{ marginRight: 8 }} />
                             <Text style={styles.gateScannerText}>Gate Access Scanner</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.findParkingBtn}
-                            onPress={() => {
-                                try {
-                                    navigation?.navigate?.('SearchTab', { screen: 'Search' });
-                                } catch (_) {
-                                    navigation?.navigate?.('Search');
-                                }
-                            }}
+                            onPress={handleFindParking}
                             activeOpacity={0.85}
+                            accessibilityRole="button"
+                            accessibilityLabel="Find & Explore Parking"
+                            testID="find-explore-parking-button"
                         >
                             <Ionicons name="search-outline" size={20} color={colors.primaryAccent} style={{ marginRight: 8 }} />
                             <Text style={styles.findParkingText}>Find & Explore Parking</Text>

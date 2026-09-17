@@ -84,24 +84,6 @@ const bookingStyles = StyleSheet.create({
 
 export const MEMBER_FEATURE_TILES = [
     {
-        id: 'search',
-        title: 'Find Parking',
-        subtitle: 'Explore spots & rates',
-        icon: 'search',
-        color: colors.primary,
-        screen: 'Search',
-        params: { focusSearch: true },
-    },
-    {
-        id: 'bookings',
-        title: 'Reservations',
-        subtitle: 'Driver bookings & passes',
-        icon: 'calendar',
-        color: '#2563EB',
-        screen: 'MyBookings',
-        params: { initialTab: 'all' },
-    },
-    {
         id: 'vehicles',
         title: 'My Garage',
         subtitle: 'Vehicles & plates',

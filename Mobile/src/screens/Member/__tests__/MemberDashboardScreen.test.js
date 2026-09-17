@@ -141,6 +141,10 @@ describe('MemberDashboardScreen', () => {
       }
     );
 
+    const { queryByText } = renderWithProviders(
+      <MemberDashboardScreen navigation={mockNavigation} />
+    );
+
     await waitFor(() => {
       expect(getByText('Features & Quick Access')).toBeTruthy();
       expect(getByText('My Garage')).toBeTruthy();
@@ -149,6 +153,9 @@ describe('MemberDashboardScreen', () => {
       expect(getByText('Gate Pass QR')).toBeTruthy();
       expect(getByText('EV Charging')).toBeTruthy();
       expect(getByText('LPR Simulator')).toBeTruthy();
+      // Verify duplicate/redundant tiles are removed
+      expect(queryByText('Explore spots & rates')).toBeNull();
+      expect(queryByText('Reservations')).toBeNull();
     });
 
     // Press My Garage tile

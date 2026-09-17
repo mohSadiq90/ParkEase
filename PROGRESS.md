@@ -9,6 +9,28 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Find & Explore Parking Big Button & Eliminate Home Screen Redundancy (<@U06FVANTNHL>)
+- **Find & Explore Parking Big Button Navigation Fix**:
+  - Investigated issue reported by `<@U06FVANTNHL>`: the prominent "Find & Explore Parking" button on the home screen (`VendorDashboardScreen.js`) failed to navigate because it called `navigation.navigate('SearchTab', ...)`, which does not exist in `HomeStack` or in `AppTabNavigator` for vendor roles. Since React Navigation does not throw an error on unhandled routes, the `catch` block was ignored and the press silently failed.
+  - Implemented `handleFindParking`: routes directly to `'Search'` within `HomeStack` (`navigation.navigate('Search', { focusSearch: true })`) while supporting parent `SearchTab` when available. Added `accessibilityRole="button"`, `accessibilityLabel="Find & Explore Parking"`, and `testID="find-explore-parking-button"`.
+- **Home Screen Redundancy Removal**:
+  - `VendorDashboardScreen.js`: Removed redundant `gate_scanner` ("Gate Scanner") and `find_parking` ("Explore Spots") tiles from `VENDOR_FEATURE_TILES`, since both actions are prominently provided by the dedicated "Gate Access Scanner" and "Find & Explore Parking" action buttons above the grid. Streamlined feature grid to 8 distinct host operations tools (Add Space, My Listings, Host Bookings, Event Packages, LPR Cameras, Messages, LPR Simulator, EV Simulator).
+  - `MemberDashboardScreen.js`: Removed redundant `search` ("Find Parking") and `bookings` ("Reservations") tiles from `MEMBER_FEATURE_TILES`, since search is prominently handled by the Hero search bar CTA and reservations are handled by the 3 stats cards and bottom tab bar. Streamlined member feature grid to 8 unique feature tools (My Garage, Favorites, Digital Passes, Event Passes, Messages, Gate Pass QR, EV Charging, LPR Simulator).
+- **Automated Testing & Verification**:
+  - Updated `VendorDashboardScreen.test.js`: added test verifying tapping "Find & Explore Parking" invokes `mockNavigation.navigate('Search', { focusSearch: true })`, added test for parent `SearchTab` routing, and asserted that duplicate tiles (`Explore Spots`) are removed.
+  - Updated `MemberDashboardScreen.test.js`: asserted that duplicate tiles (`Explore spots & rates`, `Reservations`) are removed from the member feature grid.
+  - Executed full Mobile test suite (`npm test -- --watchAll=false` in `Mobile/`): **100% pass rate** (48/48 test suites, 236/236 unit tests passing).
+  - Maintained strict mobile-only scope: zero modifications to `backend/` or `frontend/`.
+- **Key Files Modified**:
+  - `Mobile/src/screens/Vendor/VendorDashboardScreen.js`
+  - `Mobile/src/screens/Member/MemberDashboardScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/VendorDashboardScreen.test.js`
+  - `Mobile/src/screens/Member/__tests__/MemberDashboardScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 48 mobile test suites passing cleanly (236/236 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Mobile Logout Delay with Instant Optimistic Authentication Reset (<@U06FVANTNHL>)
 - **Instant Optimistic Client Logout & Non-Blocking Server Revocation**:
   - Investigated logout latency reported by `<@U06FVANTNHL>`: identified that `authService.logout()` previously awaited a synchronous HTTP POST request to `/auth/logout` (`await apiClient.post(ENDPOINTS.AUTH.LOGOUT)`), which caused a multi-second UI stall while awaiting the network round trip. In addition, `authSlice` previously only cleared `state.isAuthenticated` on `logoutThunk.fulfilled`, keeping the user stuck on the current screen until the network responded.

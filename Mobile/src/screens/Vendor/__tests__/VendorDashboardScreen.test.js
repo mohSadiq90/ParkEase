@@ -150,10 +150,25 @@ describe('VendorDashboardScreen', () => {
     expect(getByText('Add Space')).toBeTruthy();
     expect(getByText('My Listings')).toBeTruthy();
     expect(getByText('Host Bookings')).toBeTruthy();
-    expect(getByText('Gate Scanner')).toBeTruthy();
+    expect(getByText('Messages')).toBeTruthy();
     expect(getByText('LPR Cameras')).toBeTruthy();
+    expect(getByText('Event Packages')).toBeTruthy();
 
     const { fireEvent } = require('@testing-library/react-native');
+
+    // Press Find & Explore Parking big button (now working smoothly)
+    fireEvent.press(getByLabelText('Find & Explore Parking'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Search', { focusSearch: true });
+
+    // Press Gate Access Scanner primary action button
+    fireEvent.press(getByLabelText('Gate Access Scanner'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('AccessPassScanner');
+
+    // Verify redundant duplicate tiles (Explore Spots, duplicate Gate Scanner) are not in the grid
+    const { queryByText } = renderWithProviders(
+      <VendorDashboardScreen navigation={mockNavigation} />
+    );
+    expect(queryByText('Explore Spots')).toBeNull();
 
     // Press Add Space tile
     fireEvent.press(getByLabelText('Add Space'));
@@ -166,6 +181,32 @@ describe('VendorDashboardScreen', () => {
     // Press Today's Bookings metric card
     fireEvent.press(getByLabelText("Today's Bookings"));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('IncomingBookings', { initialTab: 'today', filter: 'today' });
+  });
+
+  it('Find & Explore Parking big button navigates to parent SearchTab when present in parent navigator', async () => {
+    apiClient.get.mockResolvedValue({ data: { data: { totalParkingSpaces: 1, recentBookings: [] } } });
+
+    const mockParent = {
+      navigate: jest.fn(),
+      getState: jest.fn(() => ({ routeNames: ['HomeTab', 'SearchTab', 'BookingsTab', 'MenuTab'] })),
+    };
+    const mockNavigationWithParent = {
+      navigate: jest.fn(),
+      getParent: jest.fn(() => mockParent),
+    };
+
+    const { findByLabelText } = renderWithProviders(
+      <VendorDashboardScreen navigation={mockNavigationWithParent} />
+    );
+
+    const findParkingBtn = await findByLabelText('Find & Explore Parking');
+    const { fireEvent } = require('@testing-library/react-native');
+    fireEvent.press(findParkingBtn);
+
+    expect(mockParent.navigate).toHaveBeenCalledWith('SearchTab', {
+      screen: 'Search',
+      params: { focusSearch: true },
+    });
   });
 
   it('renders dynamic personalized host greetings when user profile is present', async () => {
