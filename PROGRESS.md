@@ -9,6 +9,40 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Listing Screen UX Friction: Status Signals, Edit Affordance, Visual Thumbnails, FAB Ergonomics & On-Surface Quick Edit (<@U06FVANTNHL>)
+- **Redundant Status Signals Elimination & 3rd State Clarification**:
+  - Addressed UX feedback where the card featured both an interactive green toggle (top right) and a static "● Active" text badge communicating the exact same state.
+  - Eliminated the redundant static "● Active" / "● Inactive" text badge from the info row and card footer, leaving the interactive switch as the single clear control for active/paused status.
+  - Clarified third backend states: if a listing is under review (`PendingApproval` / `approvalStatus === 'Pending'`) or suspended (`Suspended` / `isSuspended`), a dedicated colored banner explains the status and locks/disables the toggle switch with 45% opacity and an explanatory accessibility label.
+- **Missing Edit Affordance**:
+  - Added subtle chevron icon (`>`) next to the listing title (`testID="edit-chevron-<id>"`) providing immediate visual affordance that the card is tappable to open the listing editor (`CreateParkingScreen`).
+  - Preserved full-card touch target and quick-edit pencil icons.
+- **Visual Square Thumbnails for Property Scannability**:
+  - Added a 52x52 rounded square thumbnail image (`listing-thumb-<id>`) on the left side of every listing card.
+  - Robustly extracts primary image from `imageUrls`, `images`, or `imageUrl`.
+  - Added a clean square placeholder with car icon (`listing-thumb-placeholder-<id>`) when no photo has been uploaded, guaranteeing consistent list alignment and scan-friendliness for hosts with multiple properties.
+- **FAB Ergonomics (Floating Action Button)**:
+  - Replaced the top-right docked add button with an ergonomic, thumb-reachable Floating Action Button (`testID="add-listing-button"`) docked in the bottom-right corner above the bottom nav bar.
+  - Preserved standard `testID="add-listing-button"` and increased FlatList content bottom padding (100px) to prevent floating button occlusion.
+- **Empty State Review Clutter Elimination**:
+  - Replaced the distracting `☆☆☆☆☆ 0.0 (0)` review string on listings with zero reviews with a muted `"No reviews yet"` italic text indicator (`no-reviews-<id>`).
+  - Star ratings and review count only render once real ratings have been received (`rating-summary-<id>`).
+- **Direct On-Surface Quick-Edit for Pricing & Availability**:
+  - Answered user inquiry and added direct inventory management on the listings surface: made "Hourly Rate" and "Spots Available" info cards directly interactive with pencil cues (`quick-edit-rate-<id>` and `quick-edit-spots-<id>`).
+  - Tapping either opens the **Quick Edit Inventory Modal** on this surface without navigating to deeper screens.
+  - Host can adjust Hourly Rate, Total Spots, and Available Spots using quick +/- steppers or direct input.
+  - Saves changes directly via `updateParkingThunk`, updating inventory in Redux and on screen immediately.
+- **Automated Testing & Mobile-Only Scope**:
+  - Added 7 new unit tests in `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js` (total 20 unit tests) covering thumbnails, chevron affordance, muted no-reviews text, third-state lock/banner, redundant badge removal, and Quick Edit modal workflow.
+  - Executed full Mobile test suite: **100% pass rate** (51/51 test suites, 286/286 unit tests passing).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Vendor/MyListingsScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 51 mobile test suites passing cleanly (286/286 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Booking Screen UX: Navigation Mismatch, Filter Alignment, Currency & Duration Formatting (<@U06FVANTNHL>)
 - **Bottom Navigation Mismatch & Wayfinding**:
   - Investigated UX issue where navigating to Bookings from the Dashboard kept the "Home" tab active in the bottom navigation bar while displaying the "Bookings" screen.

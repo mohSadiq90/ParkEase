@@ -366,4 +366,231 @@ describe('MyListingsScreen', () => {
       );
     });
   });
+
+  it('renders square thumbnail when image is available and placeholder when absent', () => {
+    const listingsWithImages = [
+      {
+        ...sampleListings[0],
+        id: 'img-space',
+        imageUrl: 'https://example.com/photo.jpg',
+      },
+      {
+        ...sampleListings[1],
+        id: 'no-img-space',
+        imageUrl: null,
+      },
+    ];
+
+    const { getByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: listingsWithImages,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    expect(getByTestId('listing-thumb-img-space')).toBeTruthy();
+    expect(getByTestId('listing-thumb-placeholder-no-img-space')).toBeTruthy();
+  });
+
+  it('renders subtle chevron icon for edit affordance on card', () => {
+    const { getByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    expect(getByTestId('edit-chevron-space-1')).toBeTruthy();
+    expect(getByTestId('edit-chevron-space-2')).toBeTruthy();
+  });
+
+  it('does not render redundant static Active text badge in info row', () => {
+    const { queryByText, getAllByText } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    // Filter tabs have "Active (1)" and "Inactive (1)", but the card info row should NOT have standalone "Active" or "Inactive"
+    expect(queryByText('● Active')).toBeNull();
+    expect(queryByText('● Inactive')).toBeNull();
+  });
+
+  it('renders muted "No reviews yet" for listings with zero reviews and star rating for listings with reviews', () => {
+    const testListings = [
+      {
+        ...sampleListings[0],
+        id: 'rev-space-1',
+        averageRating: 4.8,
+        totalReviews: 14,
+      },
+      {
+        ...sampleListings[1],
+        id: 'rev-space-2',
+        averageRating: 0,
+        totalReviews: 0,
+      },
+    ];
+
+    const { getByTestId, queryByTestId, getByText } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: testListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    expect(getByTestId('rating-summary-rev-space-1')).toBeTruthy();
+    expect(getByText('4.8 (14)')).toBeTruthy();
+
+    expect(getByTestId('no-reviews-rev-space-2')).toBeTruthy();
+    expect(getByText('No reviews yet')).toBeTruthy();
+    expect(queryByTestId('rating-summary-rev-space-2')).toBeNull();
+  });
+
+  it('handles third backend state (Pending Approval / Suspended) by showing banner and disabling toggle switch', () => {
+    const thirdStateListings = [
+      {
+        ...sampleListings[0],
+        id: 'pending-space',
+        status: 'PendingApproval',
+        isActive: false,
+      },
+      {
+        ...sampleListings[1],
+        id: 'suspended-space',
+        status: 'Suspended',
+        isActive: false,
+      },
+    ];
+
+    const { getByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: thirdStateListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    expect(getByTestId('pending-approval-banner-pending-space')).toBeTruthy();
+    expect(getByTestId('suspended-banner-suspended-space')).toBeTruthy();
+
+    const pendingSwitch = getByTestId('toggle-switch-pending-space');
+    expect(pendingSwitch.props.disabled).toBe(true);
+
+    const suspendedSwitch = getByTestId('toggle-switch-suspended-space');
+    expect(suspendedSwitch.props.disabled).toBe(true);
+  });
+
+  it('opens Quick Edit modal when tapping hourly rate or spots and saves changes without navigating away', async () => {
+    jest.spyOn(Alert, 'alert');
+    apiClient.put.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          ...sampleListings[0],
+          hourlyRate: 20,
+          totalSpots: 25,
+          availableSpots: 15,
+        },
+      },
+    });
+
+    const { getByTestId, queryByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    // Tap the hourly rate chip on space-1
+    fireEvent.press(getByTestId('quick-edit-rate-space-1'));
+
+    // Quick Edit modal should now be visible
+    expect(getByTestId('quick-edit-modal')).toBeTruthy();
+    expect(getByTestId('quick-edit-rate-input').props.value).toBe('15');
+    expect(getByTestId('quick-edit-total-spots-input').props.value).toBe('20');
+    expect(getByTestId('quick-edit-available-spots-input').props.value).toBe('12');
+
+    // Use stepper buttons
+    fireEvent.press(getByTestId('quick-edit-rate-plus-btn')); // 15 + 5 = 20
+    expect(getByTestId('quick-edit-rate-input').props.value).toBe('20');
+
+    fireEvent.changeText(getByTestId('quick-edit-total-spots-input'), '25');
+    fireEvent.changeText(getByTestId('quick-edit-available-spots-input'), '15');
+
+    // Press Save Changes
+    fireEvent.press(getByTestId('quick-edit-save-button'));
+
+    await waitFor(() => {
+      expect(apiClient.put).toHaveBeenCalledWith(
+        expect.stringContaining('space-1'),
+        expect.objectContaining({
+          hourlyRate: 20,
+          totalSpots: 25,
+          availableSpots: 15,
+        })
+      );
+    });
+
+    // Alert confirms success
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Updated',
+      'Pricing & availability updated successfully.'
+    );
+
+    // Verify modal is closed
+    expect(queryByTestId('quick-edit-modal')).toBeNull();
+    // Verify no navigation occurred away from the screen
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('CreateParking', expect.anything());
+  });
+
+  it('opens Quick Edit modal via spots chip and closes when pressing cancel', () => {
+    const { getByTestId, queryByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    fireEvent.press(getByTestId('quick-edit-spots-space-1'));
+    expect(getByTestId('quick-edit-modal')).toBeTruthy();
+
+    fireEvent.press(getByTestId('quick-edit-cancel-button'));
+    expect(queryByTestId('quick-edit-modal')).toBeNull();
+  });
 });

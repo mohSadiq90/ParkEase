@@ -1,6 +1,6 @@
 /**
  * MyListingsScreen
- * Host's parking space listings with edit, view, filter, search, and toggle actions
+ * Host's parking space listings with quick edit, deep edit, view, filter, search, FAB, and toggle actions
  */
 
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
@@ -16,11 +16,19 @@ import {
     Image,
     Platform,
     Alert,
+    Modal,
+    KeyboardAvoidingView,
+    ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getMyListingsThunk, toggleParkingActiveThunk, deleteParkingThunk } from '../../store/slices/parkingSlice';
+import {
+    getMyListingsThunk,
+    toggleParkingActiveThunk,
+    deleteParkingThunk,
+    updateParkingThunk,
+} from '../../store/slices/parkingSlice';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import EmptyState from '../../components/Common/EmptyState';
@@ -30,30 +38,56 @@ import { colors, spacing, typography, shadows } from '../../styles/globalStyles'
 import { formatCurrency } from '../../utils/formatters';
 import { ParkingTypeLabels } from '../../utils/constants';
 
-const ListingCard = ({ listing, onToggle, onEdit, onView, onDelete }) => {
-    const thumbnail = listing.imageUrl || (Array.isArray(listing.imageUrls) && listing.imageUrls[0]);
+const ListingCard = ({ listing, onToggle, onEdit, onView, onDelete, onQuickEdit }) => {
+    const thumbnailUri =
+        (typeof listing.imageUrl === 'string' && listing.imageUrl.trim() !== '') ? listing.imageUrl.trim() :
+        (Array.isArray(listing.imageUrls) && listing.imageUrls.length > 0 && typeof listing.imageUrls[0] === 'string') ? listing.imageUrls[0] :
+        (Array.isArray(listing.images) && listing.images.length > 0 && typeof listing.images[0] === 'string') ? listing.images[0] :
+        null;
+
     const typeLabel = ParkingTypeLabels[listing.parkingType] || 'Standard';
+
+    // Third backend state indicators (e.g. pending approval or suspended)
+    const isPendingApproval = listing.status === 'PendingApproval' || listing.approvalStatus === 'Pending';
+    const isSuspended = listing.status === 'Suspended' || Boolean(listing.isSuspended);
+    const isToggleDisabled = isPendingApproval || isSuspended;
+
+    const hasReviews = Boolean(listing.totalReviews && listing.totalReviews > 0 && listing.averageRating);
 
     return (
         <Card
             onPress={() => onEdit(listing)}
             accessibilityRole="button"
-            accessibilityLabel={`Listing: ${listing.title}`}
+            accessibilityLabel={`Listing: ${listing.title}. Tap to edit listing.`}
             testID={`listing-card-${listing.id}`}
         >
             <View style={cardStyles.headerRow}>
-                {thumbnail ? (
-                    <Image source={{ uri: thumbnail }} style={cardStyles.thumb} resizeMode="cover" />
+                {thumbnailUri ? (
+                    <Image
+                        source={{ uri: thumbnailUri }}
+                        style={cardStyles.thumb}
+                        resizeMode="cover"
+                        testID={`listing-thumb-${listing.id}`}
+                    />
                 ) : (
-                    <View style={cardStyles.thumbPlaceholder}>
-                        <Ionicons name="car" size={24} color={colors.primary} />
+                    <View style={cardStyles.thumbPlaceholder} testID={`listing-thumb-placeholder-${listing.id}`}>
+                        <Ionicons name="car-outline" size={24} color={colors.primary} />
                     </View>
                 )}
 
                 <View style={cardStyles.headerInfo}>
-                    <Text style={cardStyles.title} numberOfLines={1}>
-                        {listing.title}
-                    </Text>
+                    <View style={cardStyles.titleChevronRow}>
+                        <Text style={cardStyles.title} numberOfLines={1}>
+                            {listing.title}
+                        </Text>
+                        <Ionicons
+                            name="chevron-forward"
+                            size={18}
+                            color={colors.textTertiary}
+                            style={cardStyles.chevron}
+                            testID={`edit-chevron-${listing.id}`}
+                        />
+                    </View>
                     <View style={cardStyles.locationRow}>
                         <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
                         <Text style={cardStyles.address} numberOfLines={1}>
@@ -90,16 +124,42 @@ const ListingCard = ({ listing, onToggle, onEdit, onView, onDelete }) => {
                     </TouchableOpacity>
 
                     <Switch
-                        value={listing.isActive}
-                        onValueChange={() => onToggle(listing.id)}
+                        value={Boolean(listing.isActive)}
+                        disabled={isToggleDisabled}
+                        onValueChange={() => {
+                            if (!isToggleDisabled) {
+                                onToggle(listing.id);
+                            }
+                        }}
                         trackColor={{ false: colors.lightGray, true: colors.successLight }}
                         thumbColor={listing.isActive ? colors.success : colors.mediumGray}
                         accessibilityRole="switch"
-                        accessibilityLabel={`Toggle status for ${listing.title}`}
+                        accessibilityLabel={
+                            isPendingApproval
+                                ? `Listing ${listing.title} is pending approval and cannot be toggled`
+                                : isSuspended
+                                ? `Listing ${listing.title} is suspended and cannot be toggled`
+                                : `Toggle active status for ${listing.title}`
+                        }
                         testID={`toggle-switch-${listing.id}`}
+                        style={isToggleDisabled ? { opacity: 0.45 } : null}
                     />
                 </View>
             </View>
+
+            {/* Third Backend State Clarification Banners */}
+            {isPendingApproval && (
+                <View style={cardStyles.pendingBanner} testID={`pending-approval-banner-${listing.id}`}>
+                    <Ionicons name="time-outline" size={13} color="#B45309" />
+                    <Text style={cardStyles.pendingBannerText}>Pending Approval • Toggle locked while under review</Text>
+                </View>
+            )}
+            {isSuspended && (
+                <View style={cardStyles.suspendedBanner} testID={`suspended-banner-${listing.id}`}>
+                    <Ionicons name="alert-circle-outline" size={13} color="#B91C1C" />
+                    <Text style={cardStyles.suspendedBannerText}>Suspended • Contact support to re-activate</Text>
+                </View>
+            )}
 
             {/* Badges / Features */}
             <View style={cardStyles.badgesRow}>
@@ -126,47 +186,64 @@ const ListingCard = ({ listing, onToggle, onEdit, onView, onDelete }) => {
                 )}
             </View>
 
-            {/* Metrics Info */}
+            {/* Interactive Pricing & Availability Surface (Quick-Edit on Tap) */}
             <View style={cardStyles.infoRow}>
-                <View style={cardStyles.infoItem}>
-                    <Text style={cardStyles.infoLabel}>Hourly Rate</Text>
-                    <Text style={cardStyles.infoValue}>{formatCurrency(listing.hourlyRate)}/hr</Text>
-                </View>
-                <View style={cardStyles.infoItem}>
-                    <Text style={cardStyles.infoLabel}>Spots</Text>
-                    <Text style={cardStyles.infoValue}>
-                        {listing.availableSpots ?? listing.totalSpots}/{listing.totalSpots}
-                    </Text>
-                </View>
-                <View style={cardStyles.infoItem}>
-                    <Text style={cardStyles.infoLabel}>Status</Text>
-                    <View style={cardStyles.statusBadgeInline}>
-                        <View
-                            style={[
-                                cardStyles.statusDot,
-                                { backgroundColor: listing.isActive ? colors.success : colors.mediumGray },
-                            ]}
-                        />
-                        <Text
-                            style={[
-                                cardStyles.statusText,
-                                { color: listing.isActive ? colors.success : colors.mediumGray },
-                            ]}
-                        >
-                            {listing.isActive ? 'Active' : 'Inactive'}
-                        </Text>
+                <TouchableOpacity
+                    style={cardStyles.infoCard}
+                    onPress={(e) => {
+                        e?.stopPropagation?.();
+                        onQuickEdit(listing, 'rate');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Quick edit hourly rate for ${listing.title}, currently ${formatCurrency(listing.hourlyRate)} per hour`}
+                    testID={`quick-edit-rate-${listing.id}`}
+                    activeOpacity={0.7}
+                >
+                    <View style={cardStyles.infoCardHeader}>
+                        <Text style={cardStyles.infoLabel}>Hourly Rate</Text>
+                        <Ionicons name="pencil" size={11} color={colors.primary} />
                     </View>
-                </View>
+                    <Text style={cardStyles.infoValue}>{formatCurrency(listing.hourlyRate)}/hr</Text>
+                    <Text style={cardStyles.infoTapHint}>Tap to edit</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={cardStyles.infoCard}
+                    onPress={(e) => {
+                        e?.stopPropagation?.();
+                        onQuickEdit(listing, 'spots');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Quick edit spots for ${listing.title}, currently ${listing.availableSpots ?? listing.totalSpots} of ${listing.totalSpots} spots`}
+                    testID={`quick-edit-spots-${listing.id}`}
+                    activeOpacity={0.7}
+                >
+                    <View style={cardStyles.infoCardHeader}>
+                        <Text style={cardStyles.infoLabel}>Capacity</Text>
+                        <Ionicons name="pencil" size={11} color={colors.primary} />
+                    </View>
+                    <Text style={cardStyles.infoValue}>
+                        {listing.availableSpots ?? listing.totalSpots}/{listing.totalSpots} spots
+                    </Text>
+                    <Text style={cardStyles.infoTapHint}>Tap to edit</Text>
+                </TouchableOpacity>
             </View>
 
-            {/* Rating / Review Summary */}
+            {/* Rating / Review Summary: Clean empty state replaces 0.0 rating */}
             <View style={cardStyles.footerRow}>
-                <View style={cardStyles.ratingRow}>
-                    <StarRating rating={listing.averageRating || 0} size={14} />
-                    <Text style={cardStyles.ratingText}>
-                        {listing.averageRating ? listing.averageRating.toFixed(1) : 'New'} ({listing.totalReviews || 0})
-                    </Text>
-                </View>
+                {hasReviews ? (
+                    <View style={cardStyles.ratingRow} testID={`rating-summary-${listing.id}`}>
+                        <StarRating rating={listing.averageRating} size={14} />
+                        <Text style={cardStyles.ratingText}>
+                            {listing.averageRating.toFixed(1)} ({listing.totalReviews})
+                        </Text>
+                    </View>
+                ) : (
+                    <View style={cardStyles.noReviewsRow} testID={`no-reviews-${listing.id}`}>
+                        <Ionicons name="chatbubble-outline" size={13} color={colors.textTertiary} />
+                        <Text style={cardStyles.noReviewsText}>No reviews yet</Text>
+                    </View>
+                )}
             </View>
 
             {/* Action Buttons: View Details, Edit Listing & Delete Listing */}
@@ -225,15 +302,15 @@ const cardStyles = StyleSheet.create({
         gap: spacing.sm,
     },
     thumb: {
-        width: 48,
-        height: 48,
-        borderRadius: 8,
+        width: 52,
+        height: 52,
+        borderRadius: 10,
         backgroundColor: colors.borderLight,
     },
     thumbPlaceholder: {
-        width: 48,
-        height: 48,
-        borderRadius: 8,
+        width: 52,
+        height: 52,
+        borderRadius: 10,
         backgroundColor: colors.primarySoft || '#EEF2FF',
         justifyContent: 'center',
         alignItems: 'center',
@@ -242,10 +319,19 @@ const cardStyles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
     },
+    titleChevronRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
     title: {
         ...typography.h4,
         color: colors.textPrimary,
         fontWeight: '600',
+        flexShrink: 1,
+    },
+    chevron: {
+        marginTop: 1,
     },
     locationRow: {
         flexDirection: 'row',
@@ -279,9 +365,40 @@ const cardStyles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    pendingBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: spacing.xs,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 6,
+        backgroundColor: '#FEF3C7',
+    },
+    pendingBannerText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#92400E',
+    },
+    suspendedBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: spacing.xs,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 6,
+        backgroundColor: '#FEE2E2',
+    },
+    suspendedBannerText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#991B1B',
+    },
     badgesRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        flexWrap: 'wrap',
         gap: 6,
         marginTop: spacing.sm,
     },
@@ -310,39 +427,43 @@ const cardStyles = StyleSheet.create({
     },
     infoRow: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
+        gap: spacing.sm,
         marginTop: spacing.sm,
         paddingTop: spacing.sm,
         borderTopWidth: 1,
         borderTopColor: colors.borderLight,
     },
-    infoItem: {
+    infoCard: {
+        flex: 1,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+    },
+    infoCardHeader: {
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 2,
     },
     infoLabel: {
         ...typography.caption,
         color: colors.textTertiary,
+        fontSize: 11,
     },
     infoValue: {
         ...typography.label,
         color: colors.textPrimary,
-        fontWeight: '600',
+        fontWeight: '700',
+        fontSize: 14,
+    },
+    infoTapHint: {
+        fontSize: 10,
+        color: colors.primary,
+        fontWeight: '500',
         marginTop: 2,
-    },
-    statusBadgeInline: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        marginTop: 2,
-    },
-    statusDot: {
-        width: 7,
-        height: 7,
-        borderRadius: 4,
-    },
-    statusText: {
-        fontSize: 12,
-        fontWeight: '600',
     },
     footerRow: {
         flexDirection: 'row',
@@ -358,6 +479,18 @@ const cardStyles = StyleSheet.create({
     ratingText: {
         ...typography.caption,
         color: colors.textSecondary,
+    },
+    noReviewsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        paddingVertical: 2,
+    },
+    noReviewsText: {
+        ...typography.caption,
+        color: colors.textTertiary,
+        fontSize: 12,
+        fontStyle: 'italic',
     },
     actionRow: {
         flexDirection: 'row',
@@ -434,6 +567,14 @@ const MyListingsScreen = ({ navigation, route }) => {
     const initialFilter = route?.params?.filter || route?.params?.initialFilter || 'all';
     const [activeFilter, setActiveFilter] = useState(initialFilter);
 
+    // Quick Edit modal states
+    const [quickEditModalVisible, setQuickEditModalVisible] = useState(false);
+    const [quickEditTarget, setQuickEditTarget] = useState(null);
+    const [quickRate, setQuickRate] = useState('');
+    const [quickTotalSpots, setQuickTotalSpots] = useState('');
+    const [quickAvailableSpots, setQuickAvailableSpots] = useState('');
+    const [savingQuickEdit, setSavingQuickEdit] = useState(false);
+
     useEffect(() => {
         if (route?.params?.filter || route?.params?.initialFilter) {
             setActiveFilter(route?.params?.filter || route?.params?.initialFilter);
@@ -503,6 +644,65 @@ const MyListingsScreen = ({ navigation, route }) => {
         navigation.navigate('CreateParking');
     }, [navigation]);
 
+    // Quick edit handler
+    const handleOpenQuickEdit = useCallback((listing) => {
+        setQuickEditTarget(listing);
+        setQuickRate(String(listing.hourlyRate ?? ''));
+        setQuickTotalSpots(String(listing.totalSpots ?? ''));
+        setQuickAvailableSpots(String(listing.availableSpots ?? listing.totalSpots ?? ''));
+        setQuickEditModalVisible(true);
+    }, []);
+
+    const handleSaveQuickEdit = useCallback(async () => {
+        if (!quickEditTarget) return;
+
+        const rateNum = parseFloat(quickRate);
+        const totalNum = parseInt(quickTotalSpots, 10);
+        const availableNum = parseInt(quickAvailableSpots, 10);
+
+        if (isNaN(rateNum) || rateNum < 0) {
+            Alert.alert('Invalid Rate', 'Please enter a valid hourly rate (>= 0).');
+            return;
+        }
+        if (isNaN(totalNum) || totalNum <= 0) {
+            Alert.alert('Invalid Spots', 'Total spots must be at least 1.');
+            return;
+        }
+        if (isNaN(availableNum) || availableNum < 0 || availableNum > totalNum) {
+            Alert.alert('Invalid Availability', `Available spots must be between 0 and total spots (${totalNum}).`);
+            return;
+        }
+
+        setSavingQuickEdit(true);
+        try {
+            const updatePayload = {
+                ...quickEditTarget,
+                hourlyRate: rateNum,
+                totalSpots: totalNum,
+                availableSpots: availableNum,
+            };
+
+            const result = await dispatch(
+                updateParkingThunk({
+                    id: quickEditTarget.id,
+                    data: updatePayload,
+                })
+            );
+
+            if (!result.error) {
+                Alert.alert('Updated', 'Pricing & availability updated successfully.');
+                setQuickEditModalVisible(false);
+                setQuickEditTarget(null);
+            } else {
+                Alert.alert('Error', result.payload || 'Failed to update listing.');
+            }
+        } catch (err) {
+            Alert.alert('Error', 'An unexpected error occurred while saving.');
+        } finally {
+            setSavingQuickEdit(false);
+        }
+    }, [quickEditTarget, quickRate, quickTotalSpots, quickAvailableSpots, dispatch]);
+
     const totalCount = myListings?.length || 0;
     const activeCount = myListings?.filter((l) => l.isActive !== false).length || 0;
     const inactiveCount = myListings?.filter((l) => l.isActive === false).length || 0;
@@ -542,16 +742,6 @@ const MyListingsScreen = ({ navigation, route }) => {
                         {totalCount} {totalCount === 1 ? 'parking space' : 'parking spaces'} listed
                     </Text>
                 </View>
-                <TouchableOpacity
-                    style={styles.addBtn}
-                    onPress={handleAdd}
-                    accessibilityRole="button"
-                    accessibilityLabel="Add Parking Space"
-                    testID="add-listing-button"
-                >
-                    <Ionicons name="add" size={18} color={colors.white} />
-                    <Text style={styles.addBtnText}>Add Space</Text>
-                </TouchableOpacity>
             </View>
 
             {/* Quick Search Bar */}
@@ -615,6 +805,7 @@ const MyListingsScreen = ({ navigation, route }) => {
                             onEdit={handleEdit}
                             onView={handleView}
                             onDelete={handleDelete}
+                            onQuickEdit={handleOpenQuickEdit}
                         />
                     )}
                     contentContainerStyle={styles.listContent}
@@ -650,6 +841,192 @@ const MyListingsScreen = ({ navigation, route }) => {
                     }
                 />
             )}
+
+            {/* Floating Action Button (FAB) - Ergonomic Thumb Reach */}
+            <TouchableOpacity
+                style={styles.fab}
+                onPress={handleAdd}
+                accessibilityRole="button"
+                accessibilityLabel="Add Parking Space"
+                testID="add-listing-button"
+                activeOpacity={0.85}
+            >
+                <Ionicons name="add" size={24} color={colors.white} />
+                <Text style={styles.fabText}>Add Space</Text>
+            </TouchableOpacity>
+
+            {/* On-Surface Quick-Edit Modal for Direct Price & Availability Management */}
+            <Modal
+                visible={quickEditModalVisible}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setQuickEditModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    style={styles.modalOverlay}
+                >
+                    <View style={styles.modalBackdrop}>
+                        <TouchableOpacity
+                            style={StyleSheet.absoluteFill}
+                            onPress={() => setQuickEditModalVisible(false)}
+                        />
+                        <View style={styles.modalCard} testID="quick-edit-modal">
+                            <View style={styles.modalHeader}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.modalTitle}>Quick Edit Inventory</Text>
+                                    <Text style={styles.modalSubtitle} numberOfLines={1}>
+                                        {quickEditTarget?.title}
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={() => setQuickEditModalVisible(false)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    testID="quick-edit-close-x"
+                                >
+                                    <Ionicons name="close-circle-outline" size={24} color={colors.textTertiary} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.modalBody}>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Hourly Rate (₹/hr)</Text>
+                                    <View style={styles.stepperRow}>
+                                        <TouchableOpacity
+                                            style={styles.stepperBtn}
+                                            onPress={() => {
+                                                const val = Math.max(0, (parseFloat(quickRate) || 0) - 5);
+                                                setQuickRate(String(val));
+                                            }}
+                                            testID="quick-edit-rate-minus-btn"
+                                        >
+                                            <Ionicons name="remove" size={18} color={colors.textPrimary} />
+                                        </TouchableOpacity>
+                                        <TextInput
+                                            style={styles.stepperInput}
+                                            keyboardType="numeric"
+                                            value={quickRate}
+                                            onChangeText={setQuickRate}
+                                            placeholder="0"
+                                            placeholderTextColor={colors.textTertiary}
+                                            testID="quick-edit-rate-input"
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.stepperBtn}
+                                            onPress={() => {
+                                                const val = (parseFloat(quickRate) || 0) + 5;
+                                                setQuickRate(String(val));
+                                            }}
+                                            testID="quick-edit-rate-plus-btn"
+                                        >
+                                            <Ionicons name="add" size={18} color={colors.textPrimary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Total Spots</Text>
+                                    <View style={styles.stepperRow}>
+                                        <TouchableOpacity
+                                            style={styles.stepperBtn}
+                                            onPress={() => {
+                                                const val = Math.max(1, (parseInt(quickTotalSpots, 10) || 1) - 1);
+                                                setQuickTotalSpots(String(val));
+                                                if ((parseInt(quickAvailableSpots, 10) || 0) > val) {
+                                                    setQuickAvailableSpots(String(val));
+                                                }
+                                            }}
+                                            testID="quick-edit-total-minus-btn"
+                                        >
+                                            <Ionicons name="remove" size={18} color={colors.textPrimary} />
+                                        </TouchableOpacity>
+                                        <TextInput
+                                            style={styles.stepperInput}
+                                            keyboardType="numeric"
+                                            value={quickTotalSpots}
+                                            onChangeText={setQuickTotalSpots}
+                                            placeholder="1"
+                                            placeholderTextColor={colors.textTertiary}
+                                            testID="quick-edit-total-spots-input"
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.stepperBtn}
+                                            onPress={() => {
+                                                const val = (parseInt(quickTotalSpots, 10) || 0) + 1;
+                                                setQuickTotalSpots(String(val));
+                                            }}
+                                            testID="quick-edit-total-plus-btn"
+                                        >
+                                            <Ionicons name="add" size={18} color={colors.textPrimary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Available Spots</Text>
+                                    <View style={styles.stepperRow}>
+                                        <TouchableOpacity
+                                            style={styles.stepperBtn}
+                                            onPress={() => {
+                                                const val = Math.max(0, (parseInt(quickAvailableSpots, 10) || 0) - 1);
+                                                setQuickAvailableSpots(String(val));
+                                            }}
+                                            testID="quick-edit-available-minus-btn"
+                                        >
+                                            <Ionicons name="remove" size={18} color={colors.textPrimary} />
+                                        </TouchableOpacity>
+                                        <TextInput
+                                            style={styles.stepperInput}
+                                            keyboardType="numeric"
+                                            value={quickAvailableSpots}
+                                            onChangeText={setQuickAvailableSpots}
+                                            placeholder="0"
+                                            placeholderTextColor={colors.textTertiary}
+                                            testID="quick-edit-available-spots-input"
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.stepperBtn}
+                                            onPress={() => {
+                                                const maxVal = parseInt(quickTotalSpots, 10) || 999;
+                                                const val = Math.min(maxVal, (parseInt(quickAvailableSpots, 10) || 0) + 1);
+                                                setQuickAvailableSpots(String(val));
+                                            }}
+                                            testID="quick-edit-available-plus-btn"
+                                        >
+                                            <Ionicons name="add" size={18} color={colors.textPrimary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View style={styles.modalActions}>
+                                <TouchableOpacity
+                                    style={styles.modalCancelBtn}
+                                    onPress={() => setQuickEditModalVisible(false)}
+                                    accessibilityRole="button"
+                                    testID="quick-edit-cancel-button"
+                                >
+                                    <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.modalSaveBtn, savingQuickEdit && { opacity: 0.7 }]}
+                                    onPress={handleSaveQuickEdit}
+                                    disabled={savingQuickEdit}
+                                    accessibilityRole="button"
+                                    testID="quick-edit-save-button"
+                                >
+                                    {savingQuickEdit ? (
+                                        <ActivityIndicator size="small" color={colors.white} />
+                                    ) : (
+                                        <Text style={styles.modalSaveBtnText}>Save Changes</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
         </ScreenLayout>
     );
 };
@@ -675,21 +1052,6 @@ const styles = StyleSheet.create({
         ...typography.caption,
         color: colors.textTertiary,
         marginTop: 2,
-    },
-    addBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 20,
-        backgroundColor: colors.primary,
-        ...shadows.button,
-    },
-    addBtnText: {
-        color: colors.white,
-        fontWeight: '600',
-        fontSize: 13,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -734,7 +1096,139 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingHorizontal: spacing.screenHorizontal,
-        paddingBottom: spacing['2xl'],
+        paddingBottom: 100,
+    },
+    fab: {
+        position: 'absolute',
+        bottom: 24,
+        right: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 12,
+        paddingHorizontal: 18,
+        borderRadius: 28,
+        backgroundColor: colors.primary,
+        ...shadows.elevated,
+        zIndex: 99,
+        elevation: 8,
+    },
+    fabText: {
+        color: colors.white,
+        fontWeight: '700',
+        fontSize: 14,
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: spacing.md,
+    },
+    modalBackdrop: {
+        width: '100%',
+        maxWidth: 420,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalCard: {
+        width: '100%',
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        padding: spacing.lg,
+        ...shadows.elevated,
+        elevation: 10,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: spacing.md,
+    },
+    modalTitle: {
+        ...typography.h3,
+        color: colors.textPrimary,
+        fontWeight: '700',
+    },
+    modalSubtitle: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    modalBody: {
+        gap: spacing.md,
+        marginVertical: spacing.xs,
+    },
+    inputGroup: {
+        gap: 6,
+    },
+    inputLabel: {
+        ...typography.label,
+        color: colors.textPrimary,
+        fontWeight: '600',
+        fontSize: 13,
+    },
+    stepperRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    stepperBtn: {
+        width: 42,
+        height: 42,
+        borderRadius: 10,
+        backgroundColor: '#F3F4F6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+    },
+    stepperInput: {
+        flex: 1,
+        height: 42,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        fontSize: 15,
+        fontWeight: '600',
+        color: colors.textPrimary,
+        backgroundColor: '#FAFAFA',
+        textAlign: 'center',
+    },
+    modalActions: {
+        flexDirection: 'row',
+        gap: spacing.sm,
+        marginTop: spacing.lg,
+    },
+    modalCancelBtn: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalCancelBtnText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.textSecondary,
+    },
+    modalSaveBtn: {
+        flex: 1.4,
+        paddingVertical: 12,
+        borderRadius: 10,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.button,
+    },
+    modalSaveBtnText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.white,
     },
 });
 
