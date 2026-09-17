@@ -9,6 +9,35 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Modal Keyboard Overlap & Document Keyboard Handling Checklist (<@U06FVANTNHL>)
+- **Resolved Modal Keyboard Overlap Issue (`BookingDetailScreen.js`)**:
+  - Investigated issue reported by `<@U06FVANTNHL>` where input fields and text ("font/form") hide behind the on-screen soft keyboard in the newly implemented modals.
+  - Identified that modal bottom sheets (`Request Valet`, `Assign Parking Bay`, `Extend Booking`, and `Receipt`) were pinned to the bottom of the screen without `KeyboardAvoidingView`, causing the mobile keyboard to render over input fields and action buttons.
+  - Wrapped modal overlays in `<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>` to automatically offset the sheet above the soft keyboard on iOS and Android.
+  - Wrapped modal contents inside `<ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.modalScrollContent}>`.
+  - Added `maxHeight: '90%'` and `flexShrink: 1` to `styles.modalContainer` to prevent dialogs from overflowing off the top screen bounds when shifted upwards.
+  - Added interactive backdrop dismiss area (`modalBackdrop`) with `Keyboard.dismiss()` to smoothly dismiss the keyboard and modal when tapping outside.
+  - Maintained accessible fixed header (`modalHeader`) so users can dismiss the modal at any time.
+- **Audited Modals Across Mobile App (`ReviewsListScreen.js`, `ParkingDetailScreen.js`)**:
+  - Added `maxHeight: '90%'` constraints to modal containers in `ReviewsListScreen.js` and `ParkingDetailScreen.js` to prevent modal content overflow on smaller screen viewports.
+- **Created Standardized Keyboard Handling & Form Visibility Checklist (`GEMINI.md`, `README.md`)**:
+  - Added **Section 7: Keyboard Handling & Form Visibility Checklist** in `GEMINI.md` as a mandatory Mobile engineering rule for all future agent tasks.
+  - Added **Mobile Keyboard Handling & Form Visibility Best Practices** checklist in `README.md`.
+- **Automated Testing Suite (`BookingDetailScreen.test.js`)**:
+  - Added unit test verifying `KeyboardAvoidingView` configuration with `behavior` prop and `ScrollView` with `keyboardShouldPersistTaps="handled"` on modals.
+  - Executed full Mobile test suite: **100% pass rate** (52/52 test suites, 324/324 tests passing cleanly).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Booking/BookingDetailScreen.js`
+  - `Mobile/src/screens/Booking/__tests__/BookingDetailScreen.test.js`
+  - `Mobile/src/screens/Review/ReviewsListScreen.js`
+  - `Mobile/src/screens/Search/ParkingDetailScreen.js`
+  - `GEMINI.md`
+  - `README.md`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 52 test suites passing cleanly (324/324 unit tests).
+  - Staged, committed, and pushed to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Booking Details Request Valet, Assign Bay, & Vendor Controls (<@U06FVANTNHL>)
 - **Audited Booking Details Action Flow (`BookingDetailScreen.js`, `bookingSlice.js`)**:
   - Investigated issue reported by `<@U06FVANTNHL>` regarding "Request Validate", "Assign Bay", and "Vendor" buttons not working on the booking details screen.

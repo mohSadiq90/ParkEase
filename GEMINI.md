@@ -57,4 +57,26 @@
   Never run backend .NET tests (`dotnet test`) or web frontend tests (`vitest`).
 - **Build & CI Target**: The exclusive deployment pipeline is the **Android Release APK Build & Firebase App Distribution** (`.github/workflows/build-and-distribute.yml`). Pushes to `main` must only trigger the Android build and distribution pipeline for mobile changes.
 
+---
+
+## 7. Keyboard Handling & Form Visibility Checklist (Mobile Best Practice)
+**MANDATORY FOR ALL MODALS, SCREENS, AND FORMS WITH TEXT INPUTS:**
+Whenever creating or modifying any modal, screen, bottom-sheet, or dialog containing `TextInput` or `Input` components, agents MUST enforce the following checklist to ensure typography, labels, and form fields never hide behind the on-screen keyboard:
+1. **Wrap in `KeyboardAvoidingView`**:
+   - Wrap the modal overlay or container with `<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>`.
+   - On iOS, use `padding`; on Android, use `height` or `adjustResize` compatible offset to lift the sheet above the soft keyboard.
+2. **Enclose Content in a Scroll Container**:
+   - Wrap all form contents (inputs, selectors, labels, and action buttons) inside a `<ScrollView>` with `keyboardShouldPersistTaps="handled"` and `keyboardDismissMode="on-drag"`.
+   - Ensure `showsVerticalScrollIndicator={false}` and configure appropriate `contentContainerStyle` padding (`paddingBottom: spacing.md` or `spacing.xl`).
+3. **Constrain Modal Dimensions (`maxHeight`)**:
+   - Give bottom-sheet and modal containers an explicit maximum height (e.g. `maxHeight: '90%'` or `'85%'`) and `flexShrink: 1` so that when the soft keyboard lifts the container, the top of the modal remains within screen bounds and does not get clipped off the status bar.
+4. **Interactive Backdrop Dismissal**:
+   - Provide an interactive backdrop (`<TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => { Keyboard.dismiss(); closeModal(); }} />`) so tapping outside dismisses both the soft keyboard and the modal.
+5. **Persistent Taps (`keyboardShouldPersistTaps="handled"`)**:
+   - Set `keyboardShouldPersistTaps="handled"` on both vertical and horizontal `ScrollView`s so buttons, chips, and radio pills respond immediately to the first touch without needing a prior tap to dismiss the keyboard.
+6. **Fixed Accessible Modal Header**:
+   - Keep the modal header (`modalHeader` with title and close X button) outside the scroll view or prominently pinned so users can always close the dialog even when the keyboard is active.
+7. **Automated Unit Test Verification**:
+   - Add unit tests verifying `KeyboardAvoidingView` and `ScrollView` with `keyboardShouldPersistTaps="handled"` are configured on modal/form components.
+
 

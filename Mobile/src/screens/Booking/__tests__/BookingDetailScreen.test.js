@@ -444,4 +444,50 @@ describe('BookingDetailScreen', () => {
       '/bookings/booking-valet-flow-uuid/valet/acknowledge'
     );
   });
+
+  it('configures KeyboardAvoidingView and scrollable content in modals to prevent keyboard obscuring form inputs', async () => {
+    const mockBooking = {
+      data: {
+        data: {
+          id: 'booking-kav-test-uuid',
+          bookingReference: 'PE-BK-KAV',
+          parkingSpaceTitle: 'Skyline Plaza Garage',
+          status: 1, // Confirmed
+          totalAmount: 200,
+          startDateTime: '2026-08-18T10:00:00Z',
+          endDateTime: '2026-08-18T14:00:00Z',
+          pricingType: 0,
+          vehicleType: 0,
+          isValetEnabled: true,
+        },
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockBooking);
+
+    const { findByText, getByText, UNSAFE_getAllByType } = renderWithProviders(
+      <BookingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { bookingId: 'booking-kav-test-uuid' } }}
+      />
+    );
+
+    const { fireEvent } = require('../../../utils/test-utils');
+    const { KeyboardAvoidingView, ScrollView } = require('react-native');
+
+    // Open Request Valet Modal
+    const requestValetBtn = await findByText('Request Valet');
+    fireEvent.press(requestValetBtn);
+
+    const kavElements = UNSAFE_getAllByType(KeyboardAvoidingView);
+    expect(kavElements.length).toBeGreaterThan(0);
+    const valetKav = kavElements[0];
+    expect(['padding', 'height']).toContain(valetKav.props.behavior);
+
+    const scrollViews = UNSAFE_getAllByType(ScrollView);
+    const handledScroll = scrollViews.find(
+      (sv) => sv.props.keyboardShouldPersistTaps === 'handled'
+    );
+    expect(handledScroll).toBeTruthy();
+  });
 });

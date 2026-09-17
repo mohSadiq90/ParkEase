@@ -451,6 +451,19 @@ Critical domain events (e.g. `BookingConfirmed`, `BookingCancelled`, `ParkingSpa
 
 ---
 
+## Mobile Keyboard Handling & Form Visibility Best Practices
+
+To prevent input fields, text typography, and buttons from hiding behind the on-screen keyboard on mobile devices, all mobile screens and bottom-sheet modals with inputs follow this standard checklist:
+- **`KeyboardAvoidingView`**: Wrap modal overlays or containers with `<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>`.
+- **`ScrollView` Containment**: Wrap modal form fields and actions in `<ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.modalScrollContent}>`.
+- **Constrained Container Height**: Apply `maxHeight: '90%'` or `'85%'` and `flexShrink: 1` to bottom-sheet dialogs so that the sheet does not overflow above the viewport when shifted up by the keyboard.
+- **Immediate First-Tap Interaction**: Always specify `keyboardShouldPersistTaps="handled"` on both vertical and horizontal scroll containers so chips, options, and buttons react to first touch.
+- **Backdrop Dismissal**: Provide an interactive backdrop dismiss area so tapping outside dismisses both the active keyboard and modal.
+- **Sticky / Accessible Header**: Keep modal title and close button prominent and accessible so users can dismiss the modal at any time.
+
+---
+
 ## License
 
 This project is for educational / portfolio purposes unless otherwise stated.
+

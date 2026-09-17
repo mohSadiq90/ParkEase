@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useCallback, useState } from 'react';
-import { View, Text, ScrollView, Alert, TouchableOpacity, StyleSheet, Modal, Linking } from 'react-native';
+import { View, Text, ScrollView, Alert, TouchableOpacity, StyleSheet, Modal, Linking, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { 
@@ -697,7 +697,15 @@ const BookingDetailScreen = ({ navigation, route }) => {
                 transparent={true}
                 onRequestClose={() => setExtendModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        style={styles.modalBackdrop}
+                        activeOpacity={1}
+                        onPress={() => setExtendModalVisible(false)}
+                    />
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Extend Booking</Text>
@@ -706,65 +714,71 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.modalSubtitle}>
-                            Select additional parking time to extend your current session:
-                        </Text>
-
-                        {/* Quick hour selection chips */}
                         <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.chipRow}
-                            style={styles.chipRowScroll}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            contentContainerStyle={styles.modalScrollContent}
                         >
-                            {EXTENSION_HOUR_OPTIONS.map((hrs) => (
-                                <TouchableOpacity
-                                    key={hrs}
-                                    testID={`extension-hour-pill-${hrs}`}
-                                    onPress={() => setExtendHours(hrs)}
-                                    style={[
-                                        styles.hourChip,
-                                        extendHours === hrs && styles.hourChipSelected,
-                                    ]}
-                                >
-                                    <Text style={[styles.hourChipText, extendHours === hrs && styles.hourChipTextSelected]}>
-                                        +{hrs} hr{hrs > 1 ? 's' : ''}
+                            <Text style={styles.modalSubtitle}>
+                                Select additional parking time to extend your current session:
+                            </Text>
+
+                            {/* Quick hour selection chips */}
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.chipRow}
+                                style={styles.chipRowScroll}
+                            >
+                                {EXTENSION_HOUR_OPTIONS.map((hrs) => (
+                                    <TouchableOpacity
+                                        key={hrs}
+                                        testID={`extension-hour-pill-${hrs}`}
+                                        onPress={() => setExtendHours(hrs)}
+                                        style={[
+                                            styles.hourChip,
+                                            extendHours === hrs && styles.hourChipSelected,
+                                        ]}
+                                    >
+                                        <Text style={[styles.hourChipText, extendHours === hrs && styles.hourChipTextSelected]}>
+                                            +{hrs} hr{hrs > 1 ? 's' : ''}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+
+                            {/* Summary Box */}
+                            <View style={styles.extendSummaryBox}>
+                                <View style={styles.summaryRow}>
+                                    <Text style={styles.summaryLabel}>Current End Time:</Text>
+                                    <Text style={styles.summaryVal}>{formatDateTime(booking.endDateTime)}</Text>
+                                </View>
+                                <View style={styles.summaryRow}>
+                                    <Text style={styles.summaryLabel}>New End Time:</Text>
+                                    <Text style={[styles.summaryVal, { color: colors.primary, fontWeight: '700' }]}>
+                                        {formatDateTime(extendedEndDate.toISOString())}
                                     </Text>
-                                </TouchableOpacity>
-                            ))}
+                                </View>
+                            </View>
+
+                            <View style={styles.modalActions}>
+                                <Button
+                                    title="Cancel"
+                                    onPress={() => setExtendModalVisible(false)}
+                                    variant="outline"
+                                    style={{ flex: 1 }}
+                                />
+                                <Button
+                                    title="Request Extension"
+                                    onPress={handleConfirmExtend}
+                                    variant="primary"
+                                    loading={extending}
+                                    style={{ flex: 1 }}
+                                />
+                            </View>
                         </ScrollView>
-
-                        {/* Summary Box */}
-                        <View style={styles.extendSummaryBox}>
-                            <View style={styles.summaryRow}>
-                                <Text style={styles.summaryLabel}>Current End Time:</Text>
-                                <Text style={styles.summaryVal}>{formatDateTime(booking.endDateTime)}</Text>
-                            </View>
-                            <View style={styles.summaryRow}>
-                                <Text style={styles.summaryLabel}>New End Time:</Text>
-                                <Text style={[styles.summaryVal, { color: colors.primary, fontWeight: '700' }]}>
-                                    {formatDateTime(extendedEndDate.toISOString())}
-                                </Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.modalActions}>
-                            <Button
-                                title="Cancel"
-                                onPress={() => setExtendModalVisible(false)}
-                                variant="outline"
-                                style={{ flex: 1 }}
-                            />
-                            <Button
-                                title="Request Extension"
-                                onPress={handleConfirmExtend}
-                                variant="primary"
-                                loading={extending}
-                                style={{ flex: 1 }}
-                            />
-                        </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Digital Tax Invoice & Receipt Modal */}
@@ -774,7 +788,15 @@ const BookingDetailScreen = ({ navigation, route }) => {
                 transparent={true}
                 onRequestClose={() => setReceiptModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        style={styles.modalBackdrop}
+                        activeOpacity={1}
+                        onPress={() => setReceiptModalVisible(false)}
+                    />
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Tax Invoice & Receipt</Text>
@@ -783,53 +805,58 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={{ ...typography.caption, color: colors.textTertiary, marginBottom: spacing.md }}>
-                            Receipt Ref: RCP-{booking.id?.substring(0, 8).toUpperCase() || 'REF001'}
-                        </Text>
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={styles.modalScrollContent}
+                        >
+                            <Text style={{ ...typography.caption, color: colors.textTertiary, marginBottom: spacing.md }}>
+                                Receipt Ref: RCP-{booking.id?.substring(0, 8).toUpperCase() || 'REF001'}
+                            </Text>
 
-                        {/* Receipt itemized table */}
-                        <View style={styles.receiptBox}>
-                            <View style={styles.receiptRow}>
-                                <Text style={styles.receiptLabel}>Parking Location</Text>
-                                <Text style={styles.receiptVal} numberOfLines={1}>{booking.parkingSpaceTitle}</Text>
+                            {/* Receipt itemized table */}
+                            <View style={styles.receiptBox}>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>Parking Location</Text>
+                                    <Text style={styles.receiptVal} numberOfLines={1}>{booking.parkingSpaceTitle}</Text>
+                                </View>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>Base Parking Fee</Text>
+                                    <Text style={styles.receiptVal}>{formatCurrency(Math.max(0, (booking.totalAmount || 0) * 0.82))}</Text>
+                                </View>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>CGST (9%)</Text>
+                                    <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09)}</Text>
+                                </View>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>SGST (9%)</Text>
+                                    <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09)}</Text>
+                                </View>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>Convenience / Platform Fee</Text>
+                                    <Text style={styles.receiptVal}>{formatCurrency(0)}</Text>
+                                </View>
+                                <View style={styles.receiptDivider} />
+                                <View style={styles.receiptRow}>
+                                    <Text style={[styles.receiptLabel, { fontWeight: '700', color: colors.textPrimary }]}>Total Paid (Incl. GST)</Text>
+                                    <Text style={[styles.receiptVal, { fontWeight: '700', color: colors.primary, fontSize: 16 }]}>
+                                        {formatCurrency(booking.totalAmount)}
+                                    </Text>
+                                </View>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>Payment Status</Text>
+                                    <Text style={[styles.receiptVal, { color: colors.success, fontWeight: '700' }]}>Paid ✅</Text>
+                                </View>
                             </View>
-                            <View style={styles.receiptRow}>
-                                <Text style={styles.receiptLabel}>Base Parking Fee</Text>
-                                <Text style={styles.receiptVal}>{formatCurrency(Math.max(0, (booking.totalAmount || 0) * 0.82))}</Text>
-                            </View>
-                            <View style={styles.receiptRow}>
-                                <Text style={styles.receiptLabel}>CGST (9%)</Text>
-                                <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09)}</Text>
-                            </View>
-                            <View style={styles.receiptRow}>
-                                <Text style={styles.receiptLabel}>SGST (9%)</Text>
-                                <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09)}</Text>
-                            </View>
-                            <View style={styles.receiptRow}>
-                                <Text style={styles.receiptLabel}>Convenience / Platform Fee</Text>
-                                <Text style={styles.receiptVal}>{formatCurrency(0)}</Text>
-                            </View>
-                            <View style={styles.receiptDivider} />
-                            <View style={styles.receiptRow}>
-                                <Text style={[styles.receiptLabel, { fontWeight: '700', color: colors.textPrimary }]}>Total Paid (Incl. GST)</Text>
-                                <Text style={[styles.receiptVal, { fontWeight: '700', color: colors.primary, fontSize: 16 }]}>
-                                    {formatCurrency(booking.totalAmount)}
-                                </Text>
-                            </View>
-                            <View style={styles.receiptRow}>
-                                <Text style={styles.receiptLabel}>Payment Status</Text>
-                                <Text style={[styles.receiptVal, { color: colors.success, fontWeight: '700' }]}>Paid ✅</Text>
-                            </View>
-                        </View>
 
-                        <Button
-                            title="Done"
-                            onPress={() => setReceiptModalVisible(false)}
-                            variant="primary"
-                            style={{ marginTop: spacing.lg }}
-                        />
+                            <Button
+                                title="Done"
+                                onPress={() => setReceiptModalVisible(false)}
+                                variant="primary"
+                                style={{ marginTop: spacing.lg }}
+                            />
+                        </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Request Valet Modal */}
@@ -839,71 +866,98 @@ const BookingDetailScreen = ({ navigation, route }) => {
                 transparent={true}
                 onRequestClose={() => setValetModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        style={styles.modalBackdrop}
+                        activeOpacity={1}
+                        onPress={() => {
+                            Keyboard.dismiss();
+                            setValetModalVisible(false);
+                        }}
+                    />
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Request Valet Retrieval</Text>
-                            <TouchableOpacity onPress={() => setValetModalVisible(false)} style={styles.modalCloseBtn}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    Keyboard.dismiss();
+                                    setValetModalVisible(false);
+                                }}
+                                style={styles.modalCloseBtn}
+                            >
                                 <Ionicons name="close" size={22} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.modalSubtitle}>
-                            Request parking staff to retrieve your vehicle to the pickup bay.
-                        </Text>
-
-                        <Text style={styles.modalInputLabel}>Lead Time (Minutes)</Text>
                         <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.chipRow}
-                            style={styles.chipRowScroll}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            contentContainerStyle={styles.modalScrollContent}
                         >
-                            {VALET_LEAD_OPTIONS.map((mins) => (
-                                <TouchableOpacity
-                                    key={mins}
-                                    testID={`valet-lead-pill-${mins}`}
-                                    onPress={() => setValetLeadMinutes(mins)}
-                                    style={[
-                                        styles.hourChip,
-                                        valetLeadMinutes === mins && styles.hourChipSelected,
-                                    ]}
-                                >
-                                    <Text style={[styles.hourChipText, valetLeadMinutes === mins && styles.hourChipTextSelected]}>
-                                        {mins} mins
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
+                            <Text style={styles.modalSubtitle}>
+                                Request parking staff to retrieve your vehicle to the pickup bay.
+                            </Text>
+
+                            <Text style={styles.modalInputLabel}>Lead Time (Minutes)</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.chipRow}
+                                style={styles.chipRowScroll}
+                            >
+                                {VALET_LEAD_OPTIONS.map((mins) => (
+                                    <TouchableOpacity
+                                        key={mins}
+                                        testID={`valet-lead-pill-${mins}`}
+                                        onPress={() => setValetLeadMinutes(mins)}
+                                        style={[
+                                            styles.hourChip,
+                                            valetLeadMinutes === mins && styles.hourChipSelected,
+                                        ]}
+                                    >
+                                        <Text style={[styles.hourChipText, valetLeadMinutes === mins && styles.hourChipTextSelected]}>
+                                            {mins} mins
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+
+                            <Input
+                                label="Pickup Notes / Car Location (Optional)"
+                                placeholder="e.g. Near Pillar B2, key with front desk"
+                                value={valetNotes}
+                                onChangeText={setValetNotes}
+                                multiline
+                                numberOfLines={3}
+                                leftIcon="document-text-outline"
+                                containerStyle={{ marginBottom: spacing.lg }}
+                            />
+
+                            <View style={styles.modalActions}>
+                                <Button
+                                    title="Cancel"
+                                    onPress={() => {
+                                        Keyboard.dismiss();
+                                        setValetModalVisible(false);
+                                    }}
+                                    variant="outline"
+                                    style={{ flex: 1 }}
+                                />
+                                <Button
+                                    title="Submit Request"
+                                    onPress={handleConfirmRequestValet}
+                                    variant="primary"
+                                    loading={requestingValet}
+                                    style={{ flex: 1 }}
+                                />
+                            </View>
                         </ScrollView>
-
-                        <Input
-                            label="Pickup Notes / Car Location (Optional)"
-                            placeholder="e.g. Near Pillar B2, key with front desk"
-                            value={valetNotes}
-                            onChangeText={setValetNotes}
-                            multiline
-                            numberOfLines={3}
-                            leftIcon="document-text-outline"
-                            containerStyle={{ marginBottom: spacing.lg }}
-                        />
-
-                        <View style={styles.modalActions}>
-                            <Button
-                                title="Cancel"
-                                onPress={() => setValetModalVisible(false)}
-                                variant="outline"
-                                style={{ flex: 1 }}
-                            />
-                            <Button
-                                title="Submit Request"
-                                onPress={handleConfirmRequestValet}
-                                variant="primary"
-                                loading={requestingValet}
-                                style={{ flex: 1 }}
-                            />
-                        </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Assign Parking Bay Modal */}
@@ -913,74 +967,101 @@ const BookingDetailScreen = ({ navigation, route }) => {
                 transparent={true}
                 onRequestClose={() => setAssignBayModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        style={styles.modalBackdrop}
+                        activeOpacity={1}
+                        onPress={() => {
+                            Keyboard.dismiss();
+                            setAssignBayModalVisible(false);
+                        }}
+                    />
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Assign Parking Bay</Text>
-                            <TouchableOpacity onPress={() => setAssignBayModalVisible(false)} style={styles.modalCloseBtn}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    Keyboard.dismiss();
+                                    setAssignBayModalVisible(false);
+                                }}
+                                style={styles.modalCloseBtn}
+                            >
                                 <Ionicons name="close" size={22} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.modalSubtitle}>
-                            Assign or update indoor bay guidance and designated spot for this booking.
-                        </Text>
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            contentContainerStyle={styles.modalScrollContent}
+                        >
+                            <Text style={styles.modalSubtitle}>
+                                Assign or update indoor bay guidance and designated spot for this booking.
+                            </Text>
 
-                        <Input
-                            label="Bay Identifier / Label"
-                            placeholder="e.g. Bay A-14, A1-001"
-                            value={bayLabel}
-                            onChangeText={setBayLabel}
-                            leftIcon="grid-outline"
-                            containerStyle={{ marginBottom: spacing.sm }}
-                        />
-
-                        <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm }}>
                             <Input
-                                label="Level / Floor"
-                                placeholder="e.g. B1, L2"
-                                value={facilityLevel}
-                                onChangeText={setFacilityLevel}
-                                leftIcon="layers-outline"
-                                containerStyle={{ flex: 1 }}
+                                label="Bay Identifier / Label"
+                                placeholder="e.g. Bay A-14, A1-001"
+                                value={bayLabel}
+                                onChangeText={setBayLabel}
+                                leftIcon="grid-outline"
+                                containerStyle={{ marginBottom: spacing.sm }}
                             />
+
+                            <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm }}>
+                                <Input
+                                    label="Level / Floor"
+                                    placeholder="e.g. B1, L2"
+                                    value={facilityLevel}
+                                    onChangeText={setFacilityLevel}
+                                    leftIcon="layers-outline"
+                                    containerStyle={{ flex: 1 }}
+                                />
+                                <Input
+                                    label="Zone"
+                                    placeholder="e.g. North, Blue"
+                                    value={facilityZone}
+                                    onChangeText={setFacilityZone}
+                                    leftIcon="navigate-outline"
+                                    containerStyle={{ flex: 1 }}
+                                />
+                            </View>
+
                             <Input
-                                label="Zone"
-                                placeholder="e.g. North, Blue"
-                                value={facilityZone}
-                                onChangeText={setFacilityZone}
-                                leftIcon="navigate-outline"
-                                containerStyle={{ flex: 1 }}
+                                label="Slot Number"
+                                placeholder="e.g. 14"
+                                value={slotNumber}
+                                onChangeText={setSlotNumber}
+                                keyboardType="numeric"
+                                leftIcon="car-outline"
+                                containerStyle={{ marginBottom: spacing.lg }}
                             />
-                        </View>
 
-                        <Input
-                            label="Slot Number"
-                            placeholder="e.g. 14"
-                            value={slotNumber}
-                            onChangeText={setSlotNumber}
-                            keyboardType="numeric"
-                            leftIcon="car-outline"
-                            containerStyle={{ marginBottom: spacing.lg }}
-                        />
-
-                        <View style={styles.modalActions}>
-                            <Button
-                                title="Cancel"
-                                onPress={() => setAssignBayModalVisible(false)}
-                                variant="outline"
-                                style={{ flex: 1 }}
-                            />
-                            <Button
-                                title="Save Bay Assignment"
-                                onPress={handleConfirmAssignBay}
-                                variant="primary"
-                                loading={assigningBay}
-                                style={{ flex: 1 }}
-                            />
-                        </View>
+                            <View style={styles.modalActions}>
+                                <Button
+                                    title="Cancel"
+                                    onPress={() => {
+                                        Keyboard.dismiss();
+                                        setAssignBayModalVisible(false);
+                                    }}
+                                    variant="outline"
+                                    style={{ flex: 1 }}
+                                />
+                                <Button
+                                    title="Save Bay Assignment"
+                                    onPress={handleConfirmAssignBay}
+                                    variant="primary"
+                                    loading={assigningBay}
+                                    style={{ flex: 1 }}
+                                />
+                            </View>
+                        </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ScreenLayout>
     );
@@ -1014,7 +1095,9 @@ const styles = StyleSheet.create({
     vendorBtnGroup: { gap: spacing.sm },
     modalInputLabel: { ...typography.label, color: colors.textPrimary, marginBottom: spacing.xs, marginTop: spacing.xs },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    modalContainer: { backgroundColor: colors.surface, borderTopLeftRadius: spacing.radius.xl, borderTopRightRadius: spacing.radius.xl, padding: spacing.screenHorizontal, paddingBottom: spacing['2xl'] },
+    modalBackdrop: { ...StyleSheet.absoluteFillObject },
+    modalContainer: { backgroundColor: colors.surface, borderTopLeftRadius: spacing.radius.xl, borderTopRightRadius: spacing.radius.xl, padding: spacing.screenHorizontal, paddingBottom: spacing['2xl'], maxHeight: '90%' },
+    modalScrollContent: { flexGrow: 1, paddingBottom: spacing.md },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
     modalTitle: { ...typography.h3, color: colors.textPrimary },
     modalCloseBtn: { padding: spacing.xs },
