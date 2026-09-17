@@ -307,6 +307,57 @@ describe('MyListingsScreen', () => {
     expect(getByTestId('toggle-switch-space-1').props.value).toBe(false);
   });
 
+  it('preserves deactivated state when backend returns ApiResponse with hardcoded data=true and deactivated message', async () => {
+    let resolveApi;
+    apiClient.post.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveApi = resolve;
+        })
+    );
+
+    const { getByTestId, queryByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    const toggle = getByTestId('toggle-switch-space-1');
+    expect(toggle.props.value).toBe(true);
+
+    // Tap switch to deactivate
+    act(() => {
+      fireEvent(toggle, 'valueChange', false);
+    });
+
+    // UI immediately updates optimistically
+    expect(getByTestId('toggle-switch-space-1').props.value).toBe(false);
+    expect(getByTestId('toggle-sync-spinner-space-1')).toBeTruthy();
+
+    // Backend responds with real API format: success=true, message="Parking space deactivated", data=true
+    await act(async () => {
+      resolveApi({
+        data: {
+          success: true,
+          message: 'Parking space deactivated',
+          data: true,
+        },
+      });
+    });
+
+    // After loading finishes, the switch must STAY false and NOT revert to true
+    await waitFor(() => {
+      expect(queryByTestId('toggle-sync-spinner-space-1')).toBeNull();
+    });
+    expect(getByTestId('toggle-switch-space-1').props.value).toBe(false);
+  });
+
   it('reverts switch back to original state and alerts user when background toggle fails', async () => {
     jest.spyOn(Alert, 'alert');
     apiClient.post.mockRejectedValueOnce(new Error('Network connection timeout'));

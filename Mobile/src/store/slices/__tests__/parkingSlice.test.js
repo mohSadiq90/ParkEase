@@ -177,6 +177,87 @@ describe('parkingSlice', () => {
       expect(state.togglingListingIds).not.toContain('space-1');
     });
 
+    it('should correctly preserve inactive state when backend returns data: true with deactivated message', () => {
+      // Step 1: Pending optimistically flips isActive from true to false and records originalState
+      const pendingAction = {
+        type: toggleParkingActiveThunk.pending.type,
+        meta: { arg: 'space-1' },
+      };
+      const pendingState = reducer(stateWithListing, pendingAction);
+      expect(pendingState.myListings[0].isActive).toBe(false);
+      expect(pendingState.optimisticOriginalMap['space-1']).toBe(true);
+
+      // Step 2: Backend returns ApiResponse<bool> where data is hardcoded to true, but message says deactivated
+      const fulfilledAction = {
+        type: toggleParkingActiveThunk.fulfilled.type,
+        payload: {
+          id: 'space-1',
+          data: true,
+          message: 'Parking space deactivated',
+          rawResponse: { success: true, message: 'Parking space deactivated', data: true },
+        },
+        meta: { arg: 'space-1' },
+      };
+      const finalState = reducer(pendingState, fulfilledAction);
+
+      expect(finalState.myListings[0].isActive).toBe(false);
+      expect(finalState.togglingListingIds).not.toContain('space-1');
+      expect(finalState.optimisticOriginalMap['space-1']).toBeUndefined();
+    });
+
+    it('should correctly set active state when backend returns data: true with activated message', () => {
+      // Step 1: Pending optimistically flips isActive from false to true
+      const pendingAction = {
+        type: toggleParkingActiveThunk.pending.type,
+        meta: { arg: 'space-2' },
+      };
+      const pendingState = reducer(stateWithListing, pendingAction);
+      expect(pendingState.myListings[1].isActive).toBe(true);
+      expect(pendingState.optimisticOriginalMap['space-2']).toBe(false);
+
+      // Step 2: Backend returns ApiResponse<bool> with activated message
+      const fulfilledAction = {
+        type: toggleParkingActiveThunk.fulfilled.type,
+        payload: {
+          id: 'space-2',
+          data: true,
+          message: 'Parking space activated',
+          rawResponse: { success: true, message: 'Parking space activated', data: true },
+        },
+        meta: { arg: 'space-2' },
+      };
+      const finalState = reducer(pendingState, fulfilledAction);
+
+      expect(finalState.myListings[1].isActive).toBe(true);
+      expect(finalState.togglingListingIds).not.toContain('space-2');
+    });
+
+    it('should invert original active state when backend returns data: true without message', () => {
+      // User deactivates space-1 (was true, user flips to false)
+      const pendingAction = {
+        type: toggleParkingActiveThunk.pending.type,
+        meta: { arg: 'space-1' },
+      };
+      const pendingState = reducer(stateWithListing, pendingAction);
+
+      // Backend returns data: true with empty/generic message
+      const fulfilledAction = {
+        type: toggleParkingActiveThunk.fulfilled.type,
+        payload: {
+          id: 'space-1',
+          data: true,
+          message: '',
+          rawResponse: { success: true, data: true },
+        },
+        meta: { arg: 'space-1' },
+      };
+      const finalState = reducer(pendingState, fulfilledAction);
+
+      // Since originalState was true, successful toggle must invert to false
+      expect(finalState.myListings[0].isActive).toBe(false);
+      expect(finalState.togglingListingIds).not.toContain('space-1');
+    });
+
     it('should revert isActive back to original state upon rejected state', () => {
       const pendingState = {
         ...stateWithListing,
@@ -185,6 +266,7 @@ describe('parkingSlice', () => {
           { id: 'space-2', title: 'Second Lot', isActive: false },
         ],
         togglingListingIds: ['space-1'],
+        optimisticOriginalMap: { 'space-1': true },
       };
       const action = {
         type: toggleParkingActiveThunk.rejected.type,

@@ -9,6 +9,36 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Listing Deactivation Reverting to Active After Toggle Spinner (<@U06FVANTNHL>)
+- **Investigated Listing Active/Inactive Toggle Reverting Issue (`MyListingsScreen.js`, `parkingSlice.js`)**:
+  - Investigated issue reported by `<@U06FVANTNHL>` where deactivating a listing via the toggle switch displays the loading indicator, but once the loading indicator finishes, the switch flips back to the active state.
+  - Determined root cause is a dual API behavior & client-side implementation vulnerability:
+    - **Backend API Bug**: In `ToggleActiveParkingHandler.cs`, the handler returns `new ApiResponse<bool>(true, $"Parking space {(parking.IsActive ? "activated" : "deactivated")}", true)`, hardcoding the 3rd argument `Data` to boolean `true` as an operation success indicator rather than `parking.IsActive`.
+    - **Mobile Implementation Gap**: `parkingSlice.js` previously extracted `response.data.data` (`true`) and in `toggleParkingActiveThunk.fulfilled`, `typeof action.payload === 'boolean'` blindly assigned `state.myListings[idx].isActive = action.payload` (`true`). This overwrote the optimistic deactivation and forced the space back to active as soon as the background sync completed.
+- **Implemented Resilient Response Parsing & Inversion Guard (`parkingSlice.js`)**:
+  - Updated `toggleParkingActiveThunk` to return `{ id, data, message, rawResponse }`.
+  - Updated `toggleParkingActiveThunk.fulfilled` to:
+    - Check for updated entity payload with full listing details or explicit `isActive` properties.
+    - Inspect server response `message`: explicit `/deactivated|inactive/i` keywords ensure `isActive` is set to `false`, and `/activated|active/i` ensure `isActive` is set to `true`.
+    - Handle generic boolean `data: true` responses by respecting `!originalState`, ensuring successful toggle operations from active to inactive remain `false`.
+    - Retain backward compatibility with direct entity and boolean mock payloads.
+- **Automated Testing Suite (`parkingSlice.test.js`, `MyListingsScreen.test.js`)**:
+  - Added 3 unit tests in `parkingSlice.test.js`:
+    1. Preserving inactive state when backend returns `data: true` with `"Parking space deactivated"` message.
+    2. Setting active state when backend returns `data: true` with `"Parking space activated"` message.
+    3. Inverting original active state when backend returns `data: true` without a message.
+  - Added unit test in `MyListingsScreen.test.js` verifying the toggle switch in the UI remains deactivated after background resolution when receiving real backend `ApiResponse<bool>` format (`success: true, message: 'Parking space deactivated', data: true`).
+  - Executed full Mobile test suite: **100% pass rate** (52/52 test suites, 328/328 tests passing cleanly).
+- **Key Files Modified**:
+  - `Mobile/src/store/slices/parkingSlice.js`
+  - `Mobile/src/store/slices/__tests__/parkingSlice.test.js`
+  - `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 52 test suites passing cleanly (328/328 unit tests).
+  - Staged, committed, and pushed to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
+
 ### [2026-09-17] - Fix Modal Keyboard Overlap & Document Keyboard Handling Checklist (<@U06FVANTNHL>)
 - **Resolved Modal Keyboard Overlap Issue (`BookingDetailScreen.js`)**:
   - Investigated issue reported by `<@U06FVANTNHL>` where input fields and text ("font/form") hide behind the on-screen soft keyboard in the newly implemented modals.

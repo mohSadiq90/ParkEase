@@ -79,7 +79,13 @@ export const toggleParkingActiveThunk = createAsyncThunk(
     async (id, { rejectWithValue }) => {
         try {
             const response = await apiClient.post(ENDPOINTS.PARKING.TOGGLE_ACTIVE(id));
-            return response.data.data;
+            const resData = response.data;
+            return {
+                id,
+                data: resData?.data !== undefined ? resData.data : resData,
+                message: resData?.message || '',
+                rawResponse: resData,
+            };
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
         }
@@ -423,28 +429,69 @@ const parkingSlice = createSlice({
             .addCase(toggleParkingActiveThunk.fulfilled, (state, action) => {
                 if (!state.togglingListingIds) state.togglingListingIds = [];
                 if (!state.optimisticOriginalMap) state.optimisticOriginalMap = {};
-                const id = typeof action.meta.arg === 'object' && action.meta.arg !== null
-                    ? action.meta.arg.id
-                    : action.meta.arg;
+
+                const id = (action.payload && typeof action.payload === 'object' && action.payload.id)
+                    ? action.payload.id
+                    : (typeof action.meta?.arg === 'object' && action.meta?.arg !== null)
+                        ? action.meta.arg.id
+                        : action.meta?.arg;
+
+                const originalState = id ? state.optimisticOriginalMap[id] : undefined;
 
                 if (id) {
                     state.togglingListingIds = state.togglingListingIds.filter((tId) => tId !== id);
                     delete state.optimisticOriginalMap[id];
                 }
 
-                const targetId = (action.payload && typeof action.payload === 'object' && action.payload.id)
-                    ? action.payload.id
-                    : id;
-
-                const idx = state.myListings.findIndex((l) => l.id === targetId);
+                const idx = state.myListings.findIndex((l) => l.id === id);
                 if (idx !== -1) {
-                    if (action.payload && typeof action.payload === 'object') {
+                    // Check if payload (or payload.data) contains a full updated listing entity object
+                    const entityData = (action.payload && typeof action.payload === 'object' && action.payload.data && typeof action.payload.data === 'object')
+                        ? action.payload.data
+                        : (action.payload && typeof action.payload === 'object' && ('title' in action.payload || 'hourlyRate' in action.payload || 'address' in action.payload))
+                            ? action.payload
+                            : null;
+
+                    if (entityData) {
                         state.myListings[idx] = {
                             ...state.myListings[idx],
-                            ...action.payload,
+                            ...entityData,
                         };
-                    } else if (typeof action.payload === 'boolean') {
-                        state.myListings[idx].isActive = action.payload;
+                    } else if (action.payload && typeof action.payload === 'object' && typeof action.payload.isActive === 'boolean') {
+                        // Explicit isActive property on payload object (e.g. mock { id: 'space-1', isActive: false })
+                        state.myListings[idx].isActive = action.payload.isActive;
+                    } else {
+                        // Check server response message for explicit activation/deactivation keyword
+                        const message = (action.payload && typeof action.payload === 'object')
+                            ? (action.payload.message || action.payload.rawResponse?.message || '')
+                            : '';
+
+                        if (/deactivated|inactive/i.test(message)) {
+                            state.myListings[idx].isActive = false;
+                        } else if (/activated|active/i.test(message)) {
+                            state.myListings[idx].isActive = true;
+                        } else {
+                            // Check direct boolean payload or payload.data
+                            const boolVal = typeof action.payload === 'boolean'
+                                ? action.payload
+                                : (action.payload && typeof action.payload === 'object' && typeof action.payload.data === 'boolean')
+                                    ? action.payload.data
+                                    : null;
+
+                            if (boolVal === false) {
+                                state.myListings[idx].isActive = false;
+                            } else if (boolVal === true) {
+                                // Backend ApiResponse<bool> returns data: true as success flag regardless of active state.
+                                // If originalState was tracked, the new state is !originalState.
+                                if (originalState !== undefined) {
+                                    state.myListings[idx].isActive = !originalState;
+                                } else {
+                                    state.myListings[idx].isActive = true;
+                                }
+                            } else if (originalState !== undefined) {
+                                state.myListings[idx].isActive = !originalState;
+                            }
+                        }
                     }
                 }
             })
