@@ -9,14 +9,55 @@
  * @param {string} currency - Currency code (default: INR)
  * @returns {string}
  */
-export const formatCurrency = (amount, currency = 'INR') => {
-    if (amount == null || isNaN(amount)) return '₹0';
+export const formatCurrency = (amount, currency = 'INR', options = {}) => {
+    if (amount == null || isNaN(amount)) {
+        return options.minimumFractionDigits === 2 ? '₹0.00' : '₹0';
+    }
+    const num = Number(amount);
+    const hasFraction = num % 1 !== 0;
+    const minDigits = options.minimumFractionDigits !== undefined
+        ? options.minimumFractionDigits
+        : (hasFraction ? 2 : 0);
+    const maxDigits = options.maximumFractionDigits !== undefined
+        ? options.maximumFractionDigits
+        : 2;
+
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
         currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    }).format(amount);
+        minimumFractionDigits: minDigits,
+        maximumFractionDigits: maxDigits,
+    }).format(num);
+};
+
+/**
+ * Format time range or single time if start and end are identical.
+ * Also supports multi-day bookings.
+ * @param {string|Date} start
+ * @param {string|Date} end
+ * @returns {string}
+ */
+export const formatTimeRange = (start, end) => {
+    if (!start && !end) return '';
+    if (!start) return formatTime(end);
+    if (!end) return formatTime(start);
+
+    const startTime = formatTime(start);
+    const endTime = formatTime(end);
+
+    // If start and end times are identical, display single time
+    if (startTime === endTime) {
+        return startTime;
+    }
+
+    // Edge case: multi-day booking
+    const startDateStr = formatDate(start);
+    const endDateStr = formatDate(end);
+    if (startDateStr && endDateStr && startDateStr !== endDateStr) {
+        return `${startTime} - ${endDateStr} ${endTime}`;
+    }
+
+    return `${startTime} - ${endTime}`;
 };
 
 /**

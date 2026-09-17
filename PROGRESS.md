@@ -9,6 +9,55 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Booking Screen UX: Navigation Mismatch, Filter Alignment, Currency & Duration Formatting (<@U06FVANTNHL>)
+- **Bottom Navigation Mismatch & Wayfinding**:
+  - Investigated UX issue where navigating to Bookings from the Dashboard kept the "Home" tab active in the bottom navigation bar while displaying the "Bookings" screen.
+  - Added `BookingTabRedirector` in `AppTabNavigator.js` within `HomeStack` and `MenuStack` to ensure attempts to navigate to `MyBookings` or `IncomingBookings` automatically delegate to `BookingsTab`, keeping the bottom calendar icon highlighted.
+  - Updated `NOTIFICATION_ROUTE_TAB_MAP` to correctly map `MyBookings`, `IncomingBookings`, and `CorporateBookings` to `BookingsTab`.
+  - Added `navigateToBookings` helper in `VendorDashboardScreen.js` routing metric cards ("Today's Bookings", "Monthly Revenue", "Pending Approvals") and the "Host Bookings" feature tile directly to `BookingsTab` with parameters.
+- **Filter vs. Status Alignment & Nomenclature**:
+  - Added missing `Cancelled` filter tab in `VendorBookingsScreen.js` and `Pending` filter tab in `MyBookingsScreen.js` to establish consistent filter chips across both driver and host booking screens: `[All, Pending, Active, Completed, Cancelled]`.
+  - Expanded `Pending` filter to cleanly capture `Pending`, `AwaitingPayment`, `PendingExtension`, and `AwaitingExtensionPayment`.
+  - Expanded `Cancelled` filter to encompass `Cancelled`, `Rejected`, and `Expired` states.
+  - Aligned badge nomenclature by renaming `BookingStatus.AwaitingPayment` label to `Pending Payment` in `constants.js`, ensuring transparent alignment with the `Pending` filter chip.
+  - Added `testID` attributes (`filter-tab-*`) on all filter tabs for enhanced accessibility and automated testing.
+- **Currency & Financial Readability Formatting**:
+  - Updated `formatCurrency` in `formatters.js` to ensure financial amounts with fractional values (e.g. `12.3`) format to two decimal places (`₹12.30`).
+  - Preserved integer formatting without unnecessary decimals (`₹20`) while supporting explicit `minimumFractionDigits` options.
+- **Logical Time Duration Display**:
+  - Added `formatTimeRange` utility in `formatters.js` that inspects start and end times:
+    - Automatically truncates identical start and end times (e.g. `4:44 pm - 4:44 pm` or point-in-time reservations) to a single concise timestamp (`4:44 pm`).
+    - Formats standard time ranges on the same day (`4:44 pm - 6:00 pm`).
+    - Supports multi-day booking durations (`4:44 pm - 18 Sep 4:44 pm`).
+  - Integrated `formatTimeRange` into booking cards across `VendorBookingsScreen.js` and `MyBookingsScreen.js`.
+- **Status Badge Differentiation (Cancelled vs Rejected)**:
+  - Differentiated user cancellations vs host/system rejections in `Badge.js` and `colors.js`:
+    - `Cancelled` (user action): renders soft red background (`#FEE2E2`) with leading `close-circle-outline` ('X') icon.
+    - `Rejected` (vendor/system action): renders distinct rose-wine shade (`#FFF1F2` / `#9F1239`) with leading `ban-outline` (:no_entry_sign:) icon and distinct outline border (`#FDA4AF`).
+    - Added leading icons across other booking and payment status badges.
+- **Automated Testing & Scope Verification**:
+  - Added unit test suite `Mobile/src/utils/__tests__/formatters.test.js` (8 tests) covering `formatCurrency` 2-decimal formatting and `formatTimeRange` identical time truncation and multi-day handling.
+  - Added unit test suite `Mobile/src/components/Common/__tests__/Badge.test.js` (4 tests) verifying `Pending Payment` label, `Cancelled` badge styling, and `Rejected` outline badge differentiation.
+  - Updated `VendorBookingsScreen.test.js` and `MyBookingsScreen.test.js` covering new filter chips, currency formatting, and identical time truncation.
+  - Full Mobile test suite executed: **100% pass rate** (51/51 test suites, 279/279 unit tests passing).
+- **Key Files Modified**:
+  - `Mobile/src/utils/formatters.js`
+  - `Mobile/src/utils/constants.js`
+  - `Mobile/src/styles/colors.js`
+  - `Mobile/src/components/Common/Badge.js`
+  - `Mobile/src/navigation/AppTabNavigator.js`
+  - `Mobile/src/screens/Vendor/VendorBookingsScreen.js`
+  - `Mobile/src/screens/Vendor/VendorDashboardScreen.js`
+  - `Mobile/src/screens/Booking/MyBookingsScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/VendorBookingsScreen.test.js`
+  - `Mobile/src/screens/Booking/__tests__/MyBookingsScreen.test.js`
+  - `Mobile/src/utils/__tests__/formatters.test.js`
+  - `Mobile/src/components/Common/__tests__/Badge.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 51 mobile test suites passing cleanly (279/279 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Listing Photos Missing Upload Option & Add Mobile Photo Upload Flow (<@U06FVANTNHL>)
 - **Mobile-First Photo Upload Workflow for Parking Space Creation & Editing**:
   - Investigated issue reported by `<@U06FVANTNHL>`: hosts creating or editing parking spaces had no option to upload photos from their phone, with only an impractical URL text paste input.

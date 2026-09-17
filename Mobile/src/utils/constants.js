@@ -35,7 +35,7 @@ export const BookingStatusLabels = {
     [BookingStatus.Completed]: 'Completed',
     [BookingStatus.Cancelled]: 'Cancelled',
     [BookingStatus.Expired]: 'Expired',
-    [BookingStatus.AwaitingPayment]: 'Awaiting Payment',
+    [BookingStatus.AwaitingPayment]: 'Pending Payment',
     [BookingStatus.Rejected]: 'Rejected',
     [BookingStatus.PendingExtension]: 'Extension Pending',
     [BookingStatus.AwaitingExtensionPayment]: 'Extension Payment Due',

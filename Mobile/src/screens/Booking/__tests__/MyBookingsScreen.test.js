@@ -83,4 +83,62 @@ describe('MyBookingsScreen', () => {
     const emptyText = await findByText("You don't have any bookings yet");
     expect(emptyText).toBeTruthy();
   });
+
+  it('renders all filter tabs including Pending and Cancelled', async () => {
+    apiClient.get.mockResolvedValueOnce({ data: { data: { bookings: [] } } });
+
+    const { getByText, findByText } = renderWithProviders(
+      <MyBookingsScreen navigation={mockNavigation} />
+    );
+
+    expect(await findByText('My Bookings')).toBeTruthy();
+    expect(getByText('All')).toBeTruthy();
+    expect(getByText('Pending')).toBeTruthy();
+    expect(getByText('Active')).toBeTruthy();
+    expect(getByText('Completed')).toBeTruthy();
+    expect(getByText('Cancelled')).toBeTruthy();
+  });
+
+  it('filters bookings by Pending and displays 2 decimal currency formatting', async () => {
+    const identicalTime = '2026-09-17T16:44:00.000Z';
+    const mockBookings = {
+      data: {
+        bookings: [
+          {
+            id: '1',
+            parkingSpaceTitle: 'Pending Slot',
+            status: 0,
+            totalAmount: 12.3,
+            bookingReference: 'REF-P1',
+            startDateTime: identicalTime,
+            endDateTime: identicalTime,
+          },
+          {
+            id: '2',
+            parkingSpaceTitle: 'Active Slot',
+            status: 1,
+            totalAmount: 20,
+            bookingReference: 'REF-A1',
+            startDateTime: identicalTime,
+            endDateTime: '2026-09-17T18:00:00.000Z',
+          },
+        ],
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce({ data: mockBookings });
+
+    const { getByText, findByText, queryByText, getByTestId } = renderWithProviders(
+      <MyBookingsScreen navigation={mockNavigation} />
+    );
+
+    expect(await findByText('Pending Slot')).toBeTruthy();
+    expect(getByText('₹12.30')).toBeTruthy();
+
+    // Tap Pending tab
+    fireEvent.press(getByTestId('filter-tab-pending'));
+
+    expect(getByText('Pending Slot')).toBeTruthy();
+    expect(queryByText('Active Slot')).toBeNull();
+  });
 });

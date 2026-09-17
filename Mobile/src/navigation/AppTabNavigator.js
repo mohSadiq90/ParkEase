@@ -88,21 +88,39 @@ const NOTIFICATION_ROUTE_TAB_MAP = {
     CompanyManagement: 'MenuTab',
     CorporateMembers: 'MenuTab',
     CorporateAllocations: 'MenuTab',
-    CorporateBookings: 'MenuTab',
+    CorporateBookings: 'BookingsTab',
     CorporateInvoices: 'MenuTab',
     CorporateLeaseBrowse: 'MenuTab',
     CorporateParkingSpaces: 'MenuTab',
-    MyListings: 'MenuTab',
-    MyBookings: 'MenuTab',
-    IncomingBookings: 'MenuTab',
-    Search: 'MenuTab',
-    CreateParking: 'MenuTab',
+    MyListings: 'ListingsTab',
+    MyBookings: 'BookingsTab',
+    IncomingBookings: 'BookingsTab',
+    BookingsHome: 'BookingsTab',
+    Search: 'SearchTab',
+    CreateParking: 'ListingsTab',
     AccessPassScanner: 'MenuTab',
     EventPackages: 'MenuTab',
     VendorEventPackages: 'MenuTab',
     LprSettings: 'MenuTab',
     LprSimulator: 'MenuTab',
     EvChargeSimulator: 'MenuTab',
+};
+
+const BookingTabRedirector = ({ route, navigation }) => {
+    React.useEffect(() => {
+        const targetScreen = route.name === 'IncomingBookings' ? 'IncomingBookings' : 'MyBookings';
+        try {
+            const parent = navigation.getParent?.();
+            if (parent) {
+                parent.navigate('BookingsTab', { screen: targetScreen, params: route.params });
+                return;
+            }
+        } catch (_) {}
+        try {
+            navigation.navigate('BookingsTab', { screen: targetScreen, params: route.params });
+        } catch (_) {}
+    }, [navigation, route]);
+    return null;
 };
 
 const DynamicDashboardScreen = (props) => {
@@ -133,8 +151,8 @@ const HomeStack = () => (
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
         <Stack.Screen name="MyVehicles" component={VehiclesScreen} />
         <Stack.Screen name="MyPasses" component={MyPassesScreen} />
-        <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
-        <Stack.Screen name="IncomingBookings" component={VendorBookingsScreen} />
+        <Stack.Screen name="MyBookings" component={BookingTabRedirector} />
+        <Stack.Screen name="IncomingBookings" component={BookingTabRedirector} />
         <Stack.Screen name="MyListings" component={MyListingsScreen} />
         <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
         <Stack.Screen name="ReviewsList" component={ReviewsListScreen} />
@@ -253,8 +271,8 @@ const MenuStack = () => (
         <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
         <Stack.Screen name="MyListings" component={MyListingsScreen} />
         <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
-        <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
-        <Stack.Screen name="IncomingBookings" component={VendorBookingsScreen} />
+        <Stack.Screen name="MyBookings" component={BookingTabRedirector} />
+        <Stack.Screen name="IncomingBookings" component={BookingTabRedirector} />
         <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
         <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
         <Stack.Screen name="BookParking" component={BookingScreen} />

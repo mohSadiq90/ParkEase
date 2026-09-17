@@ -14,21 +14,58 @@ import Badge from '../../components/Common/Badge';
 import EmptyState from '../../components/Common/EmptyState';
 import LoadingScreen from '../../components/Common/LoadingScreen';
 import { colors, spacing, typography } from '../../styles/globalStyles';
-import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
+import { formatCurrency, formatDate, formatTime, formatTimeRange } from '../../utils/formatters';
 import { BookingStatus } from '../../utils/constants';
 
 const FILTERS = [
     { label: 'All', value: null },
-    { label: 'Active', value: [BookingStatus.Confirmed, BookingStatus.InProgress] },
-    { label: 'Completed', value: [BookingStatus.Completed] },
-    { label: 'Cancelled', value: [BookingStatus.Cancelled, BookingStatus.Rejected] },
+    {
+        label: 'Pending',
+        value: [
+            BookingStatus.Pending,
+            BookingStatus.AwaitingPayment,
+            BookingStatus.PendingExtension,
+            BookingStatus.AwaitingExtensionPayment,
+        ],
+        stringMatches: ['PENDING', 'AWAITING', 'AWAITING_PAYMENT', 'PENDING PAYMENT'],
+    },
+    {
+        label: 'Active',
+        value: [BookingStatus.Confirmed, BookingStatus.InProgress],
+        stringMatches: ['CONFIRMED', 'ACTIVE', 'INPROGRESS', 'IN_PROGRESS', 'APPROVED'],
+    },
+    {
+        label: 'Completed',
+        value: [BookingStatus.Completed],
+        stringMatches: ['COMPLETED'],
+    },
+    {
+        label: 'Cancelled',
+        value: [BookingStatus.Cancelled, BookingStatus.Rejected, BookingStatus.Expired],
+        stringMatches: ['CANCELLED', 'CANCELED', 'REJECTED', 'EXPIRED'],
+    },
 ];
 
-const MyBookingsScreen = ({ navigation }) => {
+const getInitialFilterIndex = (params) => {
+    const filterKey = (params?.filter || params?.initialTab || '').toLowerCase();
+    if (filterKey === 'pending') return 1;
+    if (filterKey === 'active' || filterKey === 'confirmed') return 2;
+    if (filterKey === 'completed') return 3;
+    if (filterKey === 'cancelled' || filterKey === 'rejected') return 4;
+    return 0;
+};
+
+const MyBookingsScreen = ({ navigation, route }) => {
     const dispatch = useDispatch();
     const { myBookings, myBookingsLoading } = useSelector((s) => s.booking);
-    const [activeFilter, setActiveFilter] = useState(0);
+    const [activeFilter, setActiveFilter] = useState(() => getInitialFilterIndex(route?.params));
     const [refreshing, setRefreshing] = useState(false);
+
+    useEffect(() => {
+        if (route?.params?.filter || route?.params?.initialTab) {
+            setActiveFilter(getInitialFilterIndex(route.params));
+        }
+    }, [route?.params]);
 
     useEffect(() => {
         dispatch(getMyBookingsThunk());
@@ -42,9 +79,18 @@ const MyBookingsScreen = ({ navigation }) => {
 
     const bookingsList = Array.isArray(myBookings) ? myBookings : [];
     const filteredBookings = bookingsList.filter((b) => {
-        const filter = FILTERS[activeFilter].value;
-        if (!filter) return true;
-        return filter.includes(b.status);
+        const filter = FILTERS[activeFilter];
+        if (!filter || filter.value == null) return true;
+        if (Array.isArray(filter.value) && filter.value.includes(b.status)) {
+            return true;
+        }
+        if (b.status === filter.value) {
+            return true;
+        }
+        if (typeof b.status === 'string' && filter.stringMatches) {
+            return filter.stringMatches.includes(b.status.toUpperCase());
+        }
+        return false;
     });
 
     const renderBookingItem = ({ item }) => (
@@ -64,7 +110,7 @@ const MyBookingsScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoRow}>
                     <Ionicons name="time-outline" size={14} color={colors.textTertiary} />
-                    <Text style={styles.infoText}>{formatTime(item.startDateTime)} - {formatTime(item.endDateTime)}</Text>
+                    <Text style={styles.infoText}>{formatTimeRange(item.startDateTime, item.endDateTime)}</Text>
                 </View>
             </View>
             <View style={styles.cardFooter}>
@@ -86,6 +132,7 @@ const MyBookingsScreen = ({ navigation }) => {
                 {FILTERS.map((filter, idx) => (
                     <TouchableOpacity
                         key={idx}
+                        testID={`filter-tab-${filter.label.toLowerCase()}`}
                         onPress={() => setActiveFilter(idx)}
                         style={[styles.filterTab, activeFilter === idx && styles.filterTabActive]}
                     >

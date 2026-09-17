@@ -56,14 +56,16 @@ export const colors = {
     textInverse: '#FFFFFF',
     textLink: '#4F46E5',
 
-    // Semantic Status Colors (Pill Background / Text)
+    // Semantic Status Colors (Pill Background / Text / Border)
     statusSemantic: {
-        pending: { bg: '#FEF3C7', text: '#92400E' },
-        awaiting: { bg: '#FEF3C7', text: '#92400E' },
-        approved: { bg: '#D1FAE5', text: '#065F46' },
-        active: { bg: '#D1FAE5', text: '#065F46' },
-        cancelled: { bg: '#FEE2E2', text: '#991B1B' },
-        rejected: { bg: '#FEE2E2', text: '#991B1B' },
+        pending: { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
+        awaiting: { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
+        approved: { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' },
+        active: { bg: '#DBEAFE', text: '#1E40AF', border: '#BFDBFE' },
+        completed: { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' },
+        cancelled: { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' }, // User cancelled (soft red pill)
+        rejected: { bg: '#FFF1F2', text: '#9F1239', border: '#FDA4AF', outline: true }, // Host/system rejected (distinct rose wine shade with outline)
+        expired: { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1' },
     },
 
     // Dark variants (for cards, badges, etc.)

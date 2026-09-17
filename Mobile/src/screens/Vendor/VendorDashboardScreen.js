@@ -211,6 +211,22 @@ const VendorDashboardScreen = ({ navigation }) => {
         }
     }, [navigation]);
 
+    const navigateToBookings = useCallback((params = {}) => {
+        try {
+            const parent = navigation.getParent?.();
+            const parentState = parent?.getState?.();
+            if (parent && parentState?.routeNames?.includes('BookingsTab')) {
+                parent.navigate('BookingsTab', { screen: 'IncomingBookings', params });
+                return;
+            }
+        } catch (_) {}
+        try {
+            navigation?.navigate?.('IncomingBookings', params);
+        } catch (err) {
+            console.warn('Navigation to IncomingBookings failed:', err);
+        }
+    }, [navigation]);
+
     if (loading && !data) return <LoadingScreen />;
 
     const pendingApprovalsCount = data?.pendingBookings ??
@@ -238,6 +254,10 @@ const VendorDashboardScreen = ({ navigation }) => {
         'Partner';
 
     const handleFeatureTilePress = (tile) => {
+        if (tile.id === 'incoming_bookings' || tile.screen === 'IncomingBookings') {
+            navigateToBookings(tile.params || {});
+            return;
+        }
         try {
             if (navigation?.navigate) {
                 navigation.navigate(tile.screen, tile.params || {});
@@ -275,7 +295,7 @@ const VendorDashboardScreen = ({ navigation }) => {
                                 icon="calendar-outline"
                                 label="Today's Bookings"
                                 value={data?.todayBookings ?? data?.activeBookings ?? data?.totalBookings ?? 0}
-                                onPress={() => navigation?.navigate?.('IncomingBookings', { initialTab: 'today', filter: 'today' })}
+                                onPress={() => navigateToBookings({ initialTab: 'today', filter: 'today' })}
                             />
                         </View>
                         <View style={styles.metricsRow}>
@@ -284,13 +304,13 @@ const VendorDashboardScreen = ({ navigation }) => {
                                 label="Monthly Revenue"
                                 value={formatCurrency(data?.monthlyEarnings ?? data?.totalEarnings ?? 0)}
                                 isCurrency
-                                onPress={() => navigation?.navigate?.('IncomingBookings', { initialTab: 'all', filter: 'completed' })}
+                                onPress={() => navigateToBookings({ initialTab: 'all', filter: 'completed' })}
                             />
                             <MetricCard
                                 icon="time-outline"
                                 label="Pending Approvals"
                                 value={pendingApprovalsCount}
-                                onPress={() => navigation?.navigate?.('IncomingBookings', { initialTab: 'pending', filter: 'pending' })}
+                                onPress={() => navigateToBookings({ initialTab: 'pending', filter: 'pending' })}
                             />
                         </View>
                     </View>

@@ -132,4 +132,66 @@ describe('VendorBookingsScreen', () => {
       expect(apiClient.post).toHaveBeenCalled();
     });
   });
+
+  it('renders all filter tabs including Cancelled and Pending', async () => {
+    apiClient.get.mockResolvedValueOnce({ data: { data: { bookings: [] } } });
+
+    const { getByText, findByText } = renderWithProviders(
+      <VendorBookingsScreen navigation={mockNavigation} />
+    );
+
+    expect(await findByText('Bookings')).toBeTruthy();
+    expect(getByText('All')).toBeTruthy();
+    expect(getByText('Pending')).toBeTruthy();
+    expect(getByText('Active')).toBeTruthy();
+    expect(getByText('Completed')).toBeTruthy();
+    expect(getByText('Cancelled')).toBeTruthy();
+  });
+
+  it('formats currency with two decimal places for fractional amounts (₹12.30) and truncates identical start/end times', async () => {
+    const identicalTime = '2026-09-17T16:44:00.000Z';
+    const mockBookings = {
+      data: {
+        bookings: [
+          {
+            id: '103',
+            userName: 'Alice Smith',
+            parkingSpaceTitle: 'Spot C',
+            status: 6, // AwaitingPayment / Pending Payment
+            totalAmount: 12.3,
+            startDateTime: identicalTime,
+            endDateTime: identicalTime,
+          },
+          {
+            id: '104',
+            userName: 'Bob Jones',
+            parkingSpaceTitle: 'Spot D',
+            status: 4, // Cancelled
+            totalAmount: 20,
+            startDateTime: identicalTime,
+            endDateTime: '2026-09-17T18:00:00.000Z',
+          },
+        ],
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce({ data: mockBookings });
+
+    const { getByText, findByText, queryByText, getByTestId } = renderWithProviders(
+      <VendorBookingsScreen navigation={mockNavigation} />
+    );
+
+    // Verify 2 decimal currency formatting
+    expect(await findByText('₹12.30')).toBeTruthy();
+
+    // Verify badge displays Pending Payment
+    expect(getByText('Pending Payment')).toBeTruthy();
+
+    // Filter by Cancelled
+    fireEvent.press(getByTestId('filter-tab-cancelled'));
+
+    // Spot D (Cancelled) should be visible, Spot C (Pending Payment) should be filtered out
+    expect(getByText('Spot D')).toBeTruthy();
+    expect(queryByText('Spot C')).toBeNull();
+  });
 });
