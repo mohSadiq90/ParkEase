@@ -407,6 +407,7 @@ const VendorDashboardScreen = ({ navigation }) => {
                             bookingId: booking.id,
                             id: booking.id,
                             booking,
+                            isVendor: true,
                         })}
                     >
                         <View style={styles.bookingRow}>

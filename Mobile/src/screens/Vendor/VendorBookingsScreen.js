@@ -128,7 +128,7 @@ const VendorBookingsScreen = ({ navigation, route }) => {
         const hasPendingExtension = item.hasPendingExtension || item.extensionStatus === 'Pending' || item.pendingExtension;
 
         return (
-            <Card onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })}>
+            <Card onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id, isVendor: true })}>
                 <View style={styles.cardHeader}>
                     <View style={{ flex: 1 }}>
                         <Text style={styles.bookingTitle}>{item.userName}</Text>

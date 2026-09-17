@@ -19,10 +19,11 @@ import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import Badge from '../../components/Common/Badge';
 import Button from '../../components/Common/Button';
+import Input from '../../components/Common/Input';
 import LoadingScreen from '../../components/Common/LoadingScreen';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
-import { formatCurrency, formatDateTime } from '../../utils/formatters';
-import { BookingStatus, BookingStatusLabels, PricingTypeLabels, VehicleTypeLabels } from '../../utils/constants';
+import { formatCurrency, formatDateTime, formatTime } from '../../utils/formatters';
+import { BookingStatus, BookingStatusLabels, PricingTypeLabels, VehicleTypeLabels, UserRole, ValetStatus } from '../../utils/constants';
 
 const InfoRow = ({ icon, label, value }) => (
     <View style={styles.infoRow}>
@@ -35,16 +36,42 @@ const InfoRow = ({ icon, label, value }) => (
 );
 
 const EXTENSION_HOUR_OPTIONS = [1, 2, 3, 4, 6, 12];
+const VALET_LEAD_OPTIONS = [5, 10, 15, 20, 30];
+
+const getValetStatusInfo = (status) => {
+    const s = typeof status === 'string' ? status.toLowerCase() : status;
+    if (s === 1 || s === 'requested') return { code: 1, label: 'Requested (Awaiting Staff)', isRequested: true };
+    if (s === 2 || s === 'inprogress' || s === 'acknowledged') return { code: 2, label: 'In Progress (Retrieval underway)', isInProgress: true };
+    if (s === 3 || s === 'ready' || s === 'readyforpickup') return { code: 3, label: 'Ready for Pickup', isReady: true };
+    if (s === 4 || s === 'completed') return { code: 4, label: 'Completed', isCompleted: true };
+    if (s === 5 || s === 'cancelled') return { code: 5, label: 'Cancelled', isCancelled: true };
+    return { code: 0, label: 'None', isNone: true };
+};
 
 const BookingDetailScreen = ({ navigation, route }) => {
     const { bookingId } = route.params;
     const dispatch = useDispatch();
+    const { user } = useSelector((s) => s.auth);
     const { selectedBooking: booking, detailLoading, actionLoading } = useSelector((s) => s.booking);
 
     const [extendModalVisible, setExtendModalVisible] = useState(false);
     const [extendHours, setExtendHours] = useState(1);
     const [extending, setExtending] = useState(false);
     const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+
+    // Valet Modal State
+    const [valetModalVisible, setValetModalVisible] = useState(false);
+    const [valetNotes, setValetNotes] = useState('');
+    const [valetLeadMinutes, setValetLeadMinutes] = useState(10);
+    const [requestingValet, setRequestingValet] = useState(false);
+
+    // Bay Assignment Modal State
+    const [assignBayModalVisible, setAssignBayModalVisible] = useState(false);
+    const [bayLabel, setBayLabel] = useState('');
+    const [facilityLevel, setFacilityLevel] = useState('');
+    const [facilityZone, setFacilityZone] = useState('');
+    const [slotNumber, setSlotNumber] = useState('');
+    const [assigningBay, setAssigningBay] = useState(false);
 
     useEffect(() => {
         dispatch(getBookingDetailThunk(bookingId));
@@ -146,18 +173,163 @@ const BookingDetailScreen = ({ navigation, route }) => {
         }
     };
 
+    const openValetModal = () => {
+        if (booking?.isValetEnabled === false) {
+            Alert.alert('Valet Unavailable', 'Valet service is not enabled for this parking facility.');
+            return;
+        }
+        setValetNotes('');
+        setValetLeadMinutes(10);
+        setValetModalVisible(true);
+    };
+
+    const handleConfirmRequestValet = async () => {
+        if (!booking) return;
+        setRequestingValet(true);
+        const res = await dispatch(requestValetThunk({
+            id: bookingId,
+            data: {
+                notes: valetNotes.trim() || undefined,
+                leadMinutes: valetLeadMinutes,
+            },
+        }));
+        setRequestingValet(false);
+        if (!res.error) {
+            setValetModalVisible(false);
+            Alert.alert('Valet Requested', `Staff has been notified. Estimated retrieval time: ~${valetLeadMinutes} minutes.`);
+        } else {
+            const errorMsg = typeof res.payload === 'string' ? res.payload : (res.error?.message || 'Could not request valet.');
+            Alert.alert('Valet Request Failed', errorMsg);
+        }
+    };
+
+    const handleCancelValet = () => {
+        Alert.alert(
+            'Cancel Valet Request',
+            'Are you sure you want to cancel your vehicle retrieval request?',
+            [
+                { text: 'No', style: 'cancel' },
+                {
+                    text: 'Yes, Cancel',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const res = await dispatch(cancelValetThunk(bookingId));
+                        if (!res.error) {
+                            Alert.alert('Valet Cancelled', 'Your valet retrieval request has been cancelled.');
+                        } else {
+                            Alert.alert('Action Failed', res.payload || 'Unable to cancel valet request.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleVendorValetAction = async (actionType) => {
+        let res;
+        switch (actionType) {
+            case 'acknowledge':
+                res = await dispatch(acknowledgeValetThunk(bookingId));
+                if (!res.error) {
+                    Alert.alert('Valet Acknowledged', 'Vehicle retrieval is now marked as in progress.');
+                }
+                break;
+            case 'ready':
+                res = await dispatch(readyValetThunk(bookingId));
+                if (!res.error) {
+                    Alert.alert('Vehicle Ready', 'Guest has been notified that the vehicle is ready for pickup.');
+                }
+                break;
+            case 'complete':
+                res = await dispatch(completeValetThunk(bookingId));
+                if (!res.error) {
+                    Alert.alert('Valet Completed', 'Valet vehicle handoff completed successfully.');
+                }
+                break;
+        }
+        if (res?.error) {
+            const errorMsg = typeof res.payload === 'string' ? res.payload : (res.error?.message || 'Action failed');
+            if (errorMsg.toLowerCase().includes('unauthorized') || errorMsg.toLowerCase().includes('forbidden')) {
+                Alert.alert(
+                    'Host Authorization Required',
+                    'Only the facility owner or designated valet staff can manage valet operations for this booking.'
+                );
+            } else {
+                Alert.alert('Valet Action Failed', errorMsg);
+            }
+        }
+    };
+
     const handleValetAction = (actionType) => {
-        switch(actionType) {
-            case 'request': dispatch(requestValetThunk({ id: bookingId, data: {} })); break;
-            case 'cancel': dispatch(cancelValetThunk(bookingId)); break;
-            case 'acknowledge': dispatch(acknowledgeValetThunk(bookingId)); break;
-            case 'ready': dispatch(readyValetThunk(bookingId)); break;
-            case 'complete': dispatch(completeValetThunk(bookingId)); break;
+        if (actionType === 'request') {
+            openValetModal();
+        } else if (actionType === 'cancel') {
+            handleCancelValet();
+        } else {
+            handleVendorValetAction(actionType);
+        }
+    };
+
+    const openAssignBayModal = () => {
+        setBayLabel(booking?.bayLabel || booking?.assignedBay || '');
+        setFacilityLevel(booking?.facilityLevel || '');
+        setFacilityZone(booking?.facilityZone || '');
+        setSlotNumber(booking?.slotNumber ? String(booking.slotNumber) : '');
+        setAssignBayModalVisible(true);
+    };
+
+    const handleConfirmAssignBay = async () => {
+        if (!booking) return;
+        const trimmedBay = bayLabel.trim();
+        const trimmedLevel = facilityLevel.trim();
+        const trimmedZone = facilityZone.trim();
+        const trimmedSlot = slotNumber.trim();
+
+        if (!trimmedBay && !trimmedLevel && !trimmedZone && !trimmedSlot) {
+            Alert.alert('Input Required', 'Please provide a bay identifier, level, zone, or slot number.');
+            return;
+        }
+
+        let parsedSlot = undefined;
+        if (trimmedSlot) {
+            parsedSlot = parseInt(trimmedSlot, 10);
+            if (isNaN(parsedSlot) || parsedSlot <= 0) {
+                Alert.alert('Invalid Slot', 'Slot number must be a valid positive integer.');
+                return;
+            }
+        }
+
+        setAssigningBay(true);
+        const res = await dispatch(assignBayThunk({
+            id: bookingId,
+            data: {
+                bayLabel: trimmedBay || undefined,
+                facilityLevel: trimmedLevel || undefined,
+                facilityZone: trimmedZone || undefined,
+                slotNumber: parsedSlot,
+            },
+        }));
+        setAssigningBay(false);
+
+        if (!res.error) {
+            setAssignBayModalVisible(false);
+            const assignedInfo = trimmedBay || (parsedSlot ? `Slot ${parsedSlot}` : 'Guidance updated');
+            Alert.alert('Bay Assigned', `Parking bay (${assignedInfo}) has been assigned successfully.`);
+        } else {
+            const errorMsg = typeof res.payload === 'string' ? res.payload : (res.error?.message || 'Could not assign bay.');
+            if (errorMsg.toLowerCase().includes('unauthorized') || errorMsg.toLowerCase().includes('forbidden')) {
+                Alert.alert(
+                    'Host Authorization Required',
+                    'Only the facility owner or vendor can assign bays for this booking.'
+                );
+            } else {
+                Alert.alert('Bay Assignment Failed', errorMsg);
+            }
         }
     };
 
     const handleAssignBay = () => {
-        dispatch(assignBayThunk({ id: bookingId, data: { bayNumber: 'A1-001' } }));
+        openAssignBayModal();
     };
 
     if (detailLoading || !booking) return <LoadingScreen />;
@@ -167,6 +339,10 @@ const BookingDetailScreen = ({ navigation, route }) => {
     const isInProgress = booking.status === BookingStatus.InProgress;
     const canExtend = isConfirmed || isInProgress;
     const hasPendingExtension = booking.hasPendingExtension || booking.extensionStatus === 'Pending' || booking.pendingExtension;
+
+    const isVendorUser = user?.role === UserRole.Vendor || user?.role === UserRole.Admin || user?.role === 'Vendor' || user?.role === 'Admin';
+    const isFacilityHost = Boolean(route.params?.isVendor || isVendorUser || (user && booking.userId && user.id !== booking.userId));
+    const valetInfo = getValetStatusInfo(booking.valetStatus);
 
     const currentEnd = new Date(booking.endDateTime);
     const extendedEndDate = new Date(currentEnd.getTime() + extendHours * 3600000);
@@ -270,6 +446,38 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         </Card>
                     )}
 
+                    {/* Active Valet Notice */}
+                    {(valetInfo.isRequested || valetInfo.isInProgress || valetInfo.isReady) && (
+                        <Card style={{
+                            backgroundColor: valetInfo.isReady ? colors.successSoft : colors.primarySoft,
+                            borderLeftWidth: 4,
+                            borderLeftColor: valetInfo.isReady ? colors.success : colors.primary,
+                        }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                <Ionicons
+                                    name={valetInfo.isReady ? 'car-sport-outline' : 'key-outline'}
+                                    size={24}
+                                    color={valetInfo.isReady ? colors.success : colors.primary}
+                                />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ ...typography.label, color: colors.textPrimary, fontWeight: '700' }}>
+                                        Valet: {valetInfo.label}
+                                    </Text>
+                                    {booking.valetTargetReadyAt && (
+                                        <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
+                                            Target Ready: {formatTime(booking.valetTargetReadyAt)}
+                                        </Text>
+                                    )}
+                                    {booking.valetNotes ? (
+                                        <Text style={{ ...typography.caption, color: colors.textTertiary, marginTop: 2 }}>
+                                            Notes: {booking.valetNotes}
+                                        </Text>
+                                    ) : null}
+                                </View>
+                            </View>
+                        </Card>
+                    )}
+
                     {/* Parking Info */}
                     <Card>
                         <Text style={styles.sectionTitle}>Parking Location</Text>
@@ -278,11 +486,23 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
                             <Text style={styles.parkingAddress}>{booking.parkingSpaceAddress || 'N/A'}</Text>
                         </View>
-                        {booking.slotNumber && (
-                            <View style={{ marginTop: spacing.sm, alignSelf: 'flex-start', backgroundColor: colors.primarySoft, paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: spacing.radius.full }}>
-                                <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '700' }}>🅿️ Slot P{booking.slotNumber}</Text>
-                            </View>
-                        )}
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.sm }}>
+                            {booking.slotNumber && (
+                                <View style={{ backgroundColor: colors.primarySoft, paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: spacing.radius.full }}>
+                                    <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '700' }}>🅿️ Slot P{booking.slotNumber}</Text>
+                                </View>
+                            )}
+                            {(booking.bayLabel || booking.assignedBay) && (
+                                <View style={{ backgroundColor: colors.successSoft, paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: spacing.radius.full }}>
+                                    <Text style={{ ...typography.caption, color: colors.success, fontWeight: '700' }}>📍 Bay {booking.bayLabel || booking.assignedBay}</Text>
+                                </View>
+                            )}
+                            {booking.facilityLevel && (
+                                <View style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderLight, paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: spacing.radius.full }}>
+                                    <Text style={{ ...typography.caption, color: colors.textSecondary, fontWeight: '600' }}>Level {booking.facilityLevel}</Text>
+                                </View>
+                            )}
+                        </View>
                     </Card>
 
                     {/* Booking Details */}
@@ -292,11 +512,19 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         <InfoRow icon="calendar-outline" label="End" value={formatDateTime(booking.endDateTime)} />
                         <InfoRow icon="pricetag-outline" label="Pricing" value={PricingTypeLabels[booking.pricingType]} />
                         <InfoRow icon="car-outline" label="Vehicle" value={booking.vehicleNumber ? `${booking.vehicleNumber} (${VehicleTypeLabels[booking.vehicleType] || 'Vehicle'})` : (VehicleTypeLabels[booking.vehicleType] || 'N/A')} />
-                        {booking.assignedBay && (
-                            <InfoRow icon="grid-outline" label="Assigned Bay" value={booking.assignedBay} />
+                        {(booking.bayLabel || booking.assignedBay || booking.facilityLevel || booking.facilityZone) && (
+                            <InfoRow
+                                icon="grid-outline"
+                                label="Assigned Bay"
+                                value={[
+                                    booking.bayLabel || booking.assignedBay ? `${booking.bayLabel || booking.assignedBay}` : null,
+                                    booking.facilityLevel ? `Lvl ${booking.facilityLevel}` : null,
+                                    booking.facilityZone ? `Zone ${booking.facilityZone}` : null,
+                                ].filter(Boolean).join(' • ')}
+                            />
                         )}
-                        {booking.valetStatus && (
-                            <InfoRow icon="key-outline" label="Valet Status" value={booking.valetStatus} />
+                        {!valetInfo.isNone && (
+                            <InfoRow icon="key-outline" label="Valet Status" value={valetInfo.label} />
                         )}
                     </Card>
 
@@ -378,25 +606,26 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         )}
                         
                         {/* Member Valet Actions */}
-                        {!booking.valetStatus && (
-                            <Button title="Request Valet" onPress={() => handleValetAction('request')} variant="secondary" loading={actionLoading} />
+                        {(isConfirmed || isInProgress) && (valetInfo.isNone || valetInfo.isCancelled || valetInfo.isCompleted) && (
+                            <Button
+                                title="Request Valet"
+                                testID="request-valet-btn"
+                                onPress={openValetModal}
+                                variant="secondary"
+                                loading={actionLoading}
+                                icon={<Ionicons name="key-outline" size={20} color={colors.primary} />}
+                            />
                         )}
-                        {booking.valetStatus === 'Requested' && (
-                            <Button title="Cancel Valet Request" onPress={() => handleValetAction('cancel')} variant="secondary" loading={actionLoading} />
+                        {valetInfo.isRequested && (
+                            <Button
+                                title="Cancel Valet Request"
+                                testID="cancel-valet-btn"
+                                onPress={handleCancelValet}
+                                variant="secondary"
+                                loading={actionLoading}
+                                icon={<Ionicons name="close-circle-outline" size={20} color={colors.primary} />}
+                            />
                         )}
-                        
-                        {/* Vendor Valet & Bay Actions */}
-                        {booking.valetStatus === 'Requested' && (
-                            <Button title="Acknowledge Valet (Vendor)" onPress={() => handleValetAction('acknowledge')} variant="outline" loading={actionLoading} />
-                        )}
-                        {booking.valetStatus === 'Acknowledged' && (
-                            <Button title="Mark Valet Ready (Vendor)" onPress={() => handleValetAction('ready')} variant="outline" loading={actionLoading} />
-                        )}
-                        {booking.valetStatus === 'Ready' && (
-                            <Button title="Complete Valet (Vendor)" onPress={() => handleValetAction('complete')} variant="primary" loading={actionLoading} />
-                        )}
-                        
-                        <Button title="Assign Bay (Vendor)" onPress={() => handleAssignBay()} variant="outline" loading={actionLoading} />
 
                         {booking.status === BookingStatus.Completed && (
                             <Button
@@ -407,6 +636,57 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             />
                         )}
                     </View>
+
+                    {/* Vendor Operations Section */}
+                    <Card style={styles.vendorCard}>
+                        <View style={styles.vendorHeader}>
+                            <Ionicons name="business-outline" size={20} color={colors.primary} />
+                            <Text style={styles.vendorHeaderTitle}>Host & Vendor Controls</Text>
+                        </View>
+                        <Text style={styles.vendorHeaderSubtitle}>
+                            Manage indoor bay assignment and valet retrieval operations.
+                        </Text>
+                        <View style={styles.vendorBtnGroup}>
+                            <Button
+                                title="Assign Bay"
+                                testID="assign-bay-btn"
+                                onPress={openAssignBayModal}
+                                variant="outline"
+                                loading={actionLoading}
+                                icon={<Ionicons name="grid-outline" size={18} color={colors.primary} />}
+                            />
+                            {valetInfo.isRequested && (
+                                <Button
+                                    title="Acknowledge Valet (Vendor)"
+                                    testID="valet-acknowledge-btn"
+                                    onPress={() => handleVendorValetAction('acknowledge')}
+                                    variant="outline"
+                                    loading={actionLoading}
+                                    icon={<Ionicons name="checkmark-circle-outline" size={18} color={colors.primary} />}
+                                />
+                            )}
+                            {valetInfo.isInProgress && (
+                                <Button
+                                    title="Mark Valet Ready (Vendor)"
+                                    testID="valet-ready-btn"
+                                    onPress={() => handleVendorValetAction('ready')}
+                                    variant="outline"
+                                    loading={actionLoading}
+                                    icon={<Ionicons name="car-sport-outline" size={18} color={colors.primary} />}
+                                />
+                            )}
+                            {valetInfo.isReady && (
+                                <Button
+                                    title="Complete Valet (Vendor)"
+                                    testID="valet-complete-btn"
+                                    onPress={() => handleVendorValetAction('complete')}
+                                    variant="primary"
+                                    loading={actionLoading}
+                                    icon={<Ionicons name="checkmark-done-outline" size={18} color={colors.white} />}
+                                />
+                            )}
+                        </View>
+                    </Card>
                 </View>
             </ScrollView>
 
@@ -551,6 +831,157 @@ const BookingDetailScreen = ({ navigation, route }) => {
                     </View>
                 </View>
             </Modal>
+
+            {/* Request Valet Modal */}
+            <Modal
+                visible={valetModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setValetModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Request Valet Retrieval</Text>
+                            <TouchableOpacity onPress={() => setValetModalVisible(false)} style={styles.modalCloseBtn}>
+                                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.modalSubtitle}>
+                            Request parking staff to retrieve your vehicle to the pickup bay.
+                        </Text>
+
+                        <Text style={styles.modalInputLabel}>Lead Time (Minutes)</Text>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.chipRow}
+                            style={styles.chipRowScroll}
+                        >
+                            {VALET_LEAD_OPTIONS.map((mins) => (
+                                <TouchableOpacity
+                                    key={mins}
+                                    testID={`valet-lead-pill-${mins}`}
+                                    onPress={() => setValetLeadMinutes(mins)}
+                                    style={[
+                                        styles.hourChip,
+                                        valetLeadMinutes === mins && styles.hourChipSelected,
+                                    ]}
+                                >
+                                    <Text style={[styles.hourChipText, valetLeadMinutes === mins && styles.hourChipTextSelected]}>
+                                        {mins} mins
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+
+                        <Input
+                            label="Pickup Notes / Car Location (Optional)"
+                            placeholder="e.g. Near Pillar B2, key with front desk"
+                            value={valetNotes}
+                            onChangeText={setValetNotes}
+                            multiline
+                            numberOfLines={3}
+                            leftIcon="document-text-outline"
+                            containerStyle={{ marginBottom: spacing.lg }}
+                        />
+
+                        <View style={styles.modalActions}>
+                            <Button
+                                title="Cancel"
+                                onPress={() => setValetModalVisible(false)}
+                                variant="outline"
+                                style={{ flex: 1 }}
+                            />
+                            <Button
+                                title="Submit Request"
+                                onPress={handleConfirmRequestValet}
+                                variant="primary"
+                                loading={requestingValet}
+                                style={{ flex: 1 }}
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Assign Parking Bay Modal */}
+            <Modal
+                visible={assignBayModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setAssignBayModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Assign Parking Bay</Text>
+                            <TouchableOpacity onPress={() => setAssignBayModalVisible(false)} style={styles.modalCloseBtn}>
+                                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.modalSubtitle}>
+                            Assign or update indoor bay guidance and designated spot for this booking.
+                        </Text>
+
+                        <Input
+                            label="Bay Identifier / Label"
+                            placeholder="e.g. Bay A-14, A1-001"
+                            value={bayLabel}
+                            onChangeText={setBayLabel}
+                            leftIcon="grid-outline"
+                            containerStyle={{ marginBottom: spacing.sm }}
+                        />
+
+                        <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm }}>
+                            <Input
+                                label="Level / Floor"
+                                placeholder="e.g. B1, L2"
+                                value={facilityLevel}
+                                onChangeText={setFacilityLevel}
+                                leftIcon="layers-outline"
+                                containerStyle={{ flex: 1 }}
+                            />
+                            <Input
+                                label="Zone"
+                                placeholder="e.g. North, Blue"
+                                value={facilityZone}
+                                onChangeText={setFacilityZone}
+                                leftIcon="navigate-outline"
+                                containerStyle={{ flex: 1 }}
+                            />
+                        </View>
+
+                        <Input
+                            label="Slot Number"
+                            placeholder="e.g. 14"
+                            value={slotNumber}
+                            onChangeText={setSlotNumber}
+                            keyboardType="numeric"
+                            leftIcon="car-outline"
+                            containerStyle={{ marginBottom: spacing.lg }}
+                        />
+
+                        <View style={styles.modalActions}>
+                            <Button
+                                title="Cancel"
+                                onPress={() => setAssignBayModalVisible(false)}
+                                variant="outline"
+                                style={{ flex: 1 }}
+                            />
+                            <Button
+                                title="Save Bay Assignment"
+                                onPress={handleConfirmAssignBay}
+                                variant="primary"
+                                loading={assigningBay}
+                                style={{ flex: 1 }}
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </ScreenLayout>
     );
 };
@@ -576,6 +1007,12 @@ const styles = StyleSheet.create({
     receiptBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm, alignSelf: 'flex-start' },
     receiptBtnText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
     actions: { gap: spacing.md, marginTop: spacing.lg },
+    vendorCard: { marginTop: spacing.md, borderLeftWidth: 4, borderLeftColor: colors.primary, backgroundColor: colors.surface },
+    vendorHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+    vendorHeaderTitle: { ...typography.h4, color: colors.textPrimary },
+    vendorHeaderSubtitle: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.md },
+    vendorBtnGroup: { gap: spacing.sm },
+    modalInputLabel: { ...typography.label, color: colors.textPrimary, marginBottom: spacing.xs, marginTop: spacing.xs },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     modalContainer: { backgroundColor: colors.surface, borderTopLeftRadius: spacing.radius.xl, borderTopRightRadius: spacing.radius.xl, padding: spacing.screenHorizontal, paddingBottom: spacing['2xl'] },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },

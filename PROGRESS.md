@@ -9,6 +9,54 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Booking Details Request Valet, Assign Bay, & Vendor Controls (<@U06FVANTNHL>)
+- **Audited Booking Details Action Flow (`BookingDetailScreen.js`, `bookingSlice.js`)**:
+  - Investigated issue reported by `<@U06FVANTNHL>` regarding "Request Validate", "Assign Bay", and "Vendor" buttons not working on the booking details screen.
+  - Identified that "Request Validate" referred to "Request Valet", which previously executed an empty payload without user prompt, notes, or lead time, and swallowed failures if valet service was disabled.
+  - Identified that "Assign Bay (Vendor)" previously dispatched a hardcoded dummy value `{ bayNumber: 'A1-001' }` without opening any modal or accepting actual bay guidance, while the backend API requires `{ bayLabel, facilityLevel, facilityZone, slotNumber }`.
+  - Identified that vendor-only buttons were rendered for all users without role distinction and with unhandled authorization failures.
+  - Identified that `valetStatus` numeric enums from the backend API were checked via strict string equality (`booking.valetStatus === 'Requested'`), causing status transitions to fail rendering subsequent action buttons.
+- **Implemented Request Valet Retrieval Flow (`BookingDetailScreen.js`)**:
+  - Created a dedicated Request Valet Retrieval Modal with selectable lead time pills (5, 10, 15, 20, 30 mins) and an optional pickup notes text input.
+  - Added facility validation: alerts guest immediately if valet service is disabled for the facility.
+  - Handled asynchronous dispatch to `requestValetThunk` with loading indicator, success alert notification, and descriptive failure messages.
+  - Implemented Cancel Valet Request flow with confirmation dialog and alert notifications.
+  - Added active Valet status banner card displaying current state, target ready time, and pickup notes.
+- **Implemented Dedicated Assign Parking Bay Modal (`BookingDetailScreen.js`)**:
+  - Created an Assign Parking Bay Modal with inputs for Bay Identifier/Label, Level/Floor, Zone, and Slot Number, pre-filled with existing booking data.
+  - Added form validation ensuring valid bay guidance data before submission and validating positive integer slot numbers.
+  - Updated API payload to send `{ bayLabel, facilityLevel, facilityZone, slotNumber }` matching backend `AssignBayDto`.
+  - Added prominent bay and level badges in the Parking Location card and Details card.
+- **Streamlined Host & Vendor Controls Section (`BookingDetailScreen.js`, `VendorBookingsScreen.js`, `VendorDashboardScreen.js`)**:
+  - Grouped host and valet actions into a dedicated "Host & Vendor Controls" card with clear labels and icons.
+  - Added support for Vendor Valet lifecycle actions: "Acknowledge Valet (Vendor)", "Mark Valet Ready (Vendor)", and "Complete Valet (Vendor)" with complete success/error feedback.
+  - Updated navigation in `VendorBookingsScreen.js` and `VendorDashboardScreen.js` to pass `isVendor: true`.
+  - Handled role authorization feedback gracefully with user-friendly alerts when an unauthorized user attempts vendor operations.
+- **Redux Slice State Resiliency (`bookingSlice.js`)**:
+  - Updated `requestValetThunk`, `cancelValetThunk`, `acknowledgeValetThunk`, `readyValetThunk`, `completeValetThunk`, and `assignBayThunk` to use `response.data?.data ?? response.data`.
+  - Updated state matcher in `bookingSlice.js` to merge partial updates (`{ ...state.selectedBooking, ...updatedBooking }`) so detailed booking data is retained across lifecycle changes.
+- **Automated Testing Suite**:
+  - Added 4 unit tests in `Mobile/src/screens/Booking/__tests__/BookingDetailScreen.test.js`:
+    1. Verifies opening Request Valet modal, selecting lead minutes, entering notes, and submitting valet request.
+    2. Verifies Cancel Valet Request button and cancellation confirmation alert.
+    3. Verifies opening Assign Bay modal, filling bay guidance inputs, and submitting bay assignment.
+    4. Verifies Vendor valet lifecycle buttons (Acknowledge, Ready, Complete) dispatching respective thunks.
+  - Added 2 unit tests in `Mobile/src/store/slices/__tests__/bookingSlice.test.js`:
+    1. Verifies `assignBayThunk.fulfilled` updating selectedBooking, myBookings, and vendorBookings.
+    2. Verifies `requestValetThunk.fulfilled` updating valetStatus and notes.
+  - Executed full Mobile automated test suite: **100% pass rate** (52/52 test suites, 323/323 tests passing cleanly).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Booking/BookingDetailScreen.js`
+  - `Mobile/src/screens/Booking/__tests__/BookingDetailScreen.test.js`
+  - `Mobile/src/screens/Vendor/VendorBookingsScreen.js`
+  - `Mobile/src/screens/Vendor/VendorDashboardScreen.js`
+  - `Mobile/src/store/slices/bookingSlice.js`
+  - `Mobile/src/store/slices/__tests__/bookingSlice.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 52 test suites passing cleanly (323/323 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Eliminate Redundant Duplicate Menu Profile Options & Streamline Profile Details (<@U06FVANTNHL>)
 - **Audited Profile & Menu Navigation Structure (`ProfileScreen.js`, `MenuScreen.js`)**:
   - Investigated issue reported by `<@U06FVANTNHL>` regarding repeated content and redundant duplicate options across the Profile Details and Menu sections.

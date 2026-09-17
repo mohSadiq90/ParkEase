@@ -114,7 +114,7 @@ export const requestValetThunk = createAsyncThunk(
     async ({ id, data }, { rejectWithValue }) => {
         try {
             const response = await apiClient.post(ENDPOINTS.BOOKINGS.VALET_REQUEST(id), data);
-            return response.data.data;
+            return response.data?.data ?? response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
         }
@@ -126,7 +126,7 @@ export const cancelValetThunk = createAsyncThunk(
     async (id, { rejectWithValue }) => {
         try {
             const response = await apiClient.post(ENDPOINTS.BOOKINGS.VALET_CANCEL(id));
-            return response.data.data;
+            return response.data?.data ?? response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
         }
@@ -138,7 +138,7 @@ export const acknowledgeValetThunk = createAsyncThunk(
     async (id, { rejectWithValue }) => {
         try {
             const response = await apiClient.post(ENDPOINTS.BOOKINGS.VALET_ACKNOWLEDGE(id));
-            return response.data.data;
+            return response.data?.data ?? response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
         }
@@ -150,7 +150,7 @@ export const readyValetThunk = createAsyncThunk(
     async (id, { rejectWithValue }) => {
         try {
             const response = await apiClient.post(ENDPOINTS.BOOKINGS.VALET_READY(id));
-            return response.data.data;
+            return response.data?.data ?? response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
         }
@@ -162,7 +162,7 @@ export const completeValetThunk = createAsyncThunk(
     async (id, { rejectWithValue }) => {
         try {
             const response = await apiClient.post(ENDPOINTS.BOOKINGS.VALET_COMPLETE(id));
-            return response.data.data;
+            return response.data?.data ?? response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
         }
@@ -175,7 +175,7 @@ export const assignBayThunk = createAsyncThunk(
     async ({ id, data }, { rejectWithValue }) => {
         try {
             const response = await apiClient.post(ENDPOINTS.BOOKINGS.BAY_ASSIGNMENT(id), data);
-            return response.data.data;
+            return response.data?.data ?? response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error));
         }
@@ -442,13 +442,13 @@ const bookingSlice = createSlice({
                     if (action.payload) {
                         const updatedBooking = action.payload;
                         if (state.selectedBooking?.id === updatedBooking.id) {
-                            state.selectedBooking = updatedBooking;
+                            state.selectedBooking = { ...state.selectedBooking, ...updatedBooking };
                         }
                         const myIdx = state.myBookings.findIndex(b => b.id === updatedBooking.id);
-                        if (myIdx !== -1) state.myBookings[myIdx] = updatedBooking;
+                        if (myIdx !== -1) state.myBookings[myIdx] = { ...state.myBookings[myIdx], ...updatedBooking };
                         
                         const vendorIdx = state.vendorBookings.findIndex(b => b.id === updatedBooking.id);
-                        if (vendorIdx !== -1) state.vendorBookings[vendorIdx] = updatedBooking;
+                        if (vendorIdx !== -1) state.vendorBookings[vendorIdx] = { ...state.vendorBookings[vendorIdx], ...updatedBooking };
                     }
                 }
             );

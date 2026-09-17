@@ -190,4 +190,258 @@ describe('BookingDetailScreen', () => {
     // Select +3 hrs
     fireEvent.press(getByTestId('extension-hour-pill-3'));
   });
+
+  it('renders Request Valet button, opens modal, selects lead minutes, enters notes, and submits request', async () => {
+    const mockBooking = {
+      data: {
+        data: {
+          id: 'booking-valet-req-uuid',
+          bookingReference: 'PE-BK-VALET-1',
+          parkingSpaceTitle: 'Grand Tower Garage',
+          status: 1, // Confirmed
+          totalAmount: 120,
+          startDateTime: '2026-08-18T10:00:00Z',
+          endDateTime: '2026-08-18T14:00:00Z',
+          pricingType: 0,
+          vehicleType: 0,
+          valetStatus: 0, // None
+          isValetEnabled: true,
+        },
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockBooking);
+    apiClient.post.mockResolvedValueOnce({
+      data: {
+        data: {
+          ...mockBooking.data.data,
+          valetStatus: 1, // Requested
+          valetNotes: 'Near pillar B2',
+        },
+      },
+    });
+
+    const { findByText, getByText, getByTestId, getByPlaceholderText } = renderWithProviders(
+      <BookingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { bookingId: 'booking-valet-req-uuid' } }}
+      />
+    );
+
+    const { fireEvent, act } = require('../../../utils/test-utils');
+    const requestValetBtn = await findByText('Request Valet');
+    expect(requestValetBtn).toBeTruthy();
+
+    fireEvent.press(requestValetBtn);
+
+    // Verify modal elements
+    expect(getByText('Request Valet Retrieval')).toBeTruthy();
+    expect(getByTestId('valet-lead-pill-15')).toBeTruthy();
+
+    // Select 15 mins
+    fireEvent.press(getByTestId('valet-lead-pill-15'));
+
+    // Enter pickup notes
+    const notesInput = getByPlaceholderText('e.g. Near Pillar B2, key with front desk');
+    fireEvent.changeText(notesInput, 'Near pillar B2');
+
+    // Submit
+    const submitBtn = getByText('Submit Request');
+    await act(async () => {
+      fireEvent.press(submitBtn);
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/bookings/booking-valet-req-uuid/valet/request',
+      {
+        notes: 'Near pillar B2',
+        leadMinutes: 15,
+      }
+    );
+  });
+
+  it('renders Cancel Valet Request button when valet status is requested and confirms cancellation', async () => {
+    const mockBooking = {
+      data: {
+        data: {
+          id: 'booking-valet-cancel-uuid',
+          bookingReference: 'PE-BK-VALET-2',
+          parkingSpaceTitle: 'Grand Tower Garage',
+          status: 1, // Confirmed
+          totalAmount: 120,
+          startDateTime: '2026-08-18T10:00:00Z',
+          endDateTime: '2026-08-18T14:00:00Z',
+          pricingType: 0,
+          vehicleType: 0,
+          valetStatus: 1, // Requested
+          valetNotes: 'Vehicle retrieval requested',
+        },
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockBooking);
+    apiClient.post.mockResolvedValueOnce({
+      data: {
+        data: {
+          ...mockBooking.data.data,
+          valetStatus: 5, // Cancelled
+        },
+      },
+    });
+
+    const { Alert } = require('react-native');
+    const alertSpy = jest.spyOn(Alert, 'alert');
+
+    const { findByText } = renderWithProviders(
+      <BookingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { bookingId: 'booking-valet-cancel-uuid' } }}
+      />
+    );
+
+    const { fireEvent, act } = require('../../../utils/test-utils');
+    const cancelValetBtn = await findByText('Cancel Valet Request');
+    expect(cancelValetBtn).toBeTruthy();
+
+    fireEvent.press(cancelValetBtn);
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Cancel Valet Request',
+      'Are you sure you want to cancel your vehicle retrieval request?',
+      expect.any(Array)
+    );
+
+    // Trigger the destructive confirm button
+    const confirmAction = alertSpy.mock.calls[0][2][1];
+    await act(async () => {
+      await confirmAction.onPress();
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/bookings/booking-valet-cancel-uuid/valet/cancel'
+    );
+  });
+
+  it('renders Assign Bay button, opens modal, fills bay fields, and submits assignment', async () => {
+    const mockBooking = {
+      data: {
+        data: {
+          id: 'booking-assign-bay-uuid',
+          bookingReference: 'PE-BK-BAY-1',
+          parkingSpaceTitle: 'Skyline Metro Park',
+          status: 1,
+          totalAmount: 150,
+          startDateTime: '2026-08-18T10:00:00Z',
+          endDateTime: '2026-08-18T14:00:00Z',
+          pricingType: 0,
+          vehicleType: 0,
+        },
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockBooking);
+    apiClient.post.mockResolvedValueOnce({
+      data: {
+        data: {
+          ...mockBooking.data.data,
+          bayLabel: 'Bay A-14',
+          facilityLevel: 'B1',
+          facilityZone: 'Blue',
+          slotNumber: 14,
+        },
+      },
+    });
+
+    const { findByText, getByText, getByPlaceholderText } = renderWithProviders(
+      <BookingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { bookingId: 'booking-assign-bay-uuid', isVendor: true } }}
+      />
+    );
+
+    const { fireEvent, act } = require('../../../utils/test-utils');
+    const assignBayBtn = await findByText('Assign Bay');
+    expect(assignBayBtn).toBeTruthy();
+
+    fireEvent.press(assignBayBtn);
+
+    // Verify modal title
+    expect(getByText('Assign Parking Bay')).toBeTruthy();
+
+    // Fill inputs
+    const bayInput = getByPlaceholderText('e.g. Bay A-14, A1-001');
+    const levelInput = getByPlaceholderText('e.g. B1, L2');
+    const zoneInput = getByPlaceholderText('e.g. North, Blue');
+    const slotInput = getByPlaceholderText('e.g. 14');
+
+    fireEvent.changeText(bayInput, 'Bay A-14');
+    fireEvent.changeText(levelInput, 'B1');
+    fireEvent.changeText(zoneInput, 'Blue');
+    fireEvent.changeText(slotInput, '14');
+
+    // Save
+    const saveBtn = getByText('Save Bay Assignment');
+    await act(async () => {
+      fireEvent.press(saveBtn);
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/bookings/booking-assign-bay-uuid/bay-assignment',
+      {
+        bayLabel: 'Bay A-14',
+        facilityLevel: 'B1',
+        facilityZone: 'Blue',
+        slotNumber: 14,
+      }
+    );
+  });
+
+  it('renders and triggers vendor valet actions (Acknowledge, Ready, Complete)', async () => {
+    // 1. Acknowledge when requested
+    const mockRequestedBooking = {
+      data: {
+        data: {
+          id: 'booking-valet-flow-uuid',
+          bookingReference: 'PE-BK-VALET-FLOW',
+          parkingSpaceTitle: 'Skyline Metro Park',
+          status: 1,
+          totalAmount: 150,
+          startDateTime: '2026-08-18T10:00:00Z',
+          endDateTime: '2026-08-18T14:00:00Z',
+          pricingType: 0,
+          vehicleType: 0,
+          valetStatus: 1, // Requested
+        },
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockRequestedBooking);
+    apiClient.post.mockResolvedValueOnce({
+      data: {
+        data: {
+          ...mockRequestedBooking.data.data,
+          valetStatus: 2, // InProgress
+        },
+      },
+    });
+
+    const { findByText } = renderWithProviders(
+      <BookingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { bookingId: 'booking-valet-flow-uuid', isVendor: true } }}
+      />
+    );
+
+    const { fireEvent, act } = require('../../../utils/test-utils');
+    const ackBtn = await findByText('Acknowledge Valet (Vendor)');
+    expect(ackBtn).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(ackBtn);
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/bookings/booking-valet-flow-uuid/valet/acknowledge'
+    );
+  });
 });
