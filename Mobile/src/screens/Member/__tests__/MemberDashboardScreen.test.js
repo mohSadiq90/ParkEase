@@ -108,4 +108,59 @@ describe('MemberDashboardScreen', () => {
       expect(getAllByText('Find Parking').length).toBeGreaterThan(0);
     });
   });
+
+  it('renders Features & Quick Access section and navigates on tile and stats card press', async () => {
+    apiClient.get.mockResolvedValue({
+      data: {
+        data: {
+          totalBookings: 8,
+          activeBookings: 1,
+          totalSpent: 320,
+          upcomingBookings: [],
+          recentBookings: [],
+        },
+      },
+    });
+
+    const { getByText, getByLabelText } = renderWithProviders(
+      <MemberDashboardScreen navigation={mockNavigation} />,
+      {
+        preloadedState: {
+          dashboard: {
+            memberDashboard: {
+              totalBookings: 8,
+              activeBookings: 1,
+              totalSpent: 320,
+              upcomingBookings: [],
+              recentBookings: [],
+            },
+            loading: false,
+            error: null,
+          },
+        },
+      }
+    );
+
+    await waitFor(() => {
+      expect(getByText('Features & Quick Access')).toBeTruthy();
+      expect(getByText('My Garage')).toBeTruthy();
+      expect(getByText('Digital Passes')).toBeTruthy();
+      expect(getByText('Event Passes')).toBeTruthy();
+      expect(getByText('Gate Pass QR')).toBeTruthy();
+      expect(getByText('EV Charging')).toBeTruthy();
+      expect(getByText('LPR Simulator')).toBeTruthy();
+    });
+
+    // Press My Garage tile
+    fireEvent.press(getByLabelText('My Garage'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Vehicles', { returnScreen: 'MemberDashboard' });
+
+    // Press Total stat card
+    fireEvent.press(getByLabelText('Total: 8'));
+    expect(mockParent.navigate).toHaveBeenCalledWith('BookingsTab', {
+      screen: 'MyBookings',
+      params: { initialTab: 'all' },
+    });
+  });
 });
+

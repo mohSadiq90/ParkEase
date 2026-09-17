@@ -123,7 +123,12 @@ const ParkingDetailScreen = ({ navigation, route }) => {
         return () => clearInterval(intervalId);
     }, [imageUrls]);
 
-    const isOwnListing = parking?.ownerId === user?.id || parking?.userId === user?.id;
+    const isOwnListing = Boolean(
+        user?.id && (
+            (parking?.ownerId && String(parking.ownerId).trim().toLowerCase() === String(user.id).trim().toLowerCase()) ||
+            (parking?.userId && String(parking.userId).trim().toLowerCase() === String(user.id).trim().toLowerCase())
+        )
+    );
 
     const handleToggleFavorite = useCallback(async () => {
         setFavLoading(true);
@@ -143,30 +148,51 @@ const ParkingDetailScreen = ({ navigation, route }) => {
     }, [dispatch, parkingId, isFavorited]);
 
     const handleChatWithOwner = useCallback(async () => {
+        if (!user) {
+            Alert.alert('Sign In Required', 'Please sign in to chat with the parking space owner.', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
+            ]);
+            return;
+        }
+
+        if (isOwnListing) {
+            Alert.alert('Own Listing', 'You cannot start a chat with yourself on your own listing.');
+            return;
+        }
+
         setChatLoading(true);
         try {
-            const existing = await chatService.findConversationByParkingSpace(parkingId);
-            if (existing) {
-                navigation.navigate('ChatScreen', {
-                    conversationId: existing.id || existing._id,
-                    parkingSpaceId: parkingId,
-                    participantName: existing.otherParticipantName,
-                    parkingTitle: existing.parkingSpaceTitle,
-                });
-            } else {
-                navigation.navigate('ChatScreen', {
-                    conversationId: null,
-                    parkingSpaceId: parkingId,
-                    participantName: parking?.ownerName || 'Owner',
-                    parkingTitle: parking?.title || 'Parking Space',
-                });
+            let existing = null;
+            try {
+                existing = await chatService.findConversationByParkingSpace(parkingId);
+            } catch (_) {
+                // Graceful fallback
             }
+
+            const convId = existing?.id || existing?.Id || existing?._id || null;
+            const participantName = existing?.otherParticipantName || existing?.OtherParticipantName || parking?.ownerName || 'Space Owner';
+            const spaceTitle = existing?.parkingSpaceTitle || existing?.ParkingSpaceTitle || parking?.title || 'Parking Space';
+
+            navigation.navigate('ChatScreen', {
+                conversationId: convId,
+                parkingSpaceId: parkingId,
+                parkingId,
+                participantName,
+                parkingTitle: spaceTitle,
+            });
         } catch {
-            EventBus.emit('SHOW_ERROR_BANNER', { title: 'Error', message: 'Could not open chat.' });
+            navigation.navigate('ChatScreen', {
+                conversationId: null,
+                parkingSpaceId: parkingId,
+                parkingId,
+                participantName: parking?.ownerName || 'Space Owner',
+                parkingTitle: parking?.title || 'Parking Space',
+            });
         } finally {
             setChatLoading(false);
         }
-    }, [parkingId, parking, navigation]);
+    }, [parkingId, parking, navigation, user, isOwnListing]);
 
     const handleShare = useCallback(async () => {
         try {

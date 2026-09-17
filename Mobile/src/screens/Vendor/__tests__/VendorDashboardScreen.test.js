@@ -124,4 +124,47 @@ describe('VendorDashboardScreen', () => {
     expect(getByLabelText('Approve Booking')).toBeTruthy();
     expect(getByLabelText('Reject Booking')).toBeTruthy();
   });
+
+  it('renders Host Operations & Tools feature grid and navigates on tile and metric press', async () => {
+    const mockDashboard = {
+      data: {
+        totalParkingSpaces: 3,
+        totalBookings: 12,
+        monthlyEarnings: 3400,
+        pendingBookings: 2,
+        recentBookings: [],
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce({ data: mockDashboard });
+
+    const mockNavigation = {
+      navigate: jest.fn(),
+    };
+
+    const { findByText, getByText, getByLabelText } = renderWithProviders(
+      <VendorDashboardScreen navigation={mockNavigation} />
+    );
+
+    expect(await findByText('Host Operations & Tools')).toBeTruthy();
+    expect(getByText('Add Space')).toBeTruthy();
+    expect(getByText('My Listings')).toBeTruthy();
+    expect(getByText('Host Bookings')).toBeTruthy();
+    expect(getByText('Gate Scanner')).toBeTruthy();
+    expect(getByText('LPR Cameras')).toBeTruthy();
+
+    const { fireEvent } = require('@testing-library/react-native');
+
+    // Press Add Space tile
+    fireEvent.press(getByLabelText('Add Space'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {});
+
+    // Press Active Spaces metric card
+    fireEvent.press(getByLabelText('Active Spaces'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('MyListings', { filter: 'active', initialFilter: 'active' });
+
+    // Press Today's Bookings metric card
+    fireEvent.press(getByLabelText("Today's Bookings"));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('IncomingBookings', { initialTab: 'today', filter: 'today' });
+  });
 });

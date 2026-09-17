@@ -19,17 +19,36 @@ const QuickAction = ({ icon, label, onPress }) => (
     </TouchableOpacity>
 );
 
-const MetricCard = ({ label, value, icon, color }) => (
-    <View style={styles.metricCard}>
-        <View style={[styles.metricIconWrapper, { backgroundColor: color + '20' }]}>
-            <Ionicons name={icon} size={24} color={color} />
-        </View>
-        <View style={styles.metricInfo}>
-            <Text style={styles.metricValue}>{value !== undefined ? value : '-'}</Text>
-            <Text style={styles.metricLabel}>{label}</Text>
-        </View>
-    </View>
-);
+const MetricCard = ({ label, value, icon, color, onPress }) => {
+    const cardContent = (
+        <>
+            <View style={[styles.metricIconWrapper, { backgroundColor: color + '20' }]}>
+                <Ionicons name={icon} size={24} color={color} />
+            </View>
+            <View style={styles.metricInfo}>
+                <Text style={styles.metricValue}>{value !== undefined ? value : '-'}</Text>
+                <Text style={styles.metricLabel}>{label}</Text>
+            </View>
+            {onPress && <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />}
+        </>
+    );
+
+    if (onPress) {
+        return (
+            <TouchableOpacity
+                style={styles.metricCard}
+                onPress={onPress}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+            >
+                {cardContent}
+            </TouchableOpacity>
+        );
+    }
+
+    return <View style={styles.metricCard}>{cardContent}</View>;
+};
 
 const CorporateDashboardScreen = () => {
     const dispatch = useDispatch();
@@ -118,18 +137,21 @@ const CorporateDashboardScreen = () => {
                             value={dashboardData?.totalMembers} 
                             icon="people" 
                             color={colors.primary} 
+                            onPress={() => navigation.navigate('CorporateMembers')}
                         />
                         <MetricCard 
                             label="Active Leases" 
                             value={dashboardData?.activeAllocations} 
                             icon="document-text" 
                             color={colors.secondary} 
+                            onPress={() => navigation.navigate('CorporateAllocations')}
                         />
                         <MetricCard 
                             label="Bookings Today" 
                             value={dashboardData?.todaysBookings} 
                             icon="calendar" 
                             color={colors.success} 
+                            onPress={() => navigation.navigate('CorporateBookings')}
                         />
                     </View>
                 </Card>
@@ -146,6 +168,16 @@ const CorporateDashboardScreen = () => {
                         icon="key-outline" 
                         label="Allocations" 
                         onPress={() => navigation.navigate('CorporateAllocations')} 
+                    />
+                    <QuickAction 
+                        icon="layers-outline" 
+                        label="Inventory" 
+                        onPress={() => navigation.navigate('CorporateParkingSpaces')} 
+                    />
+                    <QuickAction 
+                        icon="search-circle-outline" 
+                        label="Lease" 
+                        onPress={() => navigation.navigate('CorporateLeaseBrowse')} 
                     />
                     <QuickAction 
                         icon="calendar-outline" 

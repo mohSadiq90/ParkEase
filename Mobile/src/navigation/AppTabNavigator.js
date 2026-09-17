@@ -132,6 +132,10 @@ const HomeStack = () => (
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
         <Stack.Screen name="MyVehicles" component={VehiclesScreen} />
+        <Stack.Screen name="MyPasses" component={MyPassesScreen} />
+        <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
+        <Stack.Screen name="IncomingBookings" component={VendorBookingsScreen} />
+        <Stack.Screen name="MyListings" component={MyListingsScreen} />
         <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
         <Stack.Screen name="ReviewsList" component={ReviewsListScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
@@ -177,6 +181,8 @@ const ListingsStack = () => (
         <Stack.Screen name="MyListings" component={MyListingsScreen} />
         <Stack.Screen name="CreateParking" component={CreateParkingScreen} />
         <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
+        <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="ConversationList" component={ConversationListScreen} />
         <Stack.Screen name="ReviewsList" component={ReviewsListScreen} />
         <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
@@ -196,6 +202,7 @@ const BookingsStack = () => (
         <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
         <Stack.Screen name="CreateReview" component={CreateReviewScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="ConversationList" component={ConversationListScreen} />
         <Stack.Screen name="Vehicles" component={VehiclesScreen} />
         <Stack.Screen name="AccessPassScanner" component={AccessPassScannerScreen} />
     </Stack.Navigator>
@@ -280,6 +287,8 @@ const CorporateInventoryStack = () => (
         <Stack.Screen name="CorporateParkingSpaces" component={CorporateParkingSpacesScreen} />
         <Stack.Screen name="CorporateLeaseBrowse" component={CorporateLeaseBrowseScreen} />
         <Stack.Screen name="ParkingDetail" component={ParkingDetailScreen} />
+        <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="ConversationList" component={ConversationListScreen} />
         <Stack.Screen name="Search" component={SearchScreen} />
     </Stack.Navigator>
 );

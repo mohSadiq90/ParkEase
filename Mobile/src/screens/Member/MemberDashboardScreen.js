@@ -18,12 +18,22 @@ import LoadingScreen from '../../components/Common/LoadingScreen';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency, formatDate, formatTime, truncateText } from '../../utils/formatters';
 
-const StatCard = ({ icon, label, value, color }) => (
-    <View style={[statStyles.card, { borderLeftColor: color }]}>
-        <Ionicons name={icon} size={24} color={color} />
+const StatCard = ({ icon, label, value, color, onPress }) => (
+    <TouchableOpacity
+        style={[statStyles.card, { borderLeftColor: color }]}
+        onPress={onPress}
+        activeOpacity={onPress ? 0.75 : 1}
+        disabled={!onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value}`}
+    >
+        <View style={statStyles.topRow}>
+            <Ionicons name={icon} size={22} color={color} />
+            {onPress && <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />}
+        </View>
         <Text style={statStyles.value}>{value}</Text>
         <Text style={statStyles.label}>{label}</Text>
-    </View>
+    </TouchableOpacity>
 );
 
 const statStyles = StyleSheet.create({
@@ -34,6 +44,11 @@ const statStyles = StyleSheet.create({
         padding: spacing.md,
         borderLeftWidth: 3,
         ...shadows.sm,
+    },
+    topRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     value: { ...typography.h3, color: colors.textPrimary, marginTop: spacing.xs },
     label: { ...typography.caption, color: colors.textTertiary, marginTop: 2 },
@@ -67,6 +82,99 @@ const bookingStyles = StyleSheet.create({
     amount: { ...typography.label, color: colors.textPrimary },
 });
 
+export const MEMBER_FEATURE_TILES = [
+    {
+        id: 'search',
+        title: 'Find Parking',
+        subtitle: 'Explore spots & rates',
+        icon: 'search',
+        color: colors.primary,
+        screen: 'Search',
+        params: { focusSearch: true },
+    },
+    {
+        id: 'bookings',
+        title: 'Reservations',
+        subtitle: 'Driver bookings & passes',
+        icon: 'calendar',
+        color: '#2563EB',
+        screen: 'MyBookings',
+        params: { initialTab: 'all' },
+    },
+    {
+        id: 'vehicles',
+        title: 'My Garage',
+        subtitle: 'Vehicles & plates',
+        icon: 'car-sport',
+        color: '#7C3AED',
+        screen: 'Vehicles',
+        params: { returnScreen: 'MemberDashboard' },
+    },
+    {
+        id: 'favorites',
+        title: 'Favorites',
+        subtitle: 'Saved parking lots',
+        icon: 'heart',
+        color: '#EF4444',
+        screen: 'Favorites',
+        params: { returnScreen: 'MemberDashboard' },
+    },
+    {
+        id: 'passes',
+        title: 'Digital Passes',
+        subtitle: 'Passes & subscriptions',
+        icon: 'ticket',
+        color: '#059669',
+        screen: 'MyPasses',
+        params: { returnScreen: 'MemberDashboard' },
+    },
+    {
+        id: 'events',
+        title: 'Event Passes',
+        subtitle: 'Concert & stadium parking',
+        icon: 'flame',
+        color: '#D97706',
+        screen: 'EventPackages',
+        params: { returnScreen: 'MemberDashboard' },
+    },
+    {
+        id: 'chat',
+        title: 'Messages',
+        subtitle: 'Host chat inquiries',
+        icon: 'chatbubbles',
+        color: '#0284C7',
+        screen: 'ConversationList',
+        params: { returnScreen: 'MemberDashboard' },
+    },
+    {
+        id: 'scanner',
+        title: 'Gate Pass QR',
+        subtitle: 'Scan access ticket',
+        icon: 'qr-code',
+        color: '#4F46E5',
+        screen: 'AccessPassScanner',
+        params: { returnScreen: 'MemberDashboard' },
+    },
+    {
+        id: 'ev',
+        title: 'EV Charging',
+        subtitle: 'Simulate charging',
+        icon: 'flash',
+        color: '#10B981',
+        screen: 'EvChargeSimulator',
+        params: { returnScreen: 'MemberDashboard' },
+    },
+    {
+        id: 'lpr',
+        title: 'LPR Simulator',
+        subtitle: 'Barrier entry/exit',
+        icon: 'scan-circle',
+        color: '#6366F1',
+        screen: 'LprSimulator',
+        params: { returnScreen: 'MemberDashboard' },
+    },
+];
+
 const MemberDashboardScreen = ({ navigation }) => {
     const dispatch = useDispatch();
     const { user } = useAuth();
@@ -92,6 +200,7 @@ const MemberDashboardScreen = ({ navigation }) => {
     const sections = [
         { type: 'header' },
         { type: 'stats' },
+        { type: 'features' },
         ...(data?.upcomingBookings?.length ? [{ type: 'sectionTitle', title: 'Upcoming Bookings' }] : []),
         ...(data?.upcomingBookings || []).map((b) => ({ type: 'booking', data: b })),
         ...(data?.recentBookings?.length ? [{ type: 'sectionTitle', title: 'Recent Bookings' }] : []),
@@ -115,6 +224,44 @@ const MemberDashboardScreen = ({ navigation }) => {
             navigation.navigate('Search');
             return;
         } catch (_) {}
+    };
+
+    const navigateToBookings = (initialTab = 'all') => {
+        try {
+            const parent = navigation.getParent?.();
+            if (parent) {
+                parent.navigate('BookingsTab', { screen: 'MyBookings', params: { initialTab } });
+                return;
+            }
+        } catch (_) {}
+        try {
+            navigation.navigate('BookingsTab', { screen: 'MyBookings', params: { initialTab } });
+            return;
+        } catch (_) {}
+        try {
+            navigation.navigate('MyBookings', { initialTab });
+            return;
+        } catch (_) {}
+    };
+
+    const handleFeatureTilePress = (tile) => {
+        if (tile.id === 'search') {
+            navigateToSearch();
+            return;
+        }
+        if (tile.id === 'bookings') {
+            navigateToBookings(tile.params?.initialTab || 'all');
+            return;
+        }
+        try {
+            navigation.navigate(tile.screen, tile.params || {});
+        } catch (_) {
+            try {
+                navigation.navigate('MenuTab', { screen: tile.screen, params: tile.params || {} });
+            } catch (err) {
+                console.warn('Navigation failed for tile:', tile.screen, err);
+            }
+        }
     };
 
     const renderItem = ({ item }) => {
@@ -145,9 +292,62 @@ const MemberDashboardScreen = ({ navigation }) => {
             case 'stats':
                 return (
                     <View style={styles.statsRow}>
-                        <StatCard icon="calendar" label="Total" value={data?.totalBookings || 0} color={colors.primary} />
-                        <StatCard icon="time" label="Active" value={data?.activeBookings || 0} color={colors.success} />
-                        <StatCard icon="wallet" label="Spent" value={formatCurrency(data?.totalSpent || 0)} color={colors.accent} />
+                        <StatCard
+                            icon="calendar"
+                            label="Total"
+                            value={data?.totalBookings || 0}
+                            color={colors.primary}
+                            onPress={() => navigateToBookings('all')}
+                        />
+                        <StatCard
+                            icon="time"
+                            label="Active"
+                            value={data?.activeBookings || 0}
+                            color={colors.success}
+                            onPress={() => navigateToBookings('active')}
+                        />
+                        <StatCard
+                            icon="wallet"
+                            label="Spent"
+                            value={formatCurrency(data?.totalSpent || 0)}
+                            color={colors.accent}
+                            onPress={() => navigateToBookings('completed')}
+                        />
+                    </View>
+                );
+            case 'features':
+                return (
+                    <View style={styles.featuresSection}>
+                        <View style={styles.featuresSectionHeader}>
+                            <Text style={styles.featuresSectionTitle}>Features & Quick Access</Text>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('MenuTab', { screen: 'MenuHome' })}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.featuresSectionLink}>View Menu →</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.featuresGrid}>
+                            {MEMBER_FEATURE_TILES.map((tile) => (
+                                <TouchableOpacity
+                                    key={tile.id}
+                                    style={styles.featureTileCard}
+                                    onPress={() => handleFeatureTilePress(tile)}
+                                    activeOpacity={0.75}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={tile.title}
+                                >
+                                    <View style={[styles.featureTileIconWrap, { backgroundColor: tile.color + '15' }]}>
+                                        <Ionicons name={tile.icon} size={22} color={tile.color} />
+                                    </View>
+                                    <View style={styles.featureTileTextWrap}>
+                                        <Text style={styles.featureTileTitle} numberOfLines={1}>{tile.title}</Text>
+                                        <Text style={styles.featureTileSubtitle} numberOfLines={1}>{tile.subtitle}</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
                 );
             case 'sectionTitle':
@@ -156,7 +356,11 @@ const MemberDashboardScreen = ({ navigation }) => {
                 return (
                     <BookingItem
                         booking={item.data}
-                        onPress={() => navigation.navigate('BookingDetail', { bookingId: item.data.id })}
+                        onPress={() => navigation.navigate('BookingDetail', {
+                            bookingId: item.data.id,
+                            id: item.data.id,
+                            booking: item.data,
+                        })}
                     />
                 );
             case 'empty':

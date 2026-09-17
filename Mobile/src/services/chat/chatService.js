@@ -40,7 +40,10 @@ const chatService = {
      */
     async sendMessage(parkingSpaceId, content, conversationId = null) {
         try {
-            const body = { parkingSpaceId, content };
+            const body = {
+                parkingSpaceId: parkingSpaceId || undefined,
+                content: typeof content === 'string' ? content.trim() : content,
+            };
             if (conversationId) body.conversationId = conversationId;
             const response = await apiClient.post('/chat/send', body);
             return response.data;
@@ -54,13 +57,16 @@ const chatService = {
      * Find existing conversation by parking space ID
      */
     async findConversationByParkingSpace(parkingSpaceId) {
+        if (!parkingSpaceId) return null;
         try {
-            const result = await this.getConversations(1, 50);
-            const conversations = result?.data?.conversations || result?.data || [];
+            const result = await chatService.getConversations(1, 50);
+            const rawList = result?.data?.conversations || (Array.isArray(result?.data) ? result.data : (Array.isArray(result) ? result : []));
+            const targetId = String(parkingSpaceId).trim().toLowerCase();
             return (
-                conversations.find(
-                    (c) => String(c.parkingSpaceId || c.parkingId).toLowerCase() === String(parkingSpaceId).toLowerCase()
-                ) || null
+                rawList.find((c) => {
+                    const spaceId = c?.parkingSpaceId || c?.ParkingSpaceId || c?.parkingId || c?.ParkingId;
+                    return spaceId && String(spaceId).trim().toLowerCase() === targetId;
+                }) || null
             );
         } catch (error) {
             logger.error(TAG, 'Failed to find conversation by parking space', error);

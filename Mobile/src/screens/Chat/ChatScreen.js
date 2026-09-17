@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     View, Text, FlatList, TextInput, TouchableOpacity,
-    StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator
+    StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/globalStyles';
@@ -15,13 +15,18 @@ import { useAuth } from '../../hooks/useAuth';
 import chatService from '../../services/chat/chatService';
 
 const ChatScreen = ({ route, navigation }) => {
-    const { conversationId, parkingSpaceId, participantName, parkingTitle } = route?.params || {};
+    const targetConvId = route?.params?.conversationId || route?.params?.convId || route?.params?.id || null;
+    const targetSpaceId = route?.params?.parkingSpaceId || route?.params?.parkingId || null;
+    const participantName = route?.params?.participantName || route?.params?.name || route?.params?.ownerName || 'Host / Driver';
+    const parkingTitle = route?.params?.parkingTitle || route?.params?.title || 'Parking Space';
+
     const { user } = useAuth();
     const insets = useSafeAreaInsets();
-    const [currentConvId, setCurrentConvId] = useState(conversationId || null);
+    const [currentConvId, setCurrentConvId] = useState(targetConvId);
+    const [currentSpaceId, setCurrentSpaceId] = useState(targetSpaceId);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
-    const [loading, setLoading] = useState(Boolean(conversationId));
+    const [loading, setLoading] = useState(Boolean(targetConvId));
     const [sending, setSending] = useState(false);
     const flatListRef = useRef(null);
     const pollInterval = useRef(null);
@@ -33,9 +38,12 @@ const ChatScreen = ({ route, navigation }) => {
         }
         try {
             const result = await chatService.getMessages(convId);
-            if (result.success) {
-                // Reverse to show oldest first (API returns newest first)
-                setMessages((result.data || []).reverse());
+            if (result && (result.success || Array.isArray(result.data))) {
+                const rawMsgs = Array.isArray(result.data)
+                    ? result.data
+                    : (result.data?.messages || result.data?.items || []);
+                // Copy before reverse to avoid mutating in-place
+                setMessages([...rawMsgs].reverse());
             }
         } catch (error) {
             console.error('Failed to load messages:', error);
@@ -70,20 +78,29 @@ const ChatScreen = ({ route, navigation }) => {
         const content = newMessage.trim();
         if (!content || sending) return;
 
+        const effectiveSpaceId = currentSpaceId || targetSpaceId;
         setSending(true);
         try {
-            const result = await chatService.sendMessage(parkingSpaceId, content, currentConvId);
-            if (result.success && result.data) {
-                setMessages(prev => [...prev, result.data]);
+            const result = await chatService.sendMessage(effectiveSpaceId, content, currentConvId);
+            if (result?.success && result?.data) {
+                const sentMsg = result.data;
+                setMessages((prev) => {
+                    if (prev.some((m) => m.id === sentMsg.id)) return prev;
+                    return [...prev, sentMsg];
+                });
                 setNewMessage('');
-                if (result.data.conversationId && !currentConvId) {
-                    setCurrentConvId(result.data.conversationId);
+                if (sentMsg.conversationId && !currentConvId) {
+                    setCurrentConvId(sentMsg.conversationId);
                 }
                 // Auto-scroll
                 setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+            } else {
+                Alert.alert('Unable to Send', result?.message || 'Could not deliver message.');
             }
         } catch (error) {
             console.error('Failed to send message:', error);
+            const errMsg = error?.response?.data?.message || error?.message || 'Failed to send message. Please try again.';
+            Alert.alert('Message Error', errMsg);
         } finally {
             setSending(false);
         }
@@ -148,7 +165,7 @@ const ChatScreen = ({ route, navigation }) => {
                     ref={flatListRef}
                     data={messages}
                     renderItem={renderMessage}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item, index) => (item?.id ? String(item.id) : `msg-${index}`)}
                     contentContainerStyle={styles.messagesList}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="interactive"

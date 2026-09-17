@@ -29,19 +29,130 @@ import EmptyState from '../../components/Common/EmptyState';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
 
-const MetricCard = ({ icon, label, value, isCurrency = false }) => (
-    <View style={styles.metricCard}>
-        <View style={styles.metricIconBox}>
-            <Ionicons name={icon} size={22} color={colors.primaryAccent} />
-        </View>
-        <Text style={[styles.metricValue, isCurrency && styles.currencyValue]} numberOfLines={1}>
-            {value}
-        </Text>
-        <Text style={styles.metricLabel} numberOfLines={1}>
-            {label}
-        </Text>
-    </View>
-);
+export const VENDOR_FEATURE_TILES = [
+    {
+        id: 'create_parking',
+        title: 'Add Space',
+        subtitle: 'List new bay or spot',
+        icon: 'add-circle-outline',
+        color: '#10B981',
+        screen: 'CreateParking',
+        params: {},
+    },
+    {
+        id: 'my_listings',
+        title: 'My Listings',
+        subtitle: 'Manage bays & rates',
+        icon: 'list-outline',
+        color: '#2563EB',
+        screen: 'MyListings',
+        params: { filter: 'all' },
+    },
+    {
+        id: 'incoming_bookings',
+        title: 'Host Bookings',
+        subtitle: 'Manage reservations',
+        icon: 'calendar-outline',
+        color: '#8B5CF6',
+        screen: 'IncomingBookings',
+        params: { initialTab: 'all' },
+    },
+    {
+        id: 'gate_scanner',
+        title: 'Gate Scanner',
+        subtitle: 'Scan driver QR pass',
+        icon: 'qr-code-outline',
+        color: '#0D9488',
+        screen: 'AccessPassScanner',
+        params: {},
+    },
+    {
+        id: 'event_packages',
+        title: 'Event Packages',
+        subtitle: 'Venue zones & passes',
+        icon: 'ticket-outline',
+        color: '#F59E0B',
+        screen: 'VendorEventPackages',
+        params: {},
+    },
+    {
+        id: 'lpr_settings',
+        title: 'LPR Cameras',
+        subtitle: 'Barrier & OCR rules',
+        icon: 'scan-outline',
+        color: '#6366F1',
+        screen: 'LprSettings',
+        params: {},
+    },
+    {
+        id: 'guest_messages',
+        title: 'Messages',
+        subtitle: 'Driver inquiries',
+        icon: 'chatbubbles-outline',
+        color: '#EC4899',
+        screen: 'ConversationList',
+        params: {},
+    },
+    {
+        id: 'find_parking',
+        title: 'Explore Spots',
+        subtitle: 'Marketplace parking',
+        icon: 'search-outline',
+        color: '#0284C7',
+        screen: 'Search',
+        params: { focusSearch: true },
+    },
+    {
+        id: 'lpr_simulator',
+        title: 'LPR Simulator',
+        subtitle: 'Test barrier entry',
+        icon: 'scan-circle-outline',
+        color: '#059669',
+        screen: 'LprSimulator',
+        params: {},
+    },
+    {
+        id: 'ev_simulator',
+        title: 'EV Simulator',
+        subtitle: 'Test OCPP charger',
+        icon: 'flash-outline',
+        color: '#D97706',
+        screen: 'EvChargeSimulator',
+        params: {},
+    },
+];
+
+const MetricCard = ({ icon, label, value, isCurrency = false, onPress }) => {
+    const cardContent = (
+        <>
+            <View style={styles.metricIconBox}>
+                <Ionicons name={icon} size={22} color={colors.primaryAccent} />
+            </View>
+            <Text style={[styles.metricValue, isCurrency && styles.currencyValue]} numberOfLines={1}>
+                {value}
+            </Text>
+            <Text style={styles.metricLabel} numberOfLines={1}>
+                {label}
+            </Text>
+        </>
+    );
+
+    if (onPress) {
+        return (
+            <TouchableOpacity
+                style={styles.metricCard}
+                onPress={onPress}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+            >
+                {cardContent}
+            </TouchableOpacity>
+        );
+    }
+
+    return <View style={styles.metricCard}>{cardContent}</View>;
+};
 
 const VendorDashboardScreen = ({ navigation }) => {
     const dispatch = useDispatch();
@@ -102,6 +213,7 @@ const VendorDashboardScreen = ({ navigation }) => {
         { type: 'header' },
         { type: 'metrics' },
         { type: 'gateScanner' },
+        { type: 'vendorFeatures' },
         ...(data?.recentBookings?.length ? [{ type: 'sectionTitle', title: 'Recent Bookings' }] : []),
         ...(data?.recentBookings || []).map((b) => ({ type: 'booking', data: b })),
         ...(!data?.recentBookings?.length ? [{ type: 'empty' }] : []),
@@ -112,6 +224,20 @@ const VendorDashboardScreen = ({ navigation }) => {
         (user?.fullName ? user.fullName.split(' ')[0] : null) ||
         (user?.name ? user.name.split(' ')[0] : null) ||
         (user ? 'Partner' : 'Sadiq');
+
+    const handleFeatureTilePress = (tile) => {
+        try {
+            if (navigation?.navigate) {
+                navigation.navigate(tile.screen, tile.params || {});
+            }
+        } catch (_) {
+            try {
+                navigation?.navigate?.('MenuTab', { screen: tile.screen, params: tile.params || {} });
+            } catch (err) {
+                console.warn('Navigation failed for tile:', tile.screen, err);
+            }
+        }
+    };
 
     const renderItem = ({ item }) => {
         switch (item.type) {
@@ -131,11 +257,13 @@ const VendorDashboardScreen = ({ navigation }) => {
                                 icon="car-outline"
                                 label="Active Spaces"
                                 value={data?.activeParkingSpaces ?? data?.totalParkingSpaces ?? 0}
+                                onPress={() => navigation?.navigate?.('MyListings', { filter: 'active', initialFilter: 'active' })}
                             />
                             <MetricCard
                                 icon="calendar-outline"
                                 label="Today's Bookings"
                                 value={data?.todayBookings ?? data?.activeBookings ?? data?.totalBookings ?? 0}
+                                onPress={() => navigation?.navigate?.('IncomingBookings', { initialTab: 'today', filter: 'today' })}
                             />
                         </View>
                         <View style={styles.metricsRow}>
@@ -144,11 +272,13 @@ const VendorDashboardScreen = ({ navigation }) => {
                                 label="Monthly Revenue"
                                 value={formatCurrency(data?.monthlyEarnings ?? data?.totalEarnings ?? 0)}
                                 isCurrency
+                                onPress={() => navigation?.navigate?.('IncomingBookings', { initialTab: 'all', filter: 'completed' })}
                             />
                             <MetricCard
                                 icon="time-outline"
                                 label="Pending Approvals"
                                 value={pendingApprovalsCount}
+                                onPress={() => navigation?.navigate?.('IncomingBookings', { initialTab: 'pending', filter: 'pending' })}
                             />
                         </View>
                     </View>
@@ -159,7 +289,7 @@ const VendorDashboardScreen = ({ navigation }) => {
                     <View style={styles.actionButtonsContainer}>
                         <TouchableOpacity
                             style={styles.gateScannerBtn}
-                            onPress={() => navigation.navigate('AccessPassScanner')}
+                            onPress={() => navigation?.navigate?.('AccessPassScanner')}
                             activeOpacity={0.85}
                         >
                             <Ionicons name="qr-code-outline" size={22} color={colors.white} style={{ marginRight: 8 }} />
@@ -169,9 +299,9 @@ const VendorDashboardScreen = ({ navigation }) => {
                             style={styles.findParkingBtn}
                             onPress={() => {
                                 try {
-                                    navigation.navigate('SearchTab', { screen: 'Search' });
+                                    navigation?.navigate?.('SearchTab', { screen: 'Search' });
                                 } catch (_) {
-                                    navigation.navigate('Search');
+                                    navigation?.navigate?.('Search');
                                 }
                             }}
                             activeOpacity={0.85}
@@ -179,6 +309,42 @@ const VendorDashboardScreen = ({ navigation }) => {
                             <Ionicons name="search-outline" size={20} color={colors.primaryAccent} style={{ marginRight: 8 }} />
                             <Text style={styles.findParkingText}>Find & Explore Parking</Text>
                         </TouchableOpacity>
+                    </View>
+                );
+
+            case 'vendorFeatures':
+                return (
+                    <View style={styles.featuresSection}>
+                        <View style={styles.featuresSectionHeader}>
+                            <Text style={styles.featuresSectionTitle}>Host Operations & Tools</Text>
+                            <TouchableOpacity
+                                onPress={() => navigation?.navigate?.('MenuTab', { screen: 'MenuHome' })}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.featuresSectionLink}>View Menu →</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.featuresGrid}>
+                            {VENDOR_FEATURE_TILES.map((tile) => (
+                                <TouchableOpacity
+                                    key={tile.id}
+                                    style={styles.featureTileCard}
+                                    onPress={() => handleFeatureTilePress(tile)}
+                                    activeOpacity={0.75}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={tile.title}
+                                >
+                                    <View style={[styles.featureTileIconWrap, { backgroundColor: tile.color + '15' }]}>
+                                        <Ionicons name={tile.icon} size={22} color={tile.color} />
+                                    </View>
+                                    <View style={styles.featureTileTextWrap}>
+                                        <Text style={styles.featureTileTitle} numberOfLines={1}>{tile.title}</Text>
+                                        <Text style={styles.featureTileSubtitle} numberOfLines={1}>{tile.subtitle}</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
                 );
 
@@ -205,7 +371,11 @@ const VendorDashboardScreen = ({ navigation }) => {
                 return (
                     <Card
                         style={styles.bookingCard}
-                        onPress={() => navigation.navigate('BookingDetail', { bookingId: booking.id })}
+                        onPress={() => navigation?.navigate?.('BookingDetail', {
+                            bookingId: booking.id,
+                            id: booking.id,
+                            booking,
+                        })}
                     >
                         <View style={styles.bookingRow}>
                             <View style={styles.bookingInfoCol}>
@@ -477,6 +647,67 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: colors.textPrimary,
         fontVariant: ['tabular-nums'],
+        marginTop: 2,
+    },
+    // Vendor Feature Tiles
+    featuresSection: {
+        marginTop: spacing.xl,
+        paddingHorizontal: spacing.screenHorizontal,
+    },
+    featuresSectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.md,
+    },
+    featuresSectionTitle: {
+        ...typography.h3,
+        fontSize: 18,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    featuresSectionLink: {
+        ...typography.body,
+        fontSize: 13,
+        color: colors.primaryAccent,
+        fontWeight: '600',
+    },
+    featuresGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: spacing.sm,
+    },
+    featureTileCard: {
+        width: '48.5%',
+        backgroundColor: colors.surface,
+        borderRadius: 14,
+        padding: spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        ...shadows.card,
+    },
+    featureTileIconWrap: {
+        width: 38,
+        height: 38,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.sm,
+    },
+    featureTileTextWrap: {
+        flex: 1,
+        marginRight: 4,
+    },
+    featureTileTitle: {
+        ...typography.label,
+        fontSize: 13,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    featureTileSubtitle: {
+        ...typography.caption,
+        fontSize: 11,
+        color: colors.textSecondary,
         marginTop: 2,
     },
 });
