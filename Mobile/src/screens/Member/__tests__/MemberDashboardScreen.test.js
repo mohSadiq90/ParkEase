@@ -38,7 +38,7 @@ describe('MemberDashboardScreen', () => {
       {
         preloadedState: {
           auth: {
-            user: { firstName: 'Sadiq' },
+            user: { firstName: 'Alex' },
           },
           dashboard: {
             memberDashboard: {
@@ -57,7 +57,7 @@ describe('MemberDashboardScreen', () => {
 
     // Dynamic greeting
     await waitFor(() => {
-      expect(getByText('Hello, Sadiq 👋')).toBeTruthy();
+      expect(getByText('Hello, Alex 👋')).toBeTruthy();
       expect(getByText('Find your perfect parking spot')).toBeTruthy();
     });
 
@@ -162,5 +162,34 @@ describe('MemberDashboardScreen', () => {
       params: { initialTab: 'all' },
     });
   });
+
+  it('renders default greeting when user is unauthenticated or has no firstName', async () => {
+    const { getByText: getByTextFallback } = renderWithProviders(
+      <MemberDashboardScreen navigation={{}} />,
+      {
+        preloadedState: {
+          auth: { user: null },
+          dashboard: { memberDashboard: { totalBookings: 0 }, loading: false },
+        },
+      }
+    );
+    await waitFor(() => {
+      expect(getByTextFallback('Hello, there 👋')).toBeTruthy();
+    });
+
+    const { getByText: getByTextFullName } = renderWithProviders(
+      <MemberDashboardScreen navigation={{}} />,
+      {
+        preloadedState: {
+          auth: { user: { fullName: 'Jordan Miller' } },
+          dashboard: { memberDashboard: { totalBookings: 0 }, loading: false },
+        },
+      }
+    );
+    await waitFor(() => {
+      expect(getByTextFullName('Hello, Jordan 👋')).toBeTruthy();
+    });
+  });
 });
+
 

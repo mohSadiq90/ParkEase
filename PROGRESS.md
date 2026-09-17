@@ -9,6 +9,26 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-17] - Fix Hardcoded Host Greeting & Dynamic Profile Greeting Fallbacks (<@U06FVANTNHL>)
+- **Fix Hardcoded Greeting & Dynamic Fallbacks**:
+  - Investigated home screen greeting reported by `<@U06FVANTNHL>`: confirmed that `VendorDashboardScreen.js` had a hardcoded `'Sadiq'` fallback (`(user ? 'Partner' : 'Sadiq')`), causing the header to display `"Welcome, Sadiq"` whenever `user` was null or loading.
+  - Fixed `VendorDashboardScreen.js` to dynamically extract host identity from `user?.firstName`, `user?.fullName`, `user?.name`, or `user?.email`, cleanly falling back to `'Partner'` (`"Welcome, Partner"`), completely eliminating hardcoded names.
+  - Enhanced `MemberDashboardScreen.js` to dynamically extract member name across `firstName`, `fullName`, `name`, and `email`, falling back cleanly to `'there'` (`"Hello, there 👋"`).
+- **Automated Testing & Verification**:
+  - Updated `VendorDashboardScreen.test.js`: replaced hardcoded `'Welcome, Sadiq'` expectation with default `'Welcome, Partner'` and added comprehensive test coverage for dynamic host greetings (`firstName`, `fullName`, `email`).
+  - Updated `MemberDashboardScreen.test.js`: replaced mock user name with neutral fixture and added unit test cases covering unauthenticated fallback (`"Hello, there 👋"`) and `fullName` resolution.
+  - Verified 100% test pass rate across ParkEase Mobile: 47/47 test suites, 225/225 tests passing.
+  - Maintained strict mobile-only scope: zero modifications to `backend/` or `frontend/`.
+- **Key Files Modified**:
+  - `Mobile/src/screens/Vendor/VendorDashboardScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/VendorDashboardScreen.test.js`
+  - `Mobile/src/screens/Member/MemberDashboardScreen.js`
+  - `Mobile/src/screens/Member/__tests__/MemberDashboardScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 47 mobile test suites passing cleanly (225/225 unit tests).
+  - Staging, committing, and pushing to `origin/main` to trigger Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Mobile Real-Time Optimistic Chat UI & Delivery Status Tracking (<@U06FVANTNHL>)
 - **Optimistic Chat UI Updates & Instant Sending Feedback**:
   - `ChatScreen.js`: Implemented instant optimistic UI dispatch matching leading chat apps (WhatsApp, Telegram, Slack, iMessage).

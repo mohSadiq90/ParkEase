@@ -37,8 +37,8 @@ describe('VendorDashboardScreen', () => {
       <VendorDashboardScreen navigation={{}} />
     );
 
-    // Should render the header
-    expect(await findByText('Welcome, Sadiq')).toBeTruthy();
+    // Should render the header with default Partner fallback when unauthenticated
+    expect(await findByText('Welcome, Partner')).toBeTruthy();
 
     // Should render the 4 metrics grid
     expect(getByText('5')).toBeTruthy(); // Active Spaces
@@ -167,4 +167,30 @@ describe('VendorDashboardScreen', () => {
     fireEvent.press(getByLabelText("Today's Bookings"));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('IncomingBookings', { initialTab: 'today', filter: 'today' });
   });
+
+  it('renders dynamic personalized host greetings when user profile is present', async () => {
+    apiClient.get.mockResolvedValue({ data: { data: { totalParkingSpaces: 0, recentBookings: [] } } });
+
+    // With firstName
+    const { findByText: findByTextFirst } = renderWithProviders(
+      <VendorDashboardScreen navigation={{}} />,
+      { preloadedState: { auth: { user: { firstName: 'Alex' } } } }
+    );
+    expect(await findByTextFirst('Welcome, Alex')).toBeTruthy();
+
+    // With fullName
+    const { findByText: findByTextFull } = renderWithProviders(
+      <VendorDashboardScreen navigation={{}} />,
+      { preloadedState: { auth: { user: { fullName: 'Jane Foster' } } } }
+    );
+    expect(await findByTextFull('Welcome, Jane')).toBeTruthy();
+
+    // With email
+    const { findByText: findByTextEmail } = renderWithProviders(
+      <VendorDashboardScreen navigation={{}} />,
+      { preloadedState: { auth: { user: { email: 'hostuser@example.com' } } } }
+    );
+    expect(await findByTextEmail('Welcome, hostuser')).toBeTruthy();
+  });
 });
+

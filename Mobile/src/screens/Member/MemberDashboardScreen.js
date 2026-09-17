@@ -264,13 +264,20 @@ const MemberDashboardScreen = ({ navigation }) => {
         }
     };
 
+    const memberName =
+        user?.firstName ||
+        (user?.fullName ? user.fullName.split(' ')[0] : null) ||
+        (user?.name ? user.name.split(' ')[0] : null) ||
+        (user?.email ? user.email.split('@')[0] : null) ||
+        'there';
+
     const renderItem = ({ item }) => {
         switch (item.type) {
             case 'header':
                 return (
                     <LinearGradient colors={colors.gradients.hero} style={styles.heroGradient}>
                         <View style={styles.heroContent}>
-                            <Text style={styles.greeting}>Hello, {user?.firstName || 'there'} 👋</Text>
+                            <Text style={styles.greeting}>Hello, {memberName} 👋</Text>
                             <Text style={styles.heroSubtitle}>Find your perfect parking spot</Text>
 
                             <TouchableOpacity

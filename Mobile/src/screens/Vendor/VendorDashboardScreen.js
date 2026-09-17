@@ -223,7 +223,8 @@ const VendorDashboardScreen = ({ navigation }) => {
         user?.firstName ||
         (user?.fullName ? user.fullName.split(' ')[0] : null) ||
         (user?.name ? user.name.split(' ')[0] : null) ||
-        (user ? 'Partner' : 'Sadiq');
+        (user?.email ? user.email.split('@')[0] : null) ||
+        'Partner';
 
     const handleFeatureTilePress = (tile) => {
         try {
