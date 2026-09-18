@@ -136,6 +136,8 @@ export const AMENITIES = [
 
 export const ListingCategory = {
     Standard: 0,
+    Commercial: 0,
+    Residential: 1,
     ResidentialDriveway: 1,
     GatedSociety: 2,
     DedicatedCommercial: 3,

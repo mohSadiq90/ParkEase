@@ -23,11 +23,43 @@ export const handleError = (error) => {
 
     if (error.response) {
         const data = error.response.data;
+        if (typeof data === 'string') {
+            return {
+                message: data,
+                code: 'SERVER_ERROR',
+                statusCode: error.response.status,
+                errors: [data],
+                rawMessage: data,
+            };
+        }
+
+        let errors = [];
+        if (Array.isArray(data?.errors)) {
+            errors = data.errors.filter(Boolean);
+        } else if (data?.errors && typeof data.errors === 'object') {
+            errors = Object.entries(data.errors).flatMap(([key, val]) => {
+                if (Array.isArray(val)) {
+                    return val.map((msg) => (key ? `${key}: ${msg}` : msg));
+                }
+                if (typeof val === 'string' && val.trim()) {
+                    return key ? `${key}: ${val}` : val;
+                }
+                return [];
+            }).filter(Boolean);
+        }
+
+        const baseMessage = data?.message || data?.title || 'Server error occurred';
+        let message = baseMessage;
+        if (errors.length > 0) {
+            message = `${baseMessage}:\n• ${errors.join('\n• ')}`;
+        }
+
         return {
-            message: data?.message || data?.title || 'Server error occurred',
+            message,
             code: data?.code || 'SERVER_ERROR',
             statusCode: error.response.status,
-            errors: data?.errors || [],
+            errors,
+            rawMessage: baseMessage,
         };
     }
 

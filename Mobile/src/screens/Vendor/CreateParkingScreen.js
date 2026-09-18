@@ -95,12 +95,14 @@ const CreateParkingScreen = ({ navigation, route }) => {
         address: '',
         city: '',
         state: '',
+        country: 'India',
+        postalCode: '',
         zipCode: '',
         latitude: 0,
         longitude: 0,
         totalSpots: '',
         parkingType: ParkingType.Open,
-        listingCategory: ListingCategory.Commercial,
+        listingCategory: ListingCategory.Standard ?? 0,
         hourlyRate: '',
         dailyRate: '',
         weeklyRate: '',
@@ -130,6 +132,8 @@ const CreateParkingScreen = ({ navigation, route }) => {
         imageUrls: [],
     });
 
+    const [errors, setErrors] = useState({});
+    const [validationSummary, setValidationSummary] = useState([]);
     const [photoInput, setPhotoInput] = useState('');
     const [showUrlInput, setShowUrlInput] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -142,12 +146,14 @@ const CreateParkingScreen = ({ navigation, route }) => {
                 address: editData.address || '',
                 city: editData.city || '',
                 state: editData.state || '',
-                zipCode: editData.zipCode || '',
+                country: editData.country || 'India',
+                postalCode: editData.postalCode || editData.zipCode || '',
+                zipCode: editData.postalCode || editData.zipCode || '',
                 latitude: editData.latitude || 0,
                 longitude: editData.longitude || 0,
                 totalSpots: editData.totalSpots ? editData.totalSpots.toString() : '',
                 parkingType: editData.parkingType ?? ParkingType.Open,
-                listingCategory: editData.listingCategory ?? ListingCategory.Commercial,
+                listingCategory: editData.listingCategory ?? (ListingCategory.Standard ?? 0),
                 hourlyRate: editData.hourlyRate ? editData.hourlyRate.toString() : '',
                 dailyRate: editData.dailyRate ? editData.dailyRate.toString() : '',
                 weeklyRate: editData.weeklyRate ? editData.weeklyRate.toString() : '',
@@ -180,7 +186,24 @@ const CreateParkingScreen = ({ navigation, route }) => {
     }, [editData]);
 
     const updateField = (field) => (value) => {
-        setFormData((prev) => ({ ...prev, [field]: value }));
+        setFormData((prev) => {
+            const next = { ...prev, [field]: value };
+            if (field === 'zipCode') next.postalCode = value;
+            if (field === 'postalCode') next.zipCode = value;
+            return next;
+        });
+        if (errors[field] || (field === 'zipCode' && errors.postalCode) || (field === 'postalCode' && errors.zipCode)) {
+            setErrors((prev) => {
+                const nextErrors = { ...prev };
+                delete nextErrors[field];
+                if (field === 'zipCode') delete nextErrors.postalCode;
+                if (field === 'postalCode') delete nextErrors.zipCode;
+                return nextErrors;
+            });
+            setValidationSummary((prev) =>
+                prev.filter((e) => e.field !== field && !(field === 'zipCode' && e.field === 'postalCode') && !(field === 'postalCode' && e.field === 'zipCode'))
+            );
+        }
     };
 
     const toggleAmenity = (amenity) => {
@@ -346,14 +369,279 @@ const CreateParkingScreen = ({ navigation, route }) => {
         }
     };
 
+    const validateForm = useCallback((data) => {
+        const newErrors = {};
+        const errorDetails = [];
+
+        // Step 1: Basics & Location
+        if (!data.title?.trim()) {
+            const msg = 'Title is required';
+            newErrors.title = msg;
+            errorDetails.push({ step: 1, field: 'title', message: msg, label: 'Title' });
+        }
+
+        if (!data.description?.trim()) {
+            const msg = 'Description is required';
+            newErrors.description = msg;
+            errorDetails.push({ step: 1, field: 'description', message: msg, label: 'Description' });
+        } else if (data.description.length > 2000) {
+            const msg = 'Description cannot exceed 2,000 characters';
+            newErrors.description = msg;
+            errorDetails.push({ step: 1, field: 'description', message: msg, label: 'Description' });
+        }
+
+        const spotsNum = parseInt(data.totalSpots, 10);
+        const isResidential = data.listingCategory === 1 || data.listingCategory === ListingCategory.ResidentialDriveway;
+        if (!data.totalSpots || isNaN(spotsNum) || spotsNum < 1) {
+            const msg = 'Total spots must be at least 1';
+            newErrors.totalSpots = msg;
+            errorDetails.push({ step: 1, field: 'totalSpots', message: msg, label: 'Total Spots' });
+        } else if (spotsNum > 1000) {
+            const msg = 'Total spots cannot exceed 1,000';
+            newErrors.totalSpots = msg;
+            errorDetails.push({ step: 1, field: 'totalSpots', message: msg, label: 'Total Spots' });
+        } else if (isResidential && spotsNum > 10) {
+            const msg = 'Residential driveway listings support a maximum of 10 spots';
+            newErrors.totalSpots = msg;
+            errorDetails.push({ step: 1, field: 'totalSpots', message: msg, label: 'Total Spots' });
+        }
+
+        if (!data.address?.trim()) {
+            const msg = 'Street address is required';
+            newErrors.address = msg;
+            errorDetails.push({ step: 1, field: 'address', message: msg, label: 'Street Address' });
+        }
+
+        if (!data.city?.trim()) {
+            const msg = 'City is required';
+            newErrors.city = msg;
+            errorDetails.push({ step: 1, field: 'city', message: msg, label: 'City' });
+        }
+
+        if (!data.state?.trim()) {
+            const msg = 'State is required';
+            newErrors.state = msg;
+            errorDetails.push({ step: 1, field: 'state', message: msg, label: 'State' });
+        }
+
+        const postalVal = (data.postalCode || data.zipCode || '').trim();
+        if (!postalVal) {
+            const msg = 'Postal / Zip code is required';
+            newErrors.postalCode = msg;
+            newErrors.zipCode = msg;
+            errorDetails.push({ step: 1, field: 'postalCode', message: msg, label: 'Postal / Zip Code' });
+        }
+
+        if (!data.country?.trim()) {
+            const msg = 'Country is required';
+            newErrors.country = msg;
+            errorDetails.push({ step: 1, field: 'country', message: msg, label: 'Country' });
+        }
+
+        // Step 2: Access & Features
+        if (data.hasEvCharging) {
+            const bays = parseInt(data.evChargerCount, 10);
+            if (data.evChargerCount && (isNaN(bays) || bays < 1)) {
+                const msg = 'EV charger count must be at least 1';
+                newErrors.evChargerCount = msg;
+                errorDetails.push({ step: 2, field: 'evChargerCount', message: msg, label: 'EV Charger Bays' });
+            }
+            if (data.evRatePerKwh && (isNaN(parseFloat(data.evRatePerKwh)) || parseFloat(data.evRatePerKwh) < 0)) {
+                const msg = 'EV rate per kWh cannot be negative';
+                newErrors.evRatePerKwh = msg;
+                errorDetails.push({ step: 2, field: 'evRatePerKwh', message: msg, label: 'EV Rate / kWh' });
+            }
+            if (data.evChargingRatePerHour && (isNaN(parseFloat(data.evChargingRatePerHour)) || parseFloat(data.evChargingRatePerHour) < 0)) {
+                const msg = 'EV charging rate cannot be negative';
+                newErrors.evChargingRatePerHour = msg;
+                errorDetails.push({ step: 2, field: 'evChargingRatePerHour', message: msg, label: 'EV Rate / Hour' });
+            }
+            if (data.evIdleRatePerHour && (isNaN(parseFloat(data.evIdleRatePerHour)) || parseFloat(data.evIdleRatePerHour) < 0)) {
+                const msg = 'EV idle rate cannot be negative';
+                newErrors.evIdleRatePerHour = msg;
+                errorDetails.push({ step: 2, field: 'evIdleRatePerHour', message: msg, label: 'EV Idle Fee' });
+            }
+            if (data.evIdleGraceMinutes && (isNaN(parseInt(data.evIdleGraceMinutes, 10)) || parseInt(data.evIdleGraceMinutes, 10) < 0 || parseInt(data.evIdleGraceMinutes, 10) > 1440)) {
+                const msg = 'EV idle grace must be between 0 and 1,440 minutes';
+                newErrors.evIdleGraceMinutes = msg;
+                errorDetails.push({ step: 2, field: 'evIdleGraceMinutes', message: msg, label: 'EV Idle Grace' });
+            }
+        }
+
+        if (data.isBayGuidanceEnabled) {
+            if (data.defaultFacilityLevel && data.defaultFacilityLevel.length > 32) {
+                const msg = 'Facility level cannot exceed 32 characters';
+                newErrors.defaultFacilityLevel = msg;
+                errorDetails.push({ step: 2, field: 'defaultFacilityLevel', message: msg, label: 'Default Level' });
+            }
+            if (data.defaultFacilityZone && data.defaultFacilityZone.length > 64) {
+                const msg = 'Facility zone cannot exceed 64 characters';
+                newErrors.defaultFacilityZone = msg;
+                errorDetails.push({ step: 2, field: 'defaultFacilityZone', message: msg, label: 'Default Zone' });
+            }
+            if (data.indoorGuidanceNotes && data.indoorGuidanceNotes.length > 2000) {
+                const msg = 'Guidance notes cannot exceed 2,000 characters';
+                newErrors.indoorGuidanceNotes = msg;
+                errorDetails.push({ step: 2, field: 'indoorGuidanceNotes', message: msg, label: 'Guidance Notes' });
+            }
+        }
+
+        if (data.isValetEnabled) {
+            if (data.valetFee && (isNaN(parseFloat(data.valetFee)) || parseFloat(data.valetFee) < 0)) {
+                const msg = 'Valet fee cannot be negative';
+                newErrors.valetFee = msg;
+                errorDetails.push({ step: 2, field: 'valetFee', message: msg, label: 'Valet Fee' });
+            }
+        }
+
+        // Step 3: Pricing
+        const rateNum = parseFloat(data.hourlyRate);
+        if (!data.hourlyRate || isNaN(rateNum)) {
+            const msg = 'Hourly rate is required';
+            newErrors.hourlyRate = msg;
+            errorDetails.push({ step: 3, field: 'hourlyRate', message: msg, label: 'Hourly Rate' });
+        } else if (rateNum < 0) {
+            const msg = 'Hourly rate cannot be negative';
+            newErrors.hourlyRate = msg;
+            errorDetails.push({ step: 3, field: 'hourlyRate', message: msg, label: 'Hourly Rate' });
+        }
+
+        if (data.dailyRate && (isNaN(parseFloat(data.dailyRate)) || parseFloat(data.dailyRate) < 0)) {
+            const msg = 'Daily rate cannot be negative';
+            newErrors.dailyRate = msg;
+            errorDetails.push({ step: 3, field: 'dailyRate', message: msg, label: 'Daily Rate' });
+        }
+        if (data.weeklyRate && (isNaN(parseFloat(data.weeklyRate)) || parseFloat(data.weeklyRate) < 0)) {
+            const msg = 'Weekly rate cannot be negative';
+            newErrors.weeklyRate = msg;
+            errorDetails.push({ step: 3, field: 'weeklyRate', message: msg, label: 'Weekly Rate' });
+        }
+        if (data.monthlyRate && (isNaN(parseFloat(data.monthlyRate)) || parseFloat(data.monthlyRate) < 0)) {
+            const msg = 'Monthly rate cannot be negative';
+            newErrors.monthlyRate = msg;
+            errorDetails.push({ step: 3, field: 'monthlyRate', message: msg, label: 'Monthly Rate' });
+        }
+
+        if (data.isDynamicPricingEnabled) {
+            const minMul = parseFloat(data.dynamicMinMultiplier);
+            const maxMul = parseFloat(data.dynamicMaxMultiplier);
+            if (data.dynamicMinMultiplier && (isNaN(minMul) || minMul < 0.1 || minMul > 1.0)) {
+                const msg = 'Min multiplier must be between 0.10 and 1.0';
+                newErrors.dynamicMinMultiplier = msg;
+                errorDetails.push({ step: 3, field: 'dynamicMinMultiplier', message: msg, label: 'Min Multiplier' });
+            }
+            if (data.dynamicMaxMultiplier && (isNaN(maxMul) || maxMul < 1.0 || maxMul > 5.0)) {
+                const msg = 'Max multiplier must be between 1.0 and 5.0';
+                newErrors.dynamicMaxMultiplier = msg;
+                errorDetails.push({ step: 3, field: 'dynamicMaxMultiplier', message: msg, label: 'Max Multiplier' });
+            } else if (!isNaN(minMul) && !isNaN(maxMul) && maxMul < minMul) {
+                const msg = 'Max multiplier must be greater than or equal to min multiplier';
+                newErrors.dynamicMaxMultiplier = msg;
+                errorDetails.push({ step: 3, field: 'dynamicMaxMultiplier', message: msg, label: 'Max Multiplier' });
+            }
+            const peakMul = parseFloat(data.peakHourMultiplier);
+            if (data.peakHourMultiplier && (isNaN(peakMul) || peakMul < 1.0 || peakMul > 3.0)) {
+                const msg = 'Peak hour multiplier must be between 1.0 and 3.0';
+                newErrors.peakHourMultiplier = msg;
+                errorDetails.push({ step: 3, field: 'peakHourMultiplier', message: msg, label: 'Peak Hour Multiplier' });
+            }
+            const weekendMul = parseFloat(data.weekendMultiplier);
+            if (data.weekendMultiplier && (isNaN(weekendMul) || weekendMul < 1.0 || weekendMul > 3.0)) {
+                const msg = 'Weekend multiplier must be between 1.0 and 3.0';
+                newErrors.weekendMultiplier = msg;
+                errorDetails.push({ step: 3, field: 'weekendMultiplier', message: msg, label: 'Weekend Multiplier' });
+            }
+        }
+
+        const firstInvalidStep = errorDetails.length > 0 ? errorDetails[0].step : null;
+
+        return {
+            isValid: errorDetails.length === 0,
+            errors: newErrors,
+            errorDetails,
+            errorList: errorDetails.map((e) => `Step ${e.step} (${STEPS[e.step - 1]?.label}): ${e.message}`),
+            firstInvalidStep,
+        };
+    }, []);
+
+    const parseServerValidationErrors = useCallback((rawMessage) => {
+        if (!rawMessage || typeof rawMessage !== 'string') return;
+        const serverErrors = {};
+        const errorDetails = [];
+
+        const lines = rawMessage.split('\n').map((l) => l.trim().replace(/^•\s*/, '')).filter(Boolean);
+
+        lines.forEach((line) => {
+            const lower = line.toLowerCase();
+            if (lower.includes('validation failed') || lower.includes('server error') || lower.includes('one or more')) {
+                return;
+            }
+            if (lower.includes('title')) {
+                serverErrors.title = line;
+                errorDetails.push({ step: 1, field: 'title', message: line, label: 'Title' });
+            } else if (lower.includes('description')) {
+                serverErrors.description = line;
+                errorDetails.push({ step: 1, field: 'description', message: line, label: 'Description' });
+            } else if (lower.includes('spots') || lower.includes('spot')) {
+                serverErrors.totalSpots = line;
+                errorDetails.push({ step: 1, field: 'totalSpots', message: line, label: 'Total Spots' });
+            } else if (lower.includes('address') || lower.includes('street')) {
+                serverErrors.address = line;
+                errorDetails.push({ step: 1, field: 'address', message: line, label: 'Street Address' });
+            } else if (lower.includes('city')) {
+                serverErrors.city = line;
+                errorDetails.push({ step: 1, field: 'city', message: line, label: 'City' });
+            } else if (lower.includes('state')) {
+                serverErrors.state = line;
+                errorDetails.push({ step: 1, field: 'state', message: line, label: 'State' });
+            } else if (lower.includes('postal') || lower.includes('zip')) {
+                serverErrors.postalCode = line;
+                serverErrors.zipCode = line;
+                errorDetails.push({ step: 1, field: 'postalCode', message: line, label: 'Postal / Zip Code' });
+            } else if (lower.includes('country')) {
+                serverErrors.country = line;
+                errorDetails.push({ step: 1, field: 'country', message: line, label: 'Country' });
+            } else if (lower.includes('rate') || lower.includes('hourly')) {
+                serverErrors.hourlyRate = line;
+                errorDetails.push({ step: 3, field: 'hourlyRate', message: line, label: 'Hourly Rate' });
+            } else {
+                errorDetails.push({ step: 1, field: 'general', message: line, label: 'General' });
+            }
+        });
+
+        if (errorDetails.length > 0) {
+            setErrors((prev) => ({ ...prev, ...serverErrors }));
+            setValidationSummary(errorDetails);
+            const targetStep = errorDetails[0]?.step || 1;
+            setActiveStep(targetStep);
+            if (viewMode === 'all') {
+                const targetY = stepOffsets.current[targetStep] || 0;
+                scrollViewRef.current?.scrollTo?.({ y: Math.max(0, targetY - 12), animated: true });
+            } else {
+                scrollViewRef.current?.scrollTo?.({ y: 0, animated: true });
+            }
+        }
+    }, [viewMode]);
+
     const isStepComplete = (stepId) => {
         switch (stepId) {
             case 1:
-                return Boolean(formData.title.trim() && formData.totalSpots && formData.address.trim() && formData.city.trim());
+                return Boolean(
+                    formData.title?.trim() &&
+                    formData.description?.trim() &&
+                    formData.totalSpots &&
+                    parseInt(formData.totalSpots, 10) >= 1 &&
+                    formData.address?.trim() &&
+                    formData.city?.trim() &&
+                    formData.state?.trim() &&
+                    (formData.postalCode || formData.zipCode || '').trim() &&
+                    formData.country?.trim()
+                );
             case 2:
+                if (formData.hasEvCharging && formData.evChargerCount && parseInt(formData.evChargerCount, 10) < 1) return false;
                 return true;
             case 3:
-                return Boolean(formData.hourlyRate);
+                return Boolean(formData.hourlyRate && !isNaN(parseFloat(formData.hourlyRate)) && parseFloat(formData.hourlyRate) >= 0);
             case 4:
                 return formData.imageUrls.length > 0 || formData.amenities.length > 0;
             default:
@@ -362,33 +650,71 @@ const CreateParkingScreen = ({ navigation, route }) => {
     };
 
     const handleSubmit = useCallback(async () => {
-        if (!formData.title || !formData.address || !formData.city || !formData.totalSpots || !formData.hourlyRate) {
-            if (!formData.title || !formData.address || !formData.city || !formData.totalSpots) {
-                setActiveStep(1);
-            } else if (!formData.hourlyRate) {
-                setActiveStep(3);
+        const validation = validateForm(formData);
+        if (!validation.isValid) {
+            setErrors(validation.errors);
+            setValidationSummary(validation.errorDetails);
+            if (validation.firstInvalidStep) {
+                setActiveStep(validation.firstInvalidStep);
+                if (viewMode === 'all') {
+                    const targetY = stepOffsets.current[validation.firstInvalidStep] || 0;
+                    scrollViewRef.current?.scrollTo?.({ y: Math.max(0, targetY - 12), animated: true });
+                } else {
+                    scrollViewRef.current?.scrollTo?.({ y: 0, animated: true });
+                }
             }
-            Alert.alert('Required Fields', 'Please fill in all required fields');
+            Alert.alert(
+                'Required Fields',
+                `Please fill in all required fields:\n\n• ${validation.errorList.join('\n• ')}`
+            );
             return;
         }
 
+        setErrors({});
+        setValidationSummary([]);
+
         const payload = {
             ...formData,
+            title: formData.title.trim(),
+            description: formData.description.trim(),
+            address: formData.address.trim(),
+            city: formData.city.trim(),
+            state: formData.state.trim(),
+            country: formData.country?.trim() || 'India',
+            postalCode: (formData.postalCode || formData.zipCode || '').trim(),
+            zipCode: (formData.postalCode || formData.zipCode || '').trim(),
+            latitude: Number(formData.latitude) || 0,
+            longitude: Number(formData.longitude) || 0,
+            parkingType: Number(formData.parkingType) || 0,
+            listingCategory: (formData.listingCategory === 1 || formData.listingCategory === ListingCategory.ResidentialDriveway) ? 1 : 0,
             totalSpots: parseInt(formData.totalSpots, 10),
             hourlyRate: parseFloat(formData.hourlyRate),
             dailyRate: parseFloat(formData.dailyRate) || 0,
             weeklyRate: parseFloat(formData.weeklyRate) || 0,
             monthlyRate: parseFloat(formData.monthlyRate) || 0,
-            evChargerCount: formData.hasEvCharging ? parseInt(formData.evChargerCount, 10) || 1 : undefined,
-            evRatePerKwh: formData.hasEvCharging ? parseFloat(formData.evRatePerKwh) || 0 : undefined,
-            evChargingRatePerHour: formData.hasEvCharging ? parseFloat(formData.evChargingRatePerHour) || 0 : undefined,
-            evIdleRatePerHour: formData.hasEvCharging ? parseFloat(formData.evIdleRatePerHour) || 0 : undefined,
-            evIdleGraceMinutes: formData.hasEvCharging ? parseInt(formData.evIdleGraceMinutes, 10) || 15 : undefined,
+            is24Hours: Boolean(formData.is24Hours),
+            instantBook: Boolean(formData.instantBook),
+            isLprEnabled: Boolean(formData.isLprEnabled),
+            hasEvCharging: Boolean(formData.hasEvCharging),
+            evChargerCount: formData.hasEvCharging ? Math.max(1, parseInt(formData.evChargerCount, 10) || 1) : undefined,
+            evPricingMode: formData.hasEvCharging ? (formData.evPricingMode ?? EvPricingMode.PerHour) : undefined,
+            evRatePerKwh: formData.hasEvCharging ? Math.max(0, parseFloat(formData.evRatePerKwh) || 0) : undefined,
+            evChargingRatePerHour: formData.hasEvCharging ? Math.max(0, parseFloat(formData.evChargingRatePerHour) || 0) : undefined,
+            evIdleRatePerHour: formData.hasEvCharging ? Math.max(0, parseFloat(formData.evIdleRatePerHour) || 0) : undefined,
+            evIdleGraceMinutes: formData.hasEvCharging ? Math.max(0, parseInt(formData.evIdleGraceMinutes, 10) || 15) : undefined,
+            isDynamicPricingEnabled: Boolean(formData.isDynamicPricingEnabled),
             dynamicMinMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.dynamicMinMultiplier) || 0.8 : undefined,
             dynamicMaxMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.dynamicMaxMultiplier) || 1.75 : undefined,
             peakHourMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.peakHourMultiplier) || 1.25 : undefined,
             weekendMultiplier: formData.isDynamicPricingEnabled ? parseFloat(formData.weekendMultiplier) || 1.15 : undefined,
-            valetFee: formData.isValetEnabled ? parseFloat(formData.valetFee) || 0 : undefined,
+            isBayGuidanceEnabled: Boolean(formData.isBayGuidanceEnabled),
+            defaultFacilityLevel: formData.isBayGuidanceEnabled ? (formData.defaultFacilityLevel?.trim() || null) : null,
+            defaultFacilityZone: formData.isBayGuidanceEnabled ? (formData.defaultFacilityZone?.trim() || null) : null,
+            indoorGuidanceNotes: formData.isBayGuidanceEnabled ? (formData.indoorGuidanceNotes?.trim() || null) : null,
+            isValetEnabled: Boolean(formData.isValetEnabled),
+            valetFee: formData.isValetEnabled ? Math.max(0, parseFloat(formData.valetFee) || 0) : undefined,
+            amenities: Array.isArray(formData.amenities) ? formData.amenities : [],
+            imageUrls: Array.isArray(formData.imageUrls) ? formData.imageUrls : [],
             imageUrl: (Array.isArray(formData.imageUrls) && formData.imageUrls[0]) || formData.imageUrl || '',
         };
 
@@ -418,7 +744,9 @@ const CreateParkingScreen = ({ navigation, route }) => {
                     { text: 'OK', onPress: () => navigation.goBack() },
                 ]);
             } else {
-                Alert.alert('Error', result.payload || 'Failed to update space');
+                const errorMsg = result.payload || 'Failed to update space';
+                parseServerValidationErrors(errorMsg);
+                Alert.alert('Error', errorMsg);
             }
         } else {
             const result = await dispatch(createParkingThunk(payload));
@@ -444,10 +772,12 @@ const CreateParkingScreen = ({ navigation, route }) => {
                     { text: 'OK', onPress: () => navigation.goBack() },
                 ]);
             } else {
-                Alert.alert('Error', result.payload || 'Failed to create space');
+                const errorMsg = result.payload || 'Failed to create space';
+                parseServerValidationErrors(errorMsg);
+                Alert.alert('Error', errorMsg);
             }
         }
-    }, [dispatch, formData, isEditing, editData, navigation]);
+    }, [dispatch, formData, isEditing, editData, navigation, validateForm, parseServerValidationErrors, viewMode]);
 
     const handleDelete = () => {
         if (!editData) return;
@@ -568,6 +898,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                         {STEPS.map((step) => {
                             const isActive = activeStep === step.id;
                             const isComplete = isStepComplete(step.id);
+                            const stepHasError = validationSummary.some((e) => e.step === step.id);
                             return (
                                 <TouchableOpacity
                                     key={step.id}
@@ -578,14 +909,19 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                     accessibilityLabel={`${step.label} step`}
                                     testID={`step-tab-${step.id}`}
                                 >
-                                    <View style={[styles.stepTabIconContainer, isActive && styles.stepTabIconActive, isComplete && !isActive && styles.stepTabIconComplete]}>
+                                    <View style={[
+                                        styles.stepTabIconContainer,
+                                        isActive && styles.stepTabIconActive,
+                                        isComplete && !isActive && !stepHasError && styles.stepTabIconComplete,
+                                        stepHasError && styles.stepTabIconError,
+                                    ]}>
                                         <Ionicons
-                                            name={isComplete && !isActive ? 'checkmark' : step.icon}
+                                            name={stepHasError ? 'alert-circle' : isComplete && !isActive ? 'checkmark' : step.icon}
                                             size={14}
-                                            color={isActive ? colors.white : isComplete ? colors.success : colors.textTertiary}
+                                            color={stepHasError ? colors.white : isActive ? colors.white : isComplete ? colors.success : colors.textTertiary}
                                         />
                                     </View>
-                                    <Text style={[styles.stepTabText, isActive && styles.stepTabTextActive]}>
+                                    <Text style={[styles.stepTabText, isActive && styles.stepTabTextActive, stepHasError && styles.stepTabTextError]}>
                                         {step.label}
                                     </Text>
                                 </TouchableOpacity>
@@ -604,6 +940,54 @@ const CreateParkingScreen = ({ navigation, route }) => {
                     contentContainerStyle={{ flexGrow: 1, paddingBottom: viewMode === 'steps' ? 140 : 60 }}
                 >
                     <View style={styles.content}>
+                        {/* ========================================================= */}
+                        {/* VALIDATION ERROR SUMMARY BANNER */}
+                        {/* ========================================================= */}
+                        {validationSummary.length > 0 && (
+                            <View style={styles.validationBanner} testID="validation-error-banner">
+                                <View style={styles.validationBannerHeader}>
+                                    <View style={styles.validationBannerTitleRow}>
+                                        <Ionicons name="alert-circle" size={18} color="#DC2626" style={{ marginRight: 6 }} />
+                                        <Text style={styles.validationBannerTitle}>
+                                            {validationSummary.length} {validationSummary.length === 1 ? 'Validation Issue' : 'Validation Issues'} Found
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => setValidationSummary([])}
+                                        style={styles.validationBannerDismiss}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Dismiss validation errors"
+                                        testID="dismiss-validation-banner-btn"
+                                    >
+                                        <Ionicons name="close" size={16} color={colors.textSecondary} />
+                                    </TouchableOpacity>
+                                </View>
+                                <Text style={styles.validationBannerSubtitle}>
+                                    Please resolve the highlighted fields below to create your space:
+                                </Text>
+                                <View style={styles.validationList}>
+                                    {validationSummary.map((err, idx) => (
+                                        <TouchableOpacity
+                                            key={idx}
+                                            activeOpacity={0.7}
+                                            onPress={() => {
+                                                handleStepChange(err.step);
+                                            }}
+                                            style={styles.validationListItem}
+                                            testID={`validation-error-item-${idx}`}
+                                        >
+                                            <Ionicons name="warning-outline" size={14} color="#DC2626" style={{ marginRight: 6, marginTop: 2 }} />
+                                            <Text style={styles.validationListText}>
+                                                <Text style={styles.validationStepBadgeText}>[Step {err.step}: {STEPS[err.step - 1]?.label}] </Text>
+                                                <Text style={styles.validationFieldLabelText}>{err.label}: </Text>
+                                                {err.message}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
                         {/* ========================================================= */}
                         {/* STEP 1: PROPERTY BASICS & LOCATION */}
                         {/* ========================================================= */}
@@ -638,6 +1022,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                     onChangeText={updateField('title')}
                                     placeholder="e.g. Downtown Parking Garage"
                                     leftIcon="car-sport-outline"
+                                    error={errors.title}
                                 />
 
                                 <Input
@@ -647,6 +1032,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                     placeholder="Number of spots"
                                     keyboardType="numeric"
                                     leftIcon="grid-outline"
+                                    error={errors.totalSpots}
                                 />
 
                                 {/* Quick Spots Selector */}
@@ -693,12 +1079,13 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                 </View>
 
                                 <Input
-                                    label="Description"
+                                    label="Description *"
                                     value={formData.description}
                                     onChangeText={updateField('description')}
                                     placeholder="Describe your parking space, clearance height, gate access rules, etc."
                                     multiline
                                     numberOfLines={3}
+                                    error={errors.description}
                                     style={{ marginTop: spacing.sm }}
                                 />
                             </Card>
@@ -721,6 +1108,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                     onChangeText={updateField('address')}
                                     placeholder="Street address"
                                     leftIcon="location-outline"
+                                    error={errors.address}
                                 />
 
                                 <View style={styles.row}>
@@ -729,26 +1117,42 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                         value={formData.city}
                                         onChangeText={updateField('city')}
                                         placeholder="City"
+                                        error={errors.city}
                                         style={styles.halfInput}
                                         containerStyle={styles.halfInput}
                                     />
                                     <Input
-                                        label="State"
+                                        label="State *"
                                         value={formData.state}
                                         onChangeText={updateField('state')}
                                         placeholder="State"
+                                        error={errors.state}
                                         style={styles.halfInput}
                                         containerStyle={styles.halfInput}
                                     />
                                 </View>
 
-                                <Input
-                                    label="Zip Code"
-                                    value={formData.zipCode}
-                                    onChangeText={updateField('zipCode')}
-                                    placeholder="Zip code"
-                                    keyboardType="numeric"
-                                />
+                                <View style={styles.row}>
+                                    <Input
+                                        label="Postal / Zip Code *"
+                                        value={formData.postalCode || formData.zipCode}
+                                        onChangeText={updateField('postalCode')}
+                                        placeholder="Zip code"
+                                        keyboardType="numeric"
+                                        error={errors.postalCode || errors.zipCode}
+                                        style={styles.halfInput}
+                                        containerStyle={styles.halfInput}
+                                    />
+                                    <Input
+                                        label="Country *"
+                                        value={formData.country}
+                                        onChangeText={updateField('country')}
+                                        placeholder="Country"
+                                        error={errors.country}
+                                        style={styles.halfInput}
+                                        containerStyle={styles.halfInput}
+                                    />
+                                </View>
                             </Card>
                         </View>
 
@@ -871,6 +1275,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                             onChangeText={updateField('evChargerCount')}
                                             keyboardType="numeric"
                                             placeholder="e.g. 2"
+                                            error={errors.evChargerCount}
                                         />
                                         <View style={styles.row}>
                                             <Input
@@ -879,6 +1284,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 onChangeText={updateField('evRatePerKwh')}
                                                 keyboardType="decimal-pad"
                                                 prefix="₹"
+                                                error={errors.evRatePerKwh}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -888,6 +1294,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 onChangeText={updateField('evChargingRatePerHour')}
                                                 keyboardType="decimal-pad"
                                                 prefix="₹"
+                                                error={errors.evChargingRatePerHour}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -899,6 +1306,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 onChangeText={updateField('evIdleRatePerHour')}
                                                 keyboardType="decimal-pad"
                                                 prefix="₹"
+                                                error={errors.evIdleRatePerHour}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -907,6 +1315,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 value={formData.evIdleGraceMinutes}
                                                 onChangeText={updateField('evIdleGraceMinutes')}
                                                 keyboardType="numeric"
+                                                error={errors.evIdleGraceMinutes}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -951,6 +1360,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 value={formData.defaultFacilityLevel}
                                                 onChangeText={updateField('defaultFacilityLevel')}
                                                 placeholder="e.g. B2"
+                                                error={errors.defaultFacilityLevel}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -959,6 +1369,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 value={formData.defaultFacilityZone}
                                                 onChangeText={updateField('defaultFacilityZone')}
                                                 placeholder="e.g. Blue"
+                                                error={errors.defaultFacilityZone}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -968,6 +1379,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                             value={formData.indoorGuidanceNotes}
                                             onChangeText={updateField('indoorGuidanceNotes')}
                                             placeholder="e.g. Enter ramp 2, follow blue signs"
+                                            error={errors.indoorGuidanceNotes}
                                         />
                                     </View>
                                 )}
@@ -999,6 +1411,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                             keyboardType="decimal-pad"
                                             prefix="₹"
                                             placeholder="0.00 for free"
+                                            error={errors.valetFee}
                                         />
                                     </View>
                                 )}
@@ -1042,6 +1455,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                         keyboardType="decimal-pad"
                                         leftIcon="time-outline"
                                         prefix="₹"
+                                        error={errors.hourlyRate}
                                         style={styles.halfInput}
                                         containerStyle={styles.halfInput}
                                     />
@@ -1053,6 +1467,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                         keyboardType="decimal-pad"
                                         leftIcon="calendar-outline"
                                         prefix="₹"
+                                        error={errors.dailyRate}
                                         style={styles.halfInput}
                                         containerStyle={styles.halfInput}
                                     />
@@ -1066,6 +1481,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                         placeholder="0.00"
                                         keyboardType="decimal-pad"
                                         prefix="₹"
+                                        error={errors.weeklyRate}
                                         style={styles.halfInput}
                                         containerStyle={styles.halfInput}
                                     />
@@ -1076,6 +1492,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                         placeholder="0.00"
                                         keyboardType="decimal-pad"
                                         prefix="₹"
+                                        error={errors.monthlyRate}
                                         style={styles.halfInput}
                                         containerStyle={styles.halfInput}
                                     />
@@ -1116,6 +1533,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 onChangeText={updateField('dynamicMinMultiplier')}
                                                 keyboardType="decimal-pad"
                                                 placeholder="0.8"
+                                                error={errors.dynamicMinMultiplier}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -1125,6 +1543,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 onChangeText={updateField('dynamicMaxMultiplier')}
                                                 keyboardType="decimal-pad"
                                                 placeholder="1.75"
+                                                error={errors.dynamicMaxMultiplier}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -1136,6 +1555,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 onChangeText={updateField('peakHourMultiplier')}
                                                 keyboardType="decimal-pad"
                                                 placeholder="1.25"
+                                                error={errors.peakHourMultiplier}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -1145,6 +1565,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                                 onChangeText={updateField('weekendMultiplier')}
                                                 keyboardType="decimal-pad"
                                                 placeholder="1.15"
+                                                error={errors.weekendMultiplier}
                                                 style={styles.halfInput}
                                                 containerStyle={styles.halfInput}
                                             />
@@ -1644,6 +2065,75 @@ const styles = StyleSheet.create({
     stepTabTextActive: {
         color: colors.primary,
         fontWeight: '700',
+    },
+    stepTabIconError: {
+        backgroundColor: '#DC2626',
+    },
+    stepTabTextError: {
+        color: '#DC2626',
+        fontWeight: '700',
+    },
+
+    // Validation Summary Banner
+    validationBanner: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        borderRadius: spacing.radius.lg,
+        padding: spacing.md,
+        marginBottom: spacing.base,
+        ...shadows.card,
+    },
+    validationBannerHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
+    validationBannerTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    validationBannerTitle: {
+        ...typography.body,
+        fontWeight: '700',
+        color: '#991B1B',
+    },
+    validationBannerDismiss: {
+        padding: 4,
+    },
+    validationBannerSubtitle: {
+        ...typography.caption,
+        color: '#B91C1C',
+        marginBottom: spacing.sm,
+    },
+    validationList: {
+        gap: 6,
+    },
+    validationListItem: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#FFFFFF',
+        paddingVertical: 6,
+        paddingHorizontal: spacing.sm,
+        borderRadius: spacing.radius.sm,
+        borderWidth: 1,
+        borderColor: '#FEE2E2',
+    },
+    validationListText: {
+        ...typography.caption,
+        color: '#7F1D1D',
+        flex: 1,
+        lineHeight: 18,
+    },
+    validationStepBadgeText: {
+        fontWeight: '700',
+        color: '#DC2626',
+    },
+    validationFieldLabelText: {
+        fontWeight: '600',
+        color: colors.textPrimary,
     },
 
     // Content

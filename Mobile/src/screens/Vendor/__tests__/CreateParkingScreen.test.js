@@ -31,7 +31,7 @@ describe('CreateParkingScreen', () => {
   });
 
   it('shows error alert if required fields are missing', async () => {
-    const { getByText } = renderWithProviders(
+    const { getByText, getByTestId } = renderWithProviders(
       <CreateParkingScreen navigation={mockNavigation} route={{}} />
     );
 
@@ -40,8 +40,10 @@ describe('CreateParkingScreen', () => {
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Required Fields',
-      'Please fill in all required fields'
+      expect.stringContaining('Please fill in all required fields')
     );
+    expect(getByTestId('validation-error-banner')).toBeTruthy();
+    expect(getByText(/Validation Issues Found/)).toBeTruthy();
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 
@@ -55,9 +57,12 @@ describe('CreateParkingScreen', () => {
     );
 
     fireEvent.changeText(getByPlaceholderText('e.g. Downtown Parking Garage'), 'Test Space');
+    fireEvent.changeText(getByPlaceholderText('Describe your parking space, clearance height, gate access rules, etc.'), 'Secure gated facility');
     fireEvent.changeText(getByPlaceholderText('Number of spots'), '10');
     fireEvent.changeText(getByPlaceholderText('Street address'), '123 Main St');
     fireEvent.changeText(getByPlaceholderText('City'), 'New York');
+    fireEvent.changeText(getByPlaceholderText('State'), 'NY');
+    fireEvent.changeText(getByPlaceholderText('Zip code'), '10001');
     
     const zeroInputs = getAllByPlaceholderText('0.00');
     fireEvent.changeText(zeroInputs[0], '15');
@@ -87,6 +92,10 @@ describe('CreateParkingScreen', () => {
       description: 'Covered spots with security',
       address: '777 Broadway',
       city: 'Metropolis',
+      state: 'NY',
+      postalCode: '10001',
+      zipCode: '10001',
+      country: 'USA',
       totalSpots: 50,
       hourlyRate: 25,
       imageUrls: ['https://example.com/p1.jpg'],
@@ -387,4 +396,94 @@ describe('CreateParkingScreen', () => {
 
     expect(getByTestId('photo-preview-0')).toBeTruthy();
   });
+
+  it('allows tapping a validation issue in banner to jump to that step and dismisses banner', () => {
+    const { getByText, getByTestId, queryByTestId } = renderWithProviders(
+      <CreateParkingScreen
+        navigation={mockNavigation}
+        route={{ params: { initialViewMode: 'steps', initialStep: 4 } }}
+      />
+    );
+
+    // Press submit on Step 4 to trigger validations
+    fireEvent.press(getByTestId('submit-parking-button'));
+
+    // Validation banner should appear
+    expect(getByTestId('validation-error-banner')).toBeTruthy();
+    expect(getByTestId('validation-error-item-0')).toBeTruthy();
+
+    // Tapping the first validation issue jumps back to Step 1
+    fireEvent.press(getByTestId('validation-error-item-0'));
+    expect(getByText(/Step 1 of 4 • Basics/)).toBeTruthy();
+
+    // Dismissing the banner removes it from view
+    fireEvent.press(getByTestId('dismiss-validation-banner-btn'));
+    expect(queryByTestId('validation-error-banner')).toBeNull();
+  });
+
+  it('enforces residential driveway listing spot limits (max 10 spots)', () => {
+    const { getByText, getByPlaceholderText, getByTestId } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    // Select Residential Driveway
+    fireEvent.press(getByText('Residential Driveway'));
+    fireEvent.changeText(getByPlaceholderText('Number of spots'), '15');
+
+    // Attempt submit
+    fireEvent.press(getByText('Create Space'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Required Fields',
+      expect.stringContaining('Residential driveway listings support a maximum of 10 spots')
+    );
+    expect(getByTestId('validation-error-banner')).toBeTruthy();
+  });
+
+  it('parses server validation errors and displays them in the banner and step indicators', async () => {
+    apiClient.post.mockRejectedValueOnce({
+      response: {
+        status: 400,
+        data: {
+          message: 'Validation failed',
+          errors: {
+            Title: ['Title must not exceed 100 characters.'],
+            Address: ['Address is invalid.'],
+          },
+        },
+      },
+    });
+
+    const { getByPlaceholderText, getByText, getAllByText, getByTestId, getAllByPlaceholderText } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    // Fill all client-mandatory fields
+    fireEvent.changeText(getByPlaceholderText('e.g. Downtown Parking Garage'), 'Valid Title');
+    fireEvent.changeText(getByPlaceholderText('Describe your parking space, clearance height, gate access rules, etc.'), 'Some description');
+    fireEvent.changeText(getByPlaceholderText('Number of spots'), '5');
+    fireEvent.changeText(getByPlaceholderText('Street address'), '123 Main St');
+    fireEvent.changeText(getByPlaceholderText('City'), 'Mumbai');
+    fireEvent.changeText(getByPlaceholderText('State'), 'MH');
+    fireEvent.changeText(getByPlaceholderText('Zip code'), '400001');
+
+    const zeroInputs = getAllByPlaceholderText('0.00');
+    fireEvent.changeText(zeroInputs[0], '20');
+
+    fireEvent.press(getByText('Create Space'));
+
+    await waitFor(() => {
+      expect(apiClient.post).toHaveBeenCalled();
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.stringContaining('Validation failed')
+      );
+    });
+
+    // Server errors should be mapped to both the validation banner and the inline field input
+    expect(getByTestId('validation-error-banner')).toBeTruthy();
+    const titleErrors = getAllByText(/Title: Title must not exceed 100 characters./);
+    expect(titleErrors.length).toBeGreaterThanOrEqual(1);
+  });
 });
+

@@ -1,0 +1,30 @@
+appId: com.parkease.app
+---
+# Flow 1: Member Valid Login & Role-Based UI Flow
+- launchApp:
+    clearState: true
+
+# 1. Assert Login screen renders on cold start
+- assertVisible: "Welcome Back"
+- assertVisible: "Personal"
+- assertVisible: "Corporate"
+
+# 2. Input valid Member credentials
+- tapOn:
+    placeholder: "Enter your email"
+- inputText: "member@parkease.com"
+
+- tapOn:
+    placeholder: "Enter your password"
+- inputText: "MemberPass123!"
+
+# 3. Submit login
+- tapOn: "Sign In"
+
+# 4. Assert Member Dashboard and Role Tabs
+- assertVisible: "Find your perfect parking spot"
+- assertVisible: "Search"
+- assertVisible: "Bookings"
+- assertVisible: "Menu"
+- assertNotVisible: "Listings"
+- assertNotVisible: "Inventory"

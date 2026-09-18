@@ -1,0 +1,30 @@
+appId: com.parkease.app
+---
+# Flow 4: Corporate Enterprise Mode Login & Role Tabs
+- launchApp:
+    clearState: true
+
+# 1. Assert Login screen renders
+- assertVisible: "Welcome Back"
+
+# 2. Switch to Corporate Tab
+- tapOn: "Corporate"
+
+# 3. Input Corporate Credentials
+- tapOn:
+    placeholder: "Enter your email"
+- inputText: "fleet@corporate.com"
+
+- tapOn:
+    placeholder: "Enter your password"
+- inputText: "CorpSecret123!"
+
+# 4. Submit Corporate Login
+- tapOn: "Corporate Sign In"
+
+# 5. Assert Corporate Inventory and Role Tabs
+- assertVisible: "Inventory"
+- assertVisible: "Bookings"
+- assertVisible: "Menu"
+- assertNotVisible: "Search"
+- assertNotVisible: "Listings"

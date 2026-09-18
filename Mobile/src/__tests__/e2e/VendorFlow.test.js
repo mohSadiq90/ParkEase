@@ -152,9 +152,12 @@ describe('Vendor E2E Flow (Hosting and Approving)', () => {
     // CreateParkingScreen
     await findByText('New Parking Space');
     fireEvent.changeText(getByPlaceholderText('e.g. Downtown Parking Garage'), 'Test Spot');
+    fireEvent.changeText(getByPlaceholderText('Describe your parking space, clearance height, gate access rules, etc.'), 'Secure gated parking space');
     fireEvent.changeText(getByPlaceholderText('Number of spots'), '5');
     fireEvent.changeText(getByPlaceholderText('Street address'), '123 Vendor St');
     fireEvent.changeText(getByPlaceholderText('City'), 'Vendor City');
+    fireEvent.changeText(getByPlaceholderText('State'), 'NY');
+    fireEvent.changeText(getByPlaceholderText('Zip code'), '10001');
     
     const zeroInputs = getAllByPlaceholderText('0.00');
     fireEvent.changeText(zeroInputs[0], '15'); // Hourly Rate

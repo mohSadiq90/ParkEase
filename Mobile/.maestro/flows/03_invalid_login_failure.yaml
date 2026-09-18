@@ -1,0 +1,24 @@
+appId: com.parkease.app
+---
+# Flow 3: Invalid Credentials Login & Error Handling Flow
+- launchApp:
+    clearState: true
+
+# 1. Assert Login screen renders on cold start
+- assertVisible: "Welcome Back"
+
+# 2. Input invalid credentials
+- tapOn:
+    placeholder: "Enter your email"
+- inputText: "invalid_user@unknown.com"
+
+- tapOn:
+    placeholder: "Enter your password"
+- inputText: "WrongPassword999!"
+
+# 3. Submit login
+- tapOn: "Sign In"
+
+# 4. Assert Error Feedback and Screen Retention
+- assertVisible: "Welcome Back"
+- assertNotVisible: "Home"

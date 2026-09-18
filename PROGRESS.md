@@ -9,6 +9,52 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-18] - Automated End-to-End Flow Testing Architecture & Implementation (<@U06FVANTNHL>)
+- **Architected & Implemented Automated Flow Testing Strategy (`Mobile/src/__tests__/e2e/`, `Mobile/.maestro/`)**:
+  - Addressed request from `<@U06FVANTNHL>` for an automated testing approach covering happy paths, failure scenarios, and role-based edge cases (Member, Vendor, Corporate, Invalid credentials, Network failure).
+  - Implemented a two-tier testing strategy:
+    1. **In-Repo Integration Flow Testing (Jest + React Native Testing Library + Full Redux Store)**: Fast, deterministic, headless execution directly in CI/CD pipeline without device or emulator dependencies.
+    2. **On-Device Black-Box Automation (Maestro E2E Flows)**: Declarative YAML flows executing against real Android release APK builds.
+- **Created Comprehensive Authentication & Role Flow Test Suite (`AuthAndRoleFlows.test.js`)**:
+  - Implemented 10 automated end-to-end flow tests:
+    1. *Member Valid Login*: Opens app, logs in as Member, asserts Member Dashboard and role-specific tabs (Search, Bookings, Menu; verifies Listings is hidden).
+    2. *Vendor Valid Login*: Opens app, logs in as Vendor, asserts Vendor Dashboard and role-specific tabs (Listings, Bookings, Menu; verifies Search is hidden).
+    3. *Corporate Enterprise Login*: Switches mode to Corporate, logs in, asserts Corporate Dashboard and role tabs (Inventory, Bookings, Menu).
+    4. *Invalid Credentials Failure*: Submits incorrect password, asserts 401 response displays error banner in the UI and keeps user safely on login screen.
+    5. *Network Outage Resilience*: Simulates offline / network error, verifies network error banner displays and user remains on login screen.
+    6. *Client-Side Validation Edge Cases*: Submits empty form and malformed email, verifies inline field validation errors trigger without hitting the network.
+    7. *Session Restore on Launch*: Valid stored token bypasses login screen and boots directly into authenticated dashboard.
+    8. *Expired Session Handling*: Expired stored token (401 on `/users/me`) clears local session and cleanly presents Login screen.
+    9. *Full Logout Flow*: Authenticated user logs out from Menu screen, asserts confirmation alert, verifies credentials wiped and screen navigates back to Auth stack.
+    10. *Corporate SSO Discovery*: Validates SSO discovery prompts and non-SSO domain fallback alerts.
+- **Created Declarative Maestro On-Device Flow Definitions (`Mobile/.maestro/`)**:
+  - Added `01_member_login_flow.yaml`, `02_vendor_login_flow.yaml`, `03_invalid_login_failure.yaml`, `04_corporate_login_flow.yaml`, and `README.md` for turnkey automated black-box testing on Android release builds.
+- **Added Automated Flow Runner Script (`Mobile/package.json`)**:
+  - Added `"test:flows": "jest src/__tests__/e2e --watchAll=false"`.
+- **Updated Existing E2E & Component Tests (`VendorFlow.test.js`, `CreateParkingScreen.test.js`, `errorHandler.test.js`)**:
+  - Updated `VendorFlow.test.js` to provide required description, state, and zip code fields.
+  - Verified error banner and FluentValidation error dictionary parsing in `errorHandler.js` and `CreateParkingScreen.js`.
+- **Automated Testing Suite Verification**:
+  - Executed full Mobile test suite: **100% pass rate** (54/54 test suites, 351/351 unit and flow tests passing cleanly).
+- **Key Files Modified/Added**:
+  - `Mobile/src/__tests__/e2e/AuthAndRoleFlows.test.js` (New)
+  - `Mobile/.maestro/flows/01_member_login_flow.yaml` (New)
+  - `Mobile/.maestro/flows/02_vendor_login_flow.yaml` (New)
+  - `Mobile/.maestro/flows/03_invalid_login_failure.yaml` (New)
+  - `Mobile/.maestro/flows/04_corporate_login_flow.yaml` (New)
+  - `Mobile/.maestro/README.md` (New)
+  - `Mobile/package.json`
+  - `Mobile/src/__tests__/e2e/VendorFlow.test.js`
+  - `Mobile/src/screens/Vendor/CreateParkingScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/CreateParkingScreen.test.js`
+  - `Mobile/src/utils/constants.js`
+  - `Mobile/src/utils/errorHandler.js`
+  - `Mobile/src/utils/__tests__/errorHandler.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 54 test suites passing cleanly (351/351 tests).
+  - Staging, committing, and pushing to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-17] - Fix Listing Deactivation Reverting to Active After Toggle Spinner (<@U06FVANTNHL>)
 - **Investigated Listing Active/Inactive Toggle Reverting Issue (`MyListingsScreen.js`, `parkingSlice.js`)**:
   - Investigated issue reported by `<@U06FVANTNHL>` where deactivating a listing via the toggle switch displays the loading indicator, but once the loading indicator finishes, the switch flips back to the active state.

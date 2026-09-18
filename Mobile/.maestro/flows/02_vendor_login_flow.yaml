@@ -1,0 +1,28 @@
+appId: com.parkease.app
+---
+# Flow 2: Vendor Valid Login & Role-Based UI Flow
+- launchApp:
+    clearState: true
+
+# 1. Assert Login screen renders on cold start
+- assertVisible: "Welcome Back"
+
+# 2. Input valid Vendor credentials
+- tapOn:
+    placeholder: "Enter your email"
+- inputText: "vendor@parkease.com"
+
+- tapOn:
+    placeholder: "Enter your password"
+- inputText: "VendorPass123!"
+
+# 3. Submit login
+- tapOn: "Sign In"
+
+# 4. Assert Vendor Dashboard and Role Tabs
+- assertVisible: "Manage your parking business"
+- assertVisible: "Listings"
+- assertVisible: "Bookings"
+- assertVisible: "Menu"
+- assertNotVisible: "Search"
+- assertNotVisible: "Inventory"
