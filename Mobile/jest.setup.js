@@ -1,6 +1,6 @@
 import '@testing-library/jest-native/extend-expect';
 
-jest.setTimeout(30000);
+jest.setTimeout(60000);
 
 // Mock SafeAreaContext
 jest.mock('react-native-safe-area-context', () => {

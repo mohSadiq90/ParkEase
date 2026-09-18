@@ -14,7 +14,7 @@ const TAG = 'ApiClient';
 // Create axios instance
 const apiClient = axios.create({
     baseURL: environment.apiUrl,
-    timeout: 30000,
+    timeout: environment.apiTimeout || 60000,
     headers: {
         'Content-Type': 'application/json',
     },

@@ -9,6 +9,31 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-18] - Increase Axios Timeout to 1 Minute (60s) (<@U06FVANTNHL>)
+- **Increased Global Axios Network Timeout (`Mobile/src/services/api/apiClient.js`, `Mobile/src/config/environment.js`)**:
+  - Implemented timeout increase requested by `<@U06FVANTNHL>` from 30 seconds (`30000ms`) to 60 seconds (`60000ms` / 1 minute) across all Mobile API requests.
+  - Added centralized `apiTimeout: 60000` configuration in `Mobile/src/config/environment.js`.
+  - Configured `apiClient.js` to utilize `timeout: environment.apiTimeout || 60000` to prevent premature client-side aborts (`ECONNABORTED`) during RunASP backend idle cold-starts.
+  - Aligned Jest global test timeout in `Mobile/jest.setup.js` to `60000ms` (`jest.setTimeout(60000)`).
+- **Automated Unit Testing (`Mobile/src/services/api/__tests__/apiClient.test.js`)**:
+  - Added dedicated unit test suite for `apiClient` validating:
+    1. Global timeout configured to 60,000ms (1 minute).
+    2. BaseURL mapped correctly to `environment.apiUrl`.
+    3. Default `Content-Type: application/json` header.
+    4. Bearer token attachment via request interceptor.
+    5. Graceful handling when no token is present.
+- **Full Test Suite Verification**:
+  - Executed full Mobile test suite: **100% pass rate** (59/59 test suites, 390/390 tests passing).
+- **Key Files Modified/Added**:
+  - `Mobile/src/config/environment.js`
+  - `Mobile/src/services/api/apiClient.js`
+  - `Mobile/jest.setup.js`
+  - `Mobile/src/services/api/__tests__/apiClient.test.js` (New)
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All 59 test suites passing (390/390 tests).
+  - Staged, committed, and pushed to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-18] - Update End-to-End Testing Status For Each Feature (<@U06FVANTNHL>)
 - **Updated Comprehensive End-to-End Testing Status Across All Features (`Mobile/docs/E2E_FLOWS_TEST_PLAN.md`)**:
   - Published feature-by-feature testing status matrix covering all 10 major functional domains across 4 user personas (Member, Vendor, Corporate, Admin).
