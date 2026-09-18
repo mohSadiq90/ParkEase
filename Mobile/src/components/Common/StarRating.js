@@ -27,6 +27,8 @@ const StarRating = ({
                 return (
                     <TouchableOpacity
                         key={index}
+                        testID={`star-${starNumber}`}
+                        accessibilityLabel={`${starNumber} stars`}
                         disabled={!editable}
                         onPress={() => editable && onRatingChange?.(starNumber)}
                         style={styles.star}

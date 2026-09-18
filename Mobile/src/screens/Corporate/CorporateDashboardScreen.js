@@ -51,9 +51,10 @@ const MetricCard = ({ label, value, icon, color, onPress }) => {
     return <View style={styles.metricCard}>{cardContent}</View>;
 };
 
-const CorporateDashboardScreen = () => {
+const CorporateDashboardScreen = ({ navigation: propNavigation }) => {
     const dispatch = useDispatch();
-    const navigation = useNavigation();
+    const hookNavigation = useNavigation();
+    const navigation = propNavigation || hookNavigation;
     const { myCompanies, activeCompanyId, isLoading: reduxLoading } = useSelector((state) => state.corporate);
     
     const [dashboardData, setDashboardData] = useState(null);

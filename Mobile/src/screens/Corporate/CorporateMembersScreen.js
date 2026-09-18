@@ -94,7 +94,11 @@ const CorporateMembersScreen = () => {
                         </View>
                     </View>
                 </View>
-                <TouchableOpacity onPress={() => handleRemoveMember(item.id)} style={styles.deleteBtn}>
+                <TouchableOpacity 
+                    onPress={() => handleRemoveMember(item.id)} 
+                    style={styles.deleteBtn}
+                    testID={`remove-member-${item.id}`}
+                >
                     <Ionicons name="trash-outline" size={20} color={colors.danger} />
                 </TouchableOpacity>
             </View>

@@ -33,7 +33,12 @@ const VehicleCard = ({ vehicle, onEdit, onDelete }) => (
                 <TouchableOpacity onPress={() => onEdit(vehicle)} style={styles.actionBtn}>
                     <Ionicons name="pencil-outline" size={18} color={colors.primary} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => onDelete(vehicle.id)} style={styles.actionBtn}>
+                <TouchableOpacity 
+                    testID={`delete-vehicle-${vehicle.id}`}
+                    accessibilityLabel="Delete vehicle"
+                    onPress={() => onDelete(vehicle.id)} 
+                    style={styles.actionBtn}
+                >
                     <Ionicons name="trash-outline" size={18} color={colors.danger} />
                 </TouchableOpacity>
             </View>
