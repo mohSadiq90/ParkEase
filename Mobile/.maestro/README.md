@@ -5,8 +5,12 @@ This directory contains declarative end-to-end (E2E) automation flows for the Pa
 ## 1. Fast Automated Integration Flow Tests (In-Repo / CI-Friendly)
 We have a comprehensive automated flow test suite in `Mobile/src/__tests__/e2e/`:
 - `AuthAndRoleFlows.test.js`: Covers Member, Vendor, Corporate logins, 401 invalid credentials error banner, network error handling, form validation edge cases, session restore on cold start, expired token fallback, full logout flow, and Corporate SSO discovery.
-- `MemberFlow.test.js`: End-to-end booking discovery, search, and reservation flow.
-- `VendorFlow.test.js`: End-to-end listing creation and booking approval flow.
+- `MemberBookingFlows.test.js`: End-to-end member discovery, search filtering, spot detail metadata, pricing/duration calculation, 409 conflict handling, payment gateway processing, booking tabs, and live QR passes.
+- `VendorManagementFlows.test.js`: End-to-end vendor dashboard metrics, listings lifecycle, active/inactive toggle sync, creation form validation, booking approvals/rejections, and QR pass scanner.
+- `CorporateFlows.test.js`: End-to-end corporate dashboard, bay inventory, employee directory & invites, member removal, bay allocations, and invoice offline payments.
+- `UserFeaturesFlows.test.js`: End-to-end user profile, edit profile validation, password rotation, vehicle garage management, review submission, chat messaging, and notifications.
+- `MemberFlow.test.js`: Full signup to booking discovery flow and offline network resilience.
+- `VendorFlow.test.js`: Full listing creation and booking approval flow.
 
 ### Running Jest Flow Tests:
 ```bash
