@@ -9,6 +9,19 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-18] - Fix Firebase App Distribution Link in Build & Distribute Workflow (<@U06FVANTNHL>)
+- **Firebase Build Link Correction (`.github/workflows/build-and-distribute.yml`)**:
+  - Corrected Firebase App Distribution URL in the Slack notification step of the CI/CD pipeline.
+  - Replaced developer console link (`https://console.firebase.google.com/project/_/appdistribution/app/...`) which required admin privileges with the universal tester portal link: `https://appdistribution.firebase.google.com/testerapps/1:422771999600:android:3d23fc1d587d77f91a05b5`.
+  - Updated link anchor text to `Download Build on Firebase` allowing testers across any active Google account session to directly download and install test builds.
+- **Automated Verification**:
+  - Full Mobile test suite executed: **100% pass rate** (59/59 test suites, 390/390 tests passing).
+- **Key Files Modified**:
+  - `.github/workflows/build-and-distribute.yml`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - Workflow update committed and pushed to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-18] - Increase Axios Timeout to 1 Minute (60s) (<@U06FVANTNHL>)
 - **Increased Global Axios Network Timeout (`Mobile/src/services/api/apiClient.js`, `Mobile/src/config/environment.js`)**:
   - Implemented timeout increase requested by `<@U06FVANTNHL>` from 30 seconds (`30000ms`) to 60 seconds (`60000ms` / 1 minute) across all Mobile API requests.
