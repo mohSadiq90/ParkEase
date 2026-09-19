@@ -8,12 +8,12 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { EventBus } from '../../utils/EventBus';
 import {
     View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions, Share,
-    ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView, Platform,
+    ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, Switch,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getParkingDetailThunk, getParkingForecastThunk, deleteParkingThunk } from '../../store/slices/parkingSlice';
+import { getParkingDetailThunk, getParkingForecastThunk, deleteParkingThunk, toggleParkingActiveThunk } from '../../store/slices/parkingSlice';
 import { getReviewsThunk, respondToReviewThunk } from '../../store/slices/reviewSlice';
 import { toggleFavoriteThunk } from '../../store/slices/favoriteSlice';
 import { useAuth } from '../../hooks/useAuth';
@@ -49,6 +49,7 @@ const ParkingDetailScreen = ({ navigation, route }) => {
         detailLoading,
         forecast,
         forecastLoading,
+        togglingListingIds = [],
     } = useSelector((s) => s.parking);
     const { reviews } = useSelector((s) => s.review);
     const [chatLoading, setChatLoading] = useState(false);
@@ -131,6 +132,21 @@ const ParkingDetailScreen = ({ navigation, route }) => {
             (parking?.vendorId && String(parking.vendorId).trim().toLowerCase() === String(user.id).trim().toLowerCase())
         ))
     );
+
+    const isListingActive = parking?.isActive !== undefined ? Boolean(parking.isActive) : true;
+    const isTogglingActive = Boolean(togglingListingIds?.includes(parking?.id));
+
+    const handleToggleActive = useCallback(async () => {
+        if (!parking?.id || isTogglingActive) return;
+        try {
+            await dispatch(toggleParkingActiveThunk(parking.id)).unwrap();
+        } catch (error) {
+            EventBus.emit('SHOW_ERROR_BANNER', {
+                title: 'Error',
+                message: error || 'Failed to update listing status.',
+            });
+        }
+    }, [dispatch, parking?.id, isTogglingActive]);
 
     const handleDeleteListing = useCallback(() => {
         if (!parking?.id) return;
@@ -343,35 +359,22 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                     </TouchableOpacity>
 
                     <View style={[styles.heroTopRight, { top: insets.top + 8 }]}>
-                        {isOwnListing && (
-                            <>
-                                <TouchableOpacity
-                                    style={styles.heroBtn}
-                                    onPress={() => navigation.navigate('CreateParking', { editData: parking })}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Edit Listing"
-                                    testID="hero-edit-listing-btn"
-                                >
-                                    <Ionicons name="create-outline" size={20} color={colors.white} />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.heroBtn, { backgroundColor: 'rgba(239, 68, 68, 0.85)' }]}
-                                    onPress={handleDeleteListing}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Delete Listing"
-                                    testID="hero-delete-listing-btn"
-                                >
-                                    <Ionicons name="trash-outline" size={20} color={colors.white} />
-                                </TouchableOpacity>
-                            </>
-                        )}
-                        <TouchableOpacity style={styles.heroBtn} onPress={handleShare}>
+                        <TouchableOpacity
+                            style={styles.heroBtn}
+                            onPress={handleShare}
+                            accessibilityRole="button"
+                            accessibilityLabel="Share Parking Spot"
+                            testID="hero-share-btn"
+                        >
                             <Ionicons name="share-outline" size={20} color={colors.white} />
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.heroBtn}
                             onPress={handleToggleFavorite}
                             disabled={favLoading}
+                            accessibilityRole="button"
+                            accessibilityLabel={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                            testID="hero-favorite-btn"
                         >
                             <Ionicons
                                 name={isFavorited ? 'heart' : 'heart-outline'}
@@ -395,11 +398,35 @@ const ParkingDetailScreen = ({ navigation, route }) => {
 
                 {/* Content */}
                 <View style={styles.content}>
-                    {/* Type + Rating */}
+                    {/* Type + Status Badge + Rating */}
                     <View style={styles.typeRatingRow}>
                         <View style={styles.typeBadge}>
                             <Text style={styles.typeBadgeText}>{typeLabel.toUpperCase()}</Text>
                         </View>
+                        {isOwnListing && (
+                            <View
+                                style={[
+                                    styles.statusBadge,
+                                    isListingActive ? styles.statusBadgeActive : styles.statusBadgeInactive,
+                                ]}
+                                testID="listing-status-badge"
+                            >
+                                <View
+                                    style={[
+                                        styles.statusDot,
+                                        isListingActive ? styles.statusDotActive : styles.statusDotInactive,
+                                    ]}
+                                />
+                                <Text
+                                    style={[
+                                        styles.statusBadgeText,
+                                        isListingActive ? styles.statusBadgeTextActive : styles.statusBadgeTextInactive,
+                                    ]}
+                                >
+                                    {isListingActive ? 'ACTIVE' : 'INACTIVE'}
+                                </Text>
+                            </View>
+                        )}
                         <View style={styles.ratingRow}>
                             <Ionicons name="star" size={16} color="#F59E0B" />
                             <Text style={styles.ratingText}>
@@ -420,33 +447,61 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                         </Text>
                     </View>
 
-                    {/* Own listing banner */}
+                    {/* Own listing banner with Status Toggle */}
                     {isOwnListing && (
-                        <View style={styles.ownerBanner}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                                <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
-                                <Text style={styles.ownerBannerText}>This is your listing</Text>
+                        <View style={styles.ownerBanner} testID="owner-listing-banner">
+                            <View style={styles.ownerBannerInfo}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
+                                    <Text style={styles.ownerBannerText}>This is your listing</Text>
+                                </View>
+                                <Text style={styles.ownerBannerStatusText}>
+                                    Status: <Text style={{ fontWeight: '700', color: isListingActive ? '#059669' : '#64748B' }}>
+                                        {isListingActive ? 'Active (Visible to renters)' : 'Inactive (Hidden from search)'}
+                                    </Text>
+                                </Text>
                             </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <View style={styles.ownerBannerControls}>
+                                {isTogglingActive && (
+                                    <ActivityIndicator
+                                        size="small"
+                                        color={colors.primary}
+                                        style={{ marginRight: 6 }}
+                                        testID="toggle-active-spinner"
+                                    />
+                                )}
+                                <Switch
+                                    value={isListingActive}
+                                    onValueChange={handleToggleActive}
+                                    disabled={isTogglingActive}
+                                    trackColor={{ false: '#CBD5E1', true: '#86EFAC' }}
+                                    thumbColor={isListingActive ? '#10B981' : '#94A3B8'}
+                                    accessibilityRole="switch"
+                                    accessibilityLabel={`Toggle listing status. Currently ${isListingActive ? 'Active' : 'Inactive'}`}
+                                    testID="owner-status-toggle"
+                                />
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Photo Trust & Quality Callout for Owners */}
+                    {isOwnListing && (
+                        <View style={styles.photoTrustBanner} testID="photo-trust-banner">
+                            <Ionicons name="camera-outline" size={20} color="#0D9488" style={{ marginTop: 2 }} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.photoTrustTitle}>Upload Real Photos for Trust</Text>
+                                <Text style={styles.photoTrustSubtitle}>
+                                    Please ensure you upload actual photos of your parking spot, entrance, and signage. Real photos build trust with drivers and increase bookings by 3x compared to illustrations or memes.
+                                </Text>
                                 <TouchableOpacity
-                                    style={styles.ownerBannerEditBtn}
+                                    style={styles.photoTrustActionBtn}
                                     onPress={() => navigation.navigate('CreateParking', { editData: parking })}
                                     accessibilityRole="button"
-                                    accessibilityLabel="Edit Space"
-                                    testID="owner-banner-edit-btn"
+                                    accessibilityLabel="Update Listing Photos"
+                                    testID="update-photos-btn"
                                 >
-                                    <Ionicons name="create-outline" size={14} color={colors.primary} />
-                                    <Text style={styles.ownerBannerEditBtnText}>Edit Space</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.ownerBannerDeleteBtn}
-                                    onPress={handleDeleteListing}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Delete Space"
-                                    testID="owner-banner-delete-btn"
-                                >
-                                    <Ionicons name="trash-outline" size={14} color={colors.error || '#EF4444'} />
-                                    <Text style={styles.ownerBannerDeleteBtnText}>Delete</Text>
+                                    <Ionicons name="images-outline" size={14} color="#0F766E" />
+                                    <Text style={styles.photoTrustActionBtnText}>Update Photos</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -677,6 +732,12 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                     <>
                         <View style={styles.bottomPriceCol}>
                             <Text style={styles.bottomPriceLabel}>Your Listing</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                                <Text style={styles.bottomPriceValue}>
+                                    {formatCurrency(parking.hourlyRate)}
+                                </Text>
+                                <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '500', marginLeft: 2 }}>/hr</Text>
+                            </View>
                         </View>
                         <TouchableOpacity
                             style={[styles.bookBtn, styles.bottomEditBtn]}
@@ -959,48 +1020,110 @@ const styles = StyleSheet.create({
     ownerBanner: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        backgroundColor: '#EBF5FF',
-        padding: 12,
+        justifyContent: 'space-between',
+        backgroundColor: '#EFF6FF',
+        borderWidth: 1,
+        borderColor: '#DBEAFE',
+        padding: 14,
         borderRadius: 12,
-        marginBottom: 20,
+        marginBottom: 16,
+    },
+    ownerBannerInfo: {
+        flex: 1,
+        marginRight: 12,
     },
     ownerBannerText: {
         fontSize: 14,
-        fontWeight: '600',
+        fontWeight: '700',
         color: colors.primary,
     },
-    ownerBannerEditBtn: {
+    ownerBannerStatusText: {
+        fontSize: 12,
+        color: '#475569',
+        marginTop: 4,
+    },
+    ownerBannerControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
-        paddingVertical: 6,
-        paddingHorizontal: 10,
-        backgroundColor: colors.white,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#BFDBFE',
     },
-    ownerBannerEditBtnText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: colors.primary,
-    },
-    ownerBannerDeleteBtn: {
+    // Status Badge in Type/Rating row
+    statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
-        paddingVertical: 6,
+        gap: 5,
         paddingHorizontal: 10,
-        backgroundColor: '#FEF2F2',
+        paddingVertical: 4,
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#FECACA',
     },
-    ownerBannerDeleteBtnText: {
+    statusBadgeActive: {
+        backgroundColor: '#ECFDF5',
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+    },
+    statusBadgeInactive: {
+        backgroundColor: '#F1F5F9',
+        borderWidth: 1,
+        borderColor: '#CBD5E1',
+    },
+    statusDot: {
+        width: 7,
+        height: 7,
+        borderRadius: 4,
+    },
+    statusDotActive: {
+        backgroundColor: '#10B981',
+    },
+    statusDotInactive: {
+        backgroundColor: '#64748B',
+    },
+    statusBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    statusBadgeTextActive: {
+        color: '#047857',
+    },
+    statusBadgeTextInactive: {
+        color: '#475569',
+    },
+    // Photo Trust Banner
+    photoTrustBanner: {
+        flexDirection: 'row',
+        gap: 10,
+        padding: 12,
+        borderRadius: 10,
+        backgroundColor: '#F0FDFA',
+        borderWidth: 1,
+        borderColor: '#CCFBF1',
+        marginBottom: 16,
+    },
+    photoTrustTitle: {
         fontSize: 13,
-        fontWeight: '600',
-        color: colors.error || '#EF4444',
+        fontWeight: '700',
+        color: '#0F766E',
+        marginBottom: 2,
+    },
+    photoTrustSubtitle: {
+        fontSize: 12,
+        color: '#115E59',
+        lineHeight: 17,
+        marginBottom: 8,
+    },
+    photoTrustActionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        alignSelf: 'flex-start',
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        backgroundColor: '#CCFBF1',
+        borderRadius: 6,
+    },
+    photoTrustActionBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#0F766E',
     },
     // Owner Card
     ownerCard: {
@@ -1174,8 +1297,8 @@ const styles = StyleSheet.create({
     },
     bottomPriceLabel: {
         fontSize: 12,
-        color: colors.textTertiary,
-        fontWeight: '500',
+        color: '#334155', // Darkened for accessibility & contrast ratio (WCAG AA)
+        fontWeight: '600',
     },
     bottomPriceValue: {
         fontSize: 24,

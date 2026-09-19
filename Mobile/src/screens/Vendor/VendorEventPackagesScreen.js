@@ -342,7 +342,12 @@ const VendorEventPackagesScreen = ({ navigation }) => {
                             {/* Facility Picker */}
                             <Text style={styles.inputLabel}>Target Parking Facility</Text>
                             {listings.length > 0 ? (
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.xs }}>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={{ marginBottom: spacing.xs }}
+                                    contentContainerStyle={{ paddingVertical: 4 }}
+                                >
                                     {listings.map((item) => {
                                         const isSelected = form.parkingSpaceId === item.id;
                                         return (

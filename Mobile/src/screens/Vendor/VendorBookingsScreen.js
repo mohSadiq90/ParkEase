@@ -234,8 +234,8 @@ const VendorBookingsScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     header: { paddingTop: spacing.sm, paddingHorizontal: spacing.screenHorizontal, paddingBottom: spacing.md },
     screenTitle: { ...typography.h2, color: colors.textPrimary },
-    filterRowScroll: { flexGrow: 0, marginBottom: spacing.md },
-    filterRow: { flexDirection: 'row', paddingHorizontal: spacing.screenHorizontal, gap: spacing.sm, alignItems: 'center' },
+    filterRowScroll: { flexGrow: 0, marginBottom: spacing.sm },
+    filterRow: { flexDirection: 'row', paddingHorizontal: spacing.screenHorizontal, paddingVertical: 6, gap: spacing.sm, alignItems: 'center' },
     filterTab: { paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: spacing.radius.full, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
     filterTabActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
     filterTabText: { ...typography.caption, color: colors.textSecondary, fontWeight: '500' },

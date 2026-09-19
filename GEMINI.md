@@ -79,4 +79,9 @@ Whenever creating or modifying any modal, screen, bottom-sheet, or dialog contai
 7. **Automated Unit Test Verification**:
    - Add unit tests verifying `KeyboardAvoidingView` and `ScrollView` with `keyboardShouldPersistTaps="handled"` are configured on modal/form components.
 
+---
 
+## 8. Prioritize User Inquiries & Clear Explanations Before Automation Runs
+**MANDATORY WHEN USER PROMPTS CONTAIN QUESTIONS OR INQUIRIES:**
+- Whenever a user request contains a question, request for clarification, architectural critique, or inquiry, the agent MUST prioritize answering the query clearly, directly, and comprehensively before initiating long-running automated test suites or builds.
+- Never let background automation block or delay answering the user's specific questions.

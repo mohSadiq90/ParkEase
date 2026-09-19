@@ -91,7 +91,7 @@ describe('ParkingDetailScreen', () => {
     expect(getByText('Thank you Alice! Happy to host you.')).toBeTruthy();
   });
 
-  it('renders Edit Listing buttons and navigates to CreateParking when viewing own listing', async () => {
+  it('renders consolidated Edit and Delete in bottom bar, status badge & toggle, and photo trust banner for own listing', async () => {
     const mockParking = {
       data: {
         id: 'spot-777',
@@ -106,6 +106,7 @@ describe('ParkingDetailScreen', () => {
         totalSpots: 10,
         hourlyRate: 20,
         ownerId: 'user-host-1',
+        isActive: true,
       },
     };
 
@@ -119,7 +120,7 @@ describe('ParkingDetailScreen', () => {
       return Promise.resolve({ data: { data: mockParking.data } });
     });
 
-    const { findByText, getByTestId, getByText } = renderWithProviders(
+    const { findByText, getByTestId, getByText, queryByTestId } = renderWithProviders(
       <ParkingDetailScreen
         navigation={mockNavigation}
         route={{ params: { parkingId: 'spot-777', isOwnListing: true } }}
@@ -136,11 +137,27 @@ describe('ParkingDetailScreen', () => {
 
     await findByText('Host Own Garage');
 
+    // Listing context and banners
     expect(getByText('This is your listing')).toBeTruthy();
-    expect(getByTestId('hero-edit-listing-btn')).toBeTruthy();
-    expect(getByTestId('hero-delete-listing-btn')).toBeTruthy();
-    expect(getByTestId('owner-banner-edit-btn')).toBeTruthy();
-    expect(getByTestId('owner-banner-delete-btn')).toBeTruthy();
+    expect(getByTestId('owner-listing-banner')).toBeTruthy();
+    expect(getByTestId('owner-status-toggle')).toBeTruthy();
+    expect(getByText(/Active \(Visible to renters\)/)).toBeTruthy();
+    expect(getByTestId('listing-status-badge')).toBeTruthy();
+    expect(getByText('ACTIVE')).toBeTruthy();
+
+    // Photo Trust & Quality Callout
+    expect(getByTestId('photo-trust-banner')).toBeTruthy();
+    expect(getByText('Upload Real Photos for Trust')).toBeTruthy();
+    expect(getByTestId('update-photos-btn')).toBeTruthy();
+
+    // Verify removed redundant hero and banner actions
+    expect(queryByTestId('hero-edit-listing-btn')).toBeNull();
+    expect(queryByTestId('hero-delete-listing-btn')).toBeNull();
+    expect(queryByTestId('owner-banner-edit-btn')).toBeNull();
+    expect(queryByTestId('owner-banner-delete-btn')).toBeNull();
+
+    // Consolidated bottom bar actions
+    expect(getByText('Your Listing')).toBeTruthy();
     expect(getByTestId('edit-listing-bottom-button')).toBeTruthy();
     expect(getByTestId('delete-listing-bottom-button')).toBeTruthy();
 
@@ -148,9 +165,77 @@ describe('ParkingDetailScreen', () => {
     expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {
       editData: mockParking.data,
     });
+
+    fireEvent.press(getByTestId('update-photos-btn'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {
+      editData: mockParking.data,
+    });
   });
 
-  it('triggers delete confirmation and deletes parking space when tapping delete in owner banner or bottom bar', async () => {
+  it('renders INACTIVE status badge and toggles status when owner-status-toggle is changed', async () => {
+    const mockParking = {
+      data: {
+        id: 'spot-778',
+        title: 'Inactive Garage',
+        address: '456 Quiet St',
+        city: 'Metro City',
+        state: 'CA',
+        hourlyRate: 15,
+        ownerId: 'user-host-1',
+        isActive: false,
+      },
+    };
+
+    apiClient.get.mockImplementation((url) => {
+      if (url.includes('forecast')) {
+        return Promise.resolve({ success: true, data: {} });
+      }
+      if (url.includes('reviews')) {
+        return Promise.resolve({ data: { reviews: [] } });
+      }
+      return Promise.resolve({ data: { data: mockParking.data } });
+    });
+
+    apiClient.post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { id: 'spot-778', isActive: true },
+        message: 'Parking space activated successfully',
+      },
+    });
+
+    const { findByText, getByTestId, getByText } = renderWithProviders(
+      <ParkingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { parkingId: 'spot-778', isOwnListing: true } }}
+      />,
+      {
+        preloadedState: {
+          auth: {
+            user: { id: 'user-host-1', name: 'Host User' },
+            isAuthenticated: true,
+          },
+        },
+      }
+    );
+
+    await findByText('Inactive Garage');
+
+    expect(getByTestId('listing-status-badge')).toBeTruthy();
+    expect(getByText('INACTIVE')).toBeTruthy();
+    expect(getByText(/Inactive \(Hidden from search\)/)).toBeTruthy();
+
+    const statusToggle = getByTestId('owner-status-toggle');
+    fireEvent(statusToggle, 'valueChange', true);
+
+    await waitFor(() => {
+      expect(apiClient.post).toHaveBeenCalledWith(
+        expect.stringContaining('spot-778')
+      );
+    });
+  });
+
+  it('triggers delete confirmation and deletes parking space when tapping delete in sticky bottom bar', async () => {
     jest.spyOn(Alert, 'alert');
     apiClient.delete.mockResolvedValueOnce({
       data: { success: true },

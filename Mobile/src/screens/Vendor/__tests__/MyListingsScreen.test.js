@@ -777,4 +777,31 @@ describe('MyListingsScreen', () => {
     // Kebab button is rendered in the card header for secondary destructive options
     expect(getByTestId('listing-kebab-btn-space-1')).toBeTruthy();
   });
+
+  it('opens kebab menu and renders only non-redundant destructive delete option without duplicate row actions', () => {
+    const { getByTestId, queryByTestId, getByText } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    // Press kebab button on space-1
+    fireEvent.press(getByTestId('listing-kebab-btn-space-1'));
+
+    // Modal opens
+    expect(getByTestId('listing-kebab-menu')).toBeTruthy();
+    expect(getByTestId('delete-listing-btn-space-1')).toBeTruthy();
+    expect(getByText('Delete Parking Space')).toBeTruthy();
+
+    // Verify redundant row actions are NOT in the kebab menu
+    expect(queryByTestId('kebab-view-btn')).toBeNull();
+    expect(queryByTestId('kebab-edit-btn')).toBeNull();
+    expect(queryByTestId('kebab-quick-edit-btn')).toBeNull();
+  });
 });

@@ -425,6 +425,17 @@ const parkingSlice = createSlice({
                         isActive: !state.myListings[idx].isActive,
                     };
                 }
+
+                // Also optimistically flip isActive in selectedParking if it matches
+                if (state.selectedParking && state.selectedParking.id === id) {
+                    if (state.optimisticOriginalMap[id] === undefined) {
+                        state.optimisticOriginalMap[id] = Boolean(state.selectedParking.isActive);
+                    }
+                    state.selectedParking = {
+                        ...state.selectedParking,
+                        isActive: !state.selectedParking.isActive,
+                    };
+                }
             })
             .addCase(toggleParkingActiveThunk.fulfilled, (state, action) => {
                 if (!state.togglingListingIds) state.togglingListingIds = [];
@@ -443,55 +454,63 @@ const parkingSlice = createSlice({
                     delete state.optimisticOriginalMap[id];
                 }
 
+                let nextActiveState = undefined;
+                const entityData = (action.payload && typeof action.payload === 'object' && action.payload.data && typeof action.payload.data === 'object')
+                    ? action.payload.data
+                    : (action.payload && typeof action.payload === 'object' && ('title' in action.payload || 'hourlyRate' in action.payload || 'address' in action.payload))
+                        ? action.payload
+                        : null;
+
+                if (entityData && typeof entityData.isActive === 'boolean') {
+                    nextActiveState = entityData.isActive;
+                } else if (action.payload && typeof action.payload === 'object' && typeof action.payload.isActive === 'boolean') {
+                    nextActiveState = action.payload.isActive;
+                } else {
+                    const message = (action.payload && typeof action.payload === 'object')
+                        ? (action.payload.message || action.payload.rawResponse?.message || '')
+                        : '';
+
+                    if (/deactivated|inactive/i.test(message)) {
+                        nextActiveState = false;
+                    } else if (/activated|active/i.test(message)) {
+                        nextActiveState = true;
+                    } else {
+                        const boolVal = typeof action.payload === 'boolean'
+                            ? action.payload
+                            : (action.payload && typeof action.payload === 'object' && typeof action.payload.data === 'boolean')
+                                ? action.payload.data
+                                : null;
+
+                        if (boolVal === false) {
+                            nextActiveState = false;
+                        } else if (boolVal === true) {
+                            nextActiveState = originalState !== undefined ? !originalState : true;
+                        } else if (originalState !== undefined) {
+                            nextActiveState = !originalState;
+                        }
+                    }
+                }
+
                 const idx = state.myListings.findIndex((l) => l.id === id);
                 if (idx !== -1) {
-                    // Check if payload (or payload.data) contains a full updated listing entity object
-                    const entityData = (action.payload && typeof action.payload === 'object' && action.payload.data && typeof action.payload.data === 'object')
-                        ? action.payload.data
-                        : (action.payload && typeof action.payload === 'object' && ('title' in action.payload || 'hourlyRate' in action.payload || 'address' in action.payload))
-                            ? action.payload
-                            : null;
-
                     if (entityData) {
                         state.myListings[idx] = {
                             ...state.myListings[idx],
                             ...entityData,
                         };
-                    } else if (action.payload && typeof action.payload === 'object' && typeof action.payload.isActive === 'boolean') {
-                        // Explicit isActive property on payload object (e.g. mock { id: 'space-1', isActive: false })
-                        state.myListings[idx].isActive = action.payload.isActive;
-                    } else {
-                        // Check server response message for explicit activation/deactivation keyword
-                        const message = (action.payload && typeof action.payload === 'object')
-                            ? (action.payload.message || action.payload.rawResponse?.message || '')
-                            : '';
+                    } else if (nextActiveState !== undefined) {
+                        state.myListings[idx].isActive = nextActiveState;
+                    }
+                }
 
-                        if (/deactivated|inactive/i.test(message)) {
-                            state.myListings[idx].isActive = false;
-                        } else if (/activated|active/i.test(message)) {
-                            state.myListings[idx].isActive = true;
-                        } else {
-                            // Check direct boolean payload or payload.data
-                            const boolVal = typeof action.payload === 'boolean'
-                                ? action.payload
-                                : (action.payload && typeof action.payload === 'object' && typeof action.payload.data === 'boolean')
-                                    ? action.payload.data
-                                    : null;
-
-                            if (boolVal === false) {
-                                state.myListings[idx].isActive = false;
-                            } else if (boolVal === true) {
-                                // Backend ApiResponse<bool> returns data: true as success flag regardless of active state.
-                                // If originalState was tracked, the new state is !originalState.
-                                if (originalState !== undefined) {
-                                    state.myListings[idx].isActive = !originalState;
-                                } else {
-                                    state.myListings[idx].isActive = true;
-                                }
-                            } else if (originalState !== undefined) {
-                                state.myListings[idx].isActive = !originalState;
-                            }
-                        }
+                if (state.selectedParking && state.selectedParking.id === id) {
+                    if (entityData) {
+                        state.selectedParking = {
+                            ...state.selectedParking,
+                            ...entityData,
+                        };
+                    } else if (nextActiveState !== undefined) {
+                        state.selectedParking.isActive = nextActiveState;
                     }
                 }
             })
@@ -515,6 +534,13 @@ const parkingSlice = createSlice({
                     state.myListings[idx] = {
                         ...state.myListings[idx],
                         isActive: originalState !== undefined ? originalState : !state.myListings[idx].isActive,
+                    };
+                }
+
+                if (state.selectedParking && state.selectedParking.id === id) {
+                    state.selectedParking = {
+                        ...state.selectedParking,
+                        isActive: originalState !== undefined ? originalState : !state.selectedParking.isActive,
                     };
                 }
             })

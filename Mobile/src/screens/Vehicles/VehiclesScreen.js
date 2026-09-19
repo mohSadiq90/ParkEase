@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 8,
         alignItems: 'center',
-        paddingVertical: 2,
+        paddingVertical: 6,
     },
     typeChip: {
         paddingHorizontal: 12,

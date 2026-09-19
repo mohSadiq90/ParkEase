@@ -1146,44 +1146,6 @@ const MyListingsScreen = ({ navigation, route }) => {
                             </View>
 
                             <TouchableOpacity
-                                style={styles.kebabMenuItem}
-                                onPress={() => {
-                                    setKebabModalVisible(false);
-                                    if (selectedKebabListing) handleView(selectedKebabListing);
-                                }}
-                                testID="kebab-view-btn"
-                            >
-                                <Ionicons name="eye-outline" size={18} color={colors.textPrimary} />
-                                <Text style={styles.kebabMenuText}>View Details</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.kebabMenuItem}
-                                onPress={() => {
-                                    setKebabModalVisible(false);
-                                    if (selectedKebabListing) handleEdit(selectedKebabListing);
-                                }}
-                                testID="kebab-edit-btn"
-                            >
-                                <Ionicons name="create-outline" size={18} color={colors.primary} />
-                                <Text style={styles.kebabMenuText}>Edit Listing</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.kebabMenuItem}
-                                onPress={() => {
-                                    setKebabModalVisible(false);
-                                    if (selectedKebabListing) handleOpenQuickEdit(selectedKebabListing);
-                                }}
-                                testID="kebab-quick-edit-btn"
-                            >
-                                <Ionicons name="flash-outline" size={18} color="#D97706" />
-                                <Text style={styles.kebabMenuText}>Quick Edit Rates & Spots</Text>
-                            </TouchableOpacity>
-
-                            <View style={styles.kebabDivider} />
-
-                            <TouchableOpacity
                                 style={[styles.kebabMenuItem, styles.kebabDeleteMenuItem]}
                                 onPress={() => {
                                     if (selectedKebabListing) handleInitiateDelete(selectedKebabListing);
@@ -1286,19 +1248,23 @@ const styles = StyleSheet.create({
     },
     filterTabsScroll: {
         flexGrow: 0,
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
     },
     filterTabsContainer: {
         flexDirection: 'row',
         paddingHorizontal: spacing.screenHorizontal,
+        paddingVertical: 8,
         gap: spacing.xs,
         alignItems: 'center',
     },
     filterTab: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingVertical: 7,
+        paddingHorizontal: 14,
         borderRadius: 16,
         backgroundColor: '#F3F4F6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: 34,
     },
     filterTabActive: {
         backgroundColor: colors.primary,

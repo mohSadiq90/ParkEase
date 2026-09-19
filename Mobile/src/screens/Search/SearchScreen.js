@@ -273,7 +273,12 @@ const SearchScreen = ({ navigation }) => {
                 </View>
 
                 {/* Vehicle Type Filters */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.filterScroll}
+                    contentContainerStyle={styles.filterScrollContainer}
+                >
                     {vehicleTypes.map(([value, label]) => (
                         <TouchableOpacity
                             key={value}
@@ -575,7 +580,13 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: 'bold',
     },
-    filterScroll: { marginTop: spacing.md },
+    filterScroll: { marginTop: spacing.sm, marginBottom: spacing.xs },
+    filterScrollContainer: {
+        paddingVertical: 6,
+        paddingHorizontal: 2,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     filterChip: {
         paddingHorizontal: spacing.base,
         paddingVertical: spacing.sm,

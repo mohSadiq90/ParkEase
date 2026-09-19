@@ -9,6 +9,42 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-19] - Complete Feedback Fixes: Detail Screen Redundancy, Filter Pills Clipping & Kebab Menu Streamlining (<@U06FVANTNHL>)
+- **Consolidate Action Redundancy & Destructive Action Proximity (`Mobile/src/screens/Search/ParkingDetailScreen.js`)**:
+  - Removed duplicate "Edit" and "Delete" buttons from the hero image overlay and the blue status banner, eliminating cognitive load and preventing accidental deletions next to the "Share" button.
+  - Consolidated primary actions into the sticky bottom bar ("Edit" and "Delete" alongside hourly rate).
+  - Darkened "Your Listing" bottom bar text to `#334155` for WCAG AA compliance.
+- **Listing Status Visibility & Direct Toggle (`Mobile/src/screens/Search/ParkingDetailScreen.js`, `Mobile/src/store/slices/parkingSlice.js`)**:
+  - Added visible listing status badge (`ACTIVE` / `INACTIVE`) in the Type / Rating header row.
+  - Replaced passive banner with an interactive status toggle (`owner-status-toggle`) allowing vendors to toggle listing status directly from the detail screen with an activity spinner.
+  - Added optimistic updates in `parkingSlice.js` for `selectedParking` so the toggle immediately reflects state changes.
+  - Added Photo Trust Banner prompting space owners to upload real photos for 3x bookings.
+- **Fix Filter Pills Clipping Across Screens (`Mobile/src/screens/Vendor/MyListingsScreen.js`, `Mobile/src/screens/Booking/MyBookingsScreen.js`, `Mobile/src/screens/Vendor/VendorBookingsScreen.js`, `Mobile/src/screens/Search/SearchScreen.js`, `Mobile/src/screens/Vehicles/VehiclesScreen.js`, `Mobile/src/screens/Profile/MyVehiclesScreen.js`, `Mobile/src/screens/Vendor/VendorEventPackagesScreen.js`)**:
+  - Added explicit vertical padding (`paddingVertical: 6` to `8`) to horizontal filter and category scroll containers.
+  - Eliminated bottom clipping of filter pills and badges on Android and smaller screens.
+- **Eliminate Redundant 3-Dot Kebab Menu Options (`Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
+  - Removed duplicate "View Details", "Edit Listing", and "Quick Edit Rates & Spots" options from the 3-dots kebab menu modal since these actions are already directly accessible in the listing card row UI.
+  - Retained only the protected, secondary destructive action ("Delete Parking Space") with its strict confirmation dialog.
+- **Automated Verification**:
+  - All test suites passing cleanly in Mobile (`npm test -- --watchAll=false`).
+  - Updated `ParkingDetailScreen.test.js` and `MyListingsScreen.test.js` with comprehensive assertions covering consolidated actions, status badge, toggle, photo trust banner, and streamlined kebab menu.
+- **Key Files Modified**:
+  - `Mobile/src/screens/Search/ParkingDetailScreen.js`
+  - `Mobile/src/screens/Search/__tests__/ParkingDetailScreen.test.js`
+  - `Mobile/src/screens/Vendor/MyListingsScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`
+  - `Mobile/src/screens/Search/SearchScreen.js`
+  - `Mobile/src/screens/Booking/MyBookingsScreen.js`
+  - `Mobile/src/screens/Vendor/VendorBookingsScreen.js`
+  - `Mobile/src/screens/Vehicles/VehiclesScreen.js`
+  - `Mobile/src/screens/Profile/MyVehiclesScreen.js`
+  - `Mobile/src/screens/Vendor/VendorEventPackagesScreen.js`
+  - `Mobile/src/store/slices/parkingSlice.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - 100% of test suites passing.
+  - Staged, committed, and pushed to `origin/main` to trigger the Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-19] - Vendor Listings UX & Form Improvements (<@U06FVANTNHL>)
 - **Clarify Editing Options (`Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
   - Removed misleading inline "Tap to edit" hints and pencil edit icons from Hourly Rate and Capacity cards to prevent user confusion.
