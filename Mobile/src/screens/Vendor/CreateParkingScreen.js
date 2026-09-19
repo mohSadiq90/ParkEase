@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { createParkingThunk, updateParkingThunk, deleteParkingThunk } from '../../store/slices/parkingSlice';
 import { fileUploadService } from '../../services/api/fileUploadService';
+import locationAutocompleteService from '../../services/location/locationAutocompleteService';
 import logger from '../../utils/logger';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
@@ -138,6 +139,11 @@ const CreateParkingScreen = ({ navigation, route }) => {
     const [showUrlInput, setShowUrlInput] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
+    // Location Auto-Complete States (Standardizes spelling/capitalization variations, e.g. 'katraj' vs. 'Kartaj')
+    const [locationSuggestions, setLocationSuggestions] = useState([]);
+    const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+    const [standardizedLocationApplied, setStandardizedLocationApplied] = useState(null);
+
     useEffect(() => {
         if (editData) {
             setFormData({
@@ -205,6 +211,66 @@ const CreateParkingScreen = ({ navigation, route }) => {
             );
         }
     };
+
+    const handleAddressChange = useCallback(async (text) => {
+        updateField('address')(text);
+        if (text && text.trim().length >= 2) {
+            try {
+                const results = await locationAutocompleteService.searchPlaces(text);
+                setLocationSuggestions(results);
+                setShowLocationSuggestions(results.length > 0);
+            } catch (_) {
+                setLocationSuggestions([]);
+                setShowLocationSuggestions(false);
+            }
+        } else {
+            setLocationSuggestions([]);
+            setShowLocationSuggestions(false);
+        }
+    }, []);
+
+    const handleSelectLocationSuggestion = useCallback((suggestion) => {
+        setFormData((prev) => {
+            const next = {
+                ...prev,
+                address: suggestion.street || suggestion.primaryText || prev.address,
+                city: suggestion.city || prev.city,
+                state: suggestion.state || prev.state,
+                postalCode: suggestion.postalCode || prev.postalCode,
+                zipCode: suggestion.postalCode || prev.zipCode,
+                country: suggestion.country || prev.country || 'India',
+            };
+            if (suggestion.latitude && suggestion.longitude) {
+                next.latitude = suggestion.latitude;
+                next.longitude = suggestion.longitude;
+            }
+            return next;
+        });
+
+        setStandardizedLocationApplied(
+            suggestion.city
+                ? `${suggestion.primaryText}, ${suggestion.city}`
+                : suggestion.primaryText
+        );
+        setShowLocationSuggestions(false);
+        setLocationSuggestions([]);
+
+        setErrors((prev) => {
+            const next = { ...prev };
+            delete next.address;
+            delete next.city;
+            delete next.state;
+            delete next.postalCode;
+            delete next.zipCode;
+            delete next.country;
+            return next;
+        });
+        setValidationSummary((prev) =>
+            prev.filter(
+                (e) => !['address', 'city', 'state', 'postalCode', 'zipCode', 'country'].includes(e.field)
+            )
+        );
+    }, []);
 
     const toggleAmenity = (amenity) => {
         setFormData((prev) => ({
@@ -1105,11 +1171,49 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                 <Input
                                     label="Address *"
                                     value={formData.address}
-                                    onChangeText={updateField('address')}
+                                    onChangeText={handleAddressChange}
                                     placeholder="Street address"
                                     leftIcon="location-outline"
                                     error={errors.address}
+                                    testID="input-address"
                                 />
+
+                                {standardizedLocationApplied && (
+                                    <View style={styles.standardizedBadge} testID="standardized-location-badge">
+                                        <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                                        <Text style={styles.standardizedBadgeText}>
+                                            Standardized: {standardizedLocationApplied}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {showLocationSuggestions && locationSuggestions.length > 0 && (
+                                    <View style={styles.suggestionsCard} testID="location-suggestions-container">
+                                        <View style={styles.suggestionsHeader}>
+                                            <Ionicons name="sparkles" size={13} color={colors.primary} />
+                                            <Text style={styles.suggestionsHeaderText}>Standardized Location Matches</Text>
+                                        </View>
+                                        {locationSuggestions.slice(0, 4).map((suggestion, idx) => (
+                                            <TouchableOpacity
+                                                key={suggestion.id || idx}
+                                                style={styles.suggestionItem}
+                                                onPress={() => handleSelectLocationSuggestion(suggestion)}
+                                                testID={`location-suggestion-${idx}`}
+                                            >
+                                                <View style={styles.suggestionIconBox}>
+                                                    <Ionicons name="location-sharp" size={16} color={colors.primary} />
+                                                </View>
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={styles.suggestionPrimary}>{suggestion.primaryText}</Text>
+                                                    <Text style={styles.suggestionSecondary}>
+                                                        {suggestion.secondaryText || suggestion.fullAddress}
+                                                    </Text>
+                                                </View>
+                                                <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
 
                                 <View style={styles.row}>
                                     <Input
@@ -1612,6 +1716,17 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                     </View>
                                 </View>
 
+                                {/* Trust & Quality Callout: Prompt users to upload real photos instead of illustrations */}
+                                <View style={styles.photoTrustBanner} testID="photo-trust-banner">
+                                    <Ionicons name="shield-checkmark" size={20} color="#0D9488" style={{ marginTop: 2 }} />
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.photoTrustTitle}>Upload Real Photos for Trust</Text>
+                                        <Text style={styles.photoTrustSubtitle}>
+                                            Please upload actual photos of your parking spot, entrance, and signage. Real photos build trust with drivers, prevent navigation confusion, and increase booking rates by 3x compared to illustrations or stock graphics.
+                                        </Text>
+                                    </View>
+                                </View>
+
                                 {/* Action Buttons for Photo Upload */}
                                 <View style={styles.photoActionsRow}>
                                     <TouchableOpacity
@@ -1695,7 +1810,7 @@ const CreateParkingScreen = ({ navigation, route }) => {
                                         </View>
                                         <Text style={styles.emptyPhotoHeading}>Upload photos of your parking space</Text>
                                         <Text style={styles.emptyPhotoText}>
-                                            Tap to take a photo or select from your gallery. Listings with photos receive 3x more bookings!
+                                            Tap to take a photo or select from your gallery. Listings with photos receive 3x more bookings! Please upload actual photos of your space rather than using illustrations.
                                         </Text>
                                     </TouchableOpacity>
                                 )}
@@ -2609,6 +2724,102 @@ const styles = StyleSheet.create({
     },
     navSingleNextBtn: {
         flex: 1,
+    },
+
+    // Location Auto-Complete Styles
+    standardizedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 4,
+        marginBottom: spacing.xs,
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 6,
+        backgroundColor: '#ECFDF5',
+        alignSelf: 'flex-start',
+    },
+    standardizedBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#065F46',
+    },
+    suggestionsCard: {
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        marginTop: 4,
+        marginBottom: spacing.sm,
+        padding: spacing.xs,
+        ...shadows.elevated,
+        elevation: 6,
+    },
+    suggestionsHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.borderLight,
+    },
+    suggestionsHeaderText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.primary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    suggestionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    suggestionIconBox: {
+        width: 30,
+        height: 30,
+        borderRadius: 8,
+        backgroundColor: '#EEF2FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    suggestionPrimary: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.textPrimary,
+    },
+    suggestionSecondary: {
+        fontSize: 11,
+        color: '#475569',
+        marginTop: 1,
+    },
+
+    // Photo Trust Callout Banner Styles
+    photoTrustBanner: {
+        flexDirection: 'row',
+        gap: 10,
+        padding: 12,
+        borderRadius: 10,
+        backgroundColor: '#F0FDFA',
+        borderWidth: 1,
+        borderColor: '#CCFBF1',
+        marginBottom: spacing.md,
+    },
+    photoTrustTitle: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#0F766E',
+        marginBottom: 2,
+    },
+    photoTrustSubtitle: {
+        fontSize: 12,
+        color: '#115E59',
+        lineHeight: 17,
     },
 });
 

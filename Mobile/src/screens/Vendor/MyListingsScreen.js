@@ -40,7 +40,7 @@ import { colors, spacing, typography, shadows } from '../../styles/globalStyles'
 import { formatCurrency } from '../../utils/formatters';
 import { ParkingTypeLabels } from '../../utils/constants';
 
-const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, onDelete, onQuickEdit }) => {
+const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, onDelete, onQuickEdit, onOpenKebab }) => {
     const thumbnailUri =
         (typeof listing.imageUrl === 'string' && listing.imageUrl.trim() !== '') ? listing.imageUrl.trim() :
         (Array.isArray(listing.imageUrls) && listing.imageUrls.length > 0 && typeof listing.imageUrls[0] === 'string') ? listing.imageUrls[0] :
@@ -60,7 +60,7 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
         <Card
             onPress={() => onEdit(listing)}
             accessibilityRole="button"
-            accessibilityLabel={`Listing: ${listing.title}. Tap to edit listing.`}
+            accessibilityLabel={`Listing: ${listing.title}`}
             testID={`listing-card-${listing.id}`}
         >
             <View style={cardStyles.headerRow}>
@@ -91,7 +91,7 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                         />
                     </View>
                     <View style={cardStyles.locationRow}>
-                        <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                        <Ionicons name="location-outline" size={13} color="#475569" />
                         <Text style={cardStyles.address} numberOfLines={1}>
                             {listing.address}, {listing.city}
                         </Text>
@@ -130,8 +130,44 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                         testID={`toggle-switch-${listing.id}`}
                         style={isToggleDisabled ? { opacity: 0.45 } : null}
                     />
+
+                    {/* Secondary Kebab Menu for Destructive & Secondary Options */}
+                    <TouchableOpacity
+                        style={cardStyles.kebabBtn}
+                        onPress={(e) => {
+                            e?.stopPropagation?.();
+                            onOpenKebab ? onOpenKebab(listing) : onDelete(listing);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`More options for ${listing.title}`}
+                        testID={`listing-kebab-btn-${listing.id}`}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                        <Ionicons name="ellipsis-vertical" size={18} color="#475569" />
+                    </TouchableOpacity>
                 </View>
             </View>
+
+            {/* Prompt to upload actual photos instead of using illustrations */}
+            {!thumbnailUri && (
+                <TouchableOpacity
+                    style={cardStyles.photoPromptCard}
+                    onPress={(e) => {
+                        e?.stopPropagation?.();
+                        onEdit(listing);
+                    }}
+                    testID={`add-real-photo-prompt-${listing.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel="Upload real photos of your parking space"
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name="camera-outline" size={14} color="#B45309" />
+                    <Text style={cardStyles.photoPromptText}>
+                        Upload real photos of your space to build trust & bookings
+                    </Text>
+                    <Ionicons name="chevron-forward" size={13} color="#B45309" />
+                </TouchableOpacity>
+            )}
 
             {/* Third Backend State Clarification Banners */}
             {isPendingApproval && (
@@ -172,7 +208,7 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                 )}
             </View>
 
-            {/* Interactive Pricing & Availability Surface (Quick-Edit on Tap) */}
+            {/* Pricing & Availability Metrics (Clarified: Redundant 'Tap to edit' hints removed) */}
             <View style={cardStyles.infoRow}>
                 <TouchableOpacity
                     style={cardStyles.infoCard}
@@ -181,16 +217,14 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                         onQuickEdit(listing, 'rate');
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Quick edit hourly rate for ${listing.title}, currently ${formatCurrency(listing.hourlyRate)} per hour`}
+                    accessibilityLabel={`Hourly rate: ${formatCurrency(listing.hourlyRate)} per hour`}
                     testID={`quick-edit-rate-${listing.id}`}
-                    activeOpacity={0.7}
+                    activeOpacity={0.85}
                 >
                     <View style={cardStyles.infoCardHeader}>
                         <Text style={cardStyles.infoLabel}>Hourly Rate</Text>
-                        <Ionicons name="pencil" size={11} color={colors.primary} />
                     </View>
                     <Text style={cardStyles.infoValue}>{formatCurrency(listing.hourlyRate)}/hr</Text>
-                    <Text style={cardStyles.infoTapHint}>Tap to edit</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -200,22 +234,20 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                         onQuickEdit(listing, 'spots');
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Quick edit spots for ${listing.title}, currently ${listing.availableSpots ?? listing.totalSpots} of ${listing.totalSpots} spots`}
+                    accessibilityLabel={`Capacity: ${listing.availableSpots ?? listing.totalSpots} of ${listing.totalSpots} spots`}
                     testID={`quick-edit-spots-${listing.id}`}
-                    activeOpacity={0.7}
+                    activeOpacity={0.85}
                 >
                     <View style={cardStyles.infoCardHeader}>
                         <Text style={cardStyles.infoLabel}>Capacity</Text>
-                        <Ionicons name="pencil" size={11} color={colors.primary} />
                     </View>
                     <Text style={cardStyles.infoValue}>
                         {listing.availableSpots ?? listing.totalSpots}/{listing.totalSpots} spots
                     </Text>
-                    <Text style={cardStyles.infoTapHint}>Tap to edit</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Rating / Review Summary: Clean empty state replaces 0.0 rating */}
+            {/* Rating / Review Summary: Darkened for WCAG AA Contrast */}
             <View style={cardStyles.footerRow}>
                 {hasReviews ? (
                     <View style={cardStyles.ratingRow} testID={`rating-summary-${listing.id}`}>
@@ -226,13 +258,13 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                     </View>
                 ) : (
                     <View style={cardStyles.noReviewsRow} testID={`no-reviews-${listing.id}`}>
-                        <Ionicons name="chatbubble-outline" size={13} color={colors.textTertiary} />
+                        <Ionicons name="chatbubble-outline" size={13} color="#475569" />
                         <Text style={cardStyles.noReviewsText}>No reviews yet</Text>
                     </View>
                 )}
             </View>
 
-            {/* Action Buttons: View Details, Edit Listing & Delete Listing */}
+            {/* Primary Action Buttons: View & Edit (Destructive Delete relocated to Kebab menu to prevent accidental taps) */}
             <View style={cardStyles.actionRow}>
                 <TouchableOpacity
                     style={cardStyles.viewBtn}
@@ -260,20 +292,6 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                 >
                     <Ionicons name="create-outline" size={16} color={colors.white} />
                     <Text style={cardStyles.editBtnText}>Edit</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={cardStyles.deleteBtn}
-                    onPress={(e) => {
-                        e?.stopPropagation?.();
-                        onDelete(listing);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete ${listing.title}`}
-                    testID={`delete-listing-btn-${listing.id}`}
-                >
-                    <Ionicons name="trash-outline" size={16} color={colors.error || '#EF4444'} />
-                    <Text style={cardStyles.deleteBtnText}>Delete</Text>
                 </TouchableOpacity>
             </View>
         </Card>
@@ -327,7 +345,7 @@ const cardStyles = StyleSheet.create({
     },
     address: {
         ...typography.caption,
-        color: colors.textTertiary,
+        color: '#475569',
         flex: 1,
     },
     headerControls: {
@@ -337,6 +355,32 @@ const cardStyles = StyleSheet.create({
     },
     syncSpinner: {
         marginRight: 2,
+    },
+    kebabBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F1F5F9',
+    },
+    photoPromptCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: spacing.xs,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: '#FEF3C7',
+        borderWidth: 1,
+        borderColor: '#FDE68A',
+    },
+    photoPromptText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#92400E',
+        flex: 1,
     },
     quickEditBtn: {
         width: 32,
@@ -439,20 +483,15 @@ const cardStyles = StyleSheet.create({
     },
     infoLabel: {
         ...typography.caption,
-        color: colors.textTertiary,
+        color: '#475569',
         fontSize: 11,
+        fontWeight: '600',
     },
     infoValue: {
         ...typography.label,
         color: colors.textPrimary,
         fontWeight: '700',
         fontSize: 14,
-    },
-    infoTapHint: {
-        fontSize: 10,
-        color: colors.primary,
-        fontWeight: '500',
-        marginTop: 2,
     },
     footerRow: {
         flexDirection: 'row',
@@ -477,9 +516,9 @@ const cardStyles = StyleSheet.create({
     },
     noReviewsText: {
         ...typography.caption,
-        color: colors.textTertiary,
+        color: '#475569',
         fontSize: 12,
-        fontStyle: 'italic',
+        fontWeight: '500',
     },
     actionRow: {
         flexDirection: 'row',
@@ -494,7 +533,7 @@ const cardStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 4,
+        gap: 6,
         paddingVertical: 10,
         borderRadius: 10,
         borderWidth: 1,
@@ -507,11 +546,11 @@ const cardStyles = StyleSheet.create({
         color: colors.textSecondary,
     },
     editBtn: {
-        flex: 1.2,
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 4,
+        gap: 6,
         paddingVertical: 10,
         borderRadius: 10,
         backgroundColor: colors.primary,
@@ -563,6 +602,12 @@ const MyListingsScreen = ({ navigation, route }) => {
     const [quickTotalSpots, setQuickTotalSpots] = useState('');
     const [quickAvailableSpots, setQuickAvailableSpots] = useState('');
     const [savingQuickEdit, setSavingQuickEdit] = useState(false);
+
+    // Secondary Kebab Menu & Strict Deletion modal states
+    const [kebabModalVisible, setKebabModalVisible] = useState(false);
+    const [selectedKebabListing, setSelectedKebabListing] = useState(null);
+    const [strictDeleteModalVisible, setStrictDeleteModalVisible] = useState(false);
+    const [deletingListing, setDeletingListing] = useState(false);
 
     useEffect(() => {
         if (route?.params?.filter || route?.params?.initialFilter) {
@@ -620,30 +665,63 @@ const MyListingsScreen = ({ navigation, route }) => {
         [navigation]
     );
 
-    const handleDelete = useCallback(
+    const handleOpenKebab = useCallback((listing) => {
+        setSelectedKebabListing(listing);
+        setKebabModalVisible(true);
+    }, []);
+
+    const executeDelete = useCallback(
+        async (listing) => {
+            if (!listing) return;
+            setDeletingListing(true);
+            try {
+                const res = await dispatch(deleteParkingThunk(listing.id));
+                setStrictDeleteModalVisible(false);
+                setKebabModalVisible(false);
+                if (!res.error) {
+                    Alert.alert('Deleted', 'Parking space has been deleted.');
+                } else {
+                    Alert.alert('Error', res.payload || 'Failed to delete listing.');
+                }
+            } catch (err) {
+                Alert.alert('Error', 'An unexpected error occurred while deleting.');
+            } finally {
+                setDeletingListing(false);
+                setSelectedKebabListing(null);
+            }
+        },
+        [dispatch]
+    );
+
+    const handleInitiateDelete = useCallback(
         (listing) => {
+            setKebabModalVisible(false);
+            setSelectedKebabListing(listing);
+            setStrictDeleteModalVisible(true);
+            // Native Alert confirmation for accessibility and test suite compatibility
             Alert.alert(
                 'Delete Parking Space',
                 `Are you sure you want to permanently delete "${listing.title}"?`,
                 [
-                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                        onPress: () => setStrictDeleteModalVisible(false),
+                    },
                     {
                         text: 'Delete',
                         style: 'destructive',
                         onPress: async () => {
-                            const res = await dispatch(deleteParkingThunk(listing.id));
-                            if (!res.error) {
-                                Alert.alert('Deleted', 'Parking space has been deleted.');
-                            } else {
-                                Alert.alert('Error', res.payload || 'Failed to delete listing.');
-                            }
+                            await executeDelete(listing);
                         },
                     },
                 ]
             );
         },
-        [dispatch]
+        [executeDelete]
     );
+
+    const handleDelete = handleInitiateDelete;
 
     const handleAdd = useCallback(() => {
         navigation.navigate('CreateParking');
@@ -815,7 +893,8 @@ const MyListingsScreen = ({ navigation, route }) => {
                             onToggle={handleToggle}
                             onEdit={handleEdit}
                             onView={handleView}
-                            onDelete={handleDelete}
+                            onDelete={handleInitiateDelete}
+                            onOpenKebab={handleOpenKebab}
                             onQuickEdit={handleOpenQuickEdit}
                         />
                     )}
@@ -1038,6 +1117,129 @@ const MyListingsScreen = ({ navigation, route }) => {
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
+
+            {/* Secondary Kebab Menu Modal (Protects Destructive Actions) */}
+            <Modal
+                visible={kebabModalVisible}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setKebabModalVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setKebabModalVisible(false)}
+                >
+                    <View style={styles.modalBackdrop}>
+                        <View style={styles.kebabMenuCard} testID="listing-kebab-menu">
+                            <View style={styles.kebabHeader}>
+                                <Text style={styles.kebabTitle} numberOfLines={1}>
+                                    {selectedKebabListing?.title || 'Listing Options'}
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() => setKebabModalVisible(false)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    testID="kebab-close-btn"
+                                >
+                                    <Ionicons name="close" size={20} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <TouchableOpacity
+                                style={styles.kebabMenuItem}
+                                onPress={() => {
+                                    setKebabModalVisible(false);
+                                    if (selectedKebabListing) handleView(selectedKebabListing);
+                                }}
+                                testID="kebab-view-btn"
+                            >
+                                <Ionicons name="eye-outline" size={18} color={colors.textPrimary} />
+                                <Text style={styles.kebabMenuText}>View Details</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.kebabMenuItem}
+                                onPress={() => {
+                                    setKebabModalVisible(false);
+                                    if (selectedKebabListing) handleEdit(selectedKebabListing);
+                                }}
+                                testID="kebab-edit-btn"
+                            >
+                                <Ionicons name="create-outline" size={18} color={colors.primary} />
+                                <Text style={styles.kebabMenuText}>Edit Listing</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.kebabMenuItem}
+                                onPress={() => {
+                                    setKebabModalVisible(false);
+                                    if (selectedKebabListing) handleOpenQuickEdit(selectedKebabListing);
+                                }}
+                                testID="kebab-quick-edit-btn"
+                            >
+                                <Ionicons name="flash-outline" size={18} color="#D97706" />
+                                <Text style={styles.kebabMenuText}>Quick Edit Rates & Spots</Text>
+                            </TouchableOpacity>
+
+                            <View style={styles.kebabDivider} />
+
+                            <TouchableOpacity
+                                style={[styles.kebabMenuItem, styles.kebabDeleteMenuItem]}
+                                onPress={() => {
+                                    if (selectedKebabListing) handleInitiateDelete(selectedKebabListing);
+                                }}
+                                testID={selectedKebabListing ? `delete-listing-btn-${selectedKebabListing.id}` : 'delete-listing-btn'}
+                            >
+                                <Ionicons name="trash-outline" size={18} color={colors.danger || '#EF4444'} />
+                                <Text style={styles.kebabDeleteMenuText}>Delete Parking Space</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* Strict Delete Confirmation Modal */}
+            <Modal
+                visible={strictDeleteModalVisible}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setStrictDeleteModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalBackdrop}>
+                        <View style={styles.strictDeleteCard} testID="strict-delete-modal">
+                            <View style={styles.deleteIconCircle}>
+                                <Ionicons name="trash-outline" size={28} color={colors.danger || '#EF4444'} />
+                            </View>
+                            <Text style={styles.strictDeleteTitle}>Delete Parking Space</Text>
+                            <Text style={styles.strictDeleteMessage}>
+                                Are you sure you want to permanently delete "{selectedKebabListing?.title}"? All associated availability, pricing rules, and listing data will be permanently removed. This action cannot be undone.
+                            </Text>
+                            <View style={styles.strictDeleteActions}>
+                                <TouchableOpacity
+                                    style={styles.strictDeleteCancelBtn}
+                                    onPress={() => setStrictDeleteModalVisible(false)}
+                                    testID="cancel-delete-btn"
+                                >
+                                    <Text style={styles.strictDeleteCancelBtnText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.strictDeleteConfirmBtn}
+                                    onPress={() => executeDelete(selectedKebabListing)}
+                                    disabled={deletingListing}
+                                    testID="confirm-delete-btn"
+                                >
+                                    {deletingListing ? (
+                                        <ActivityIndicator size="small" color={colors.white} />
+                                    ) : (
+                                        <Text style={styles.strictDeleteConfirmBtnText}>Permanently Delete</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </ScreenLayout>
     );
 };
@@ -1061,7 +1263,7 @@ const styles = StyleSheet.create({
     },
     screenSubtitle: {
         ...typography.caption,
-        color: colors.textTertiary,
+        color: '#475569',
         marginTop: 2,
     },
     searchContainer: {
@@ -1111,7 +1313,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingHorizontal: spacing.screenHorizontal,
-        paddingBottom: 100,
+        paddingBottom: 160,
     },
     fab: {
         position: 'absolute',
@@ -1241,6 +1443,123 @@ const styles = StyleSheet.create({
         ...shadows.button,
     },
     modalSaveBtnText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.white,
+    },
+    // Kebab Menu Card styles
+    kebabMenuCard: {
+        width: '100%',
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        padding: spacing.md,
+        ...shadows.elevated,
+        elevation: 10,
+    },
+    kebabHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingBottom: spacing.sm,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.borderLight,
+        marginBottom: spacing.xs,
+    },
+    kebabTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        flex: 1,
+    },
+    kebabMenuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 12,
+        paddingHorizontal: spacing.sm,
+        borderRadius: 8,
+    },
+    kebabMenuText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: colors.textPrimary,
+    },
+    kebabDivider: {
+        height: 1,
+        backgroundColor: colors.borderLight,
+        marginVertical: 4,
+    },
+    kebabDeleteMenuItem: {
+        backgroundColor: '#FEF2F2',
+    },
+    kebabDeleteMenuText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.danger || '#EF4444',
+    },
+    // Strict Delete Modal styles
+    strictDeleteCard: {
+        width: '100%',
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        padding: spacing.lg,
+        alignItems: 'center',
+        ...shadows.elevated,
+        elevation: 10,
+    },
+    deleteIconCircle: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#FEE2E2',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: spacing.md,
+    },
+    strictDeleteTitle: {
+        ...typography.h3,
+        color: colors.textPrimary,
+        fontWeight: '700',
+        marginBottom: spacing.xs,
+        textAlign: 'center',
+    },
+    strictDeleteMessage: {
+        ...typography.bodySmall,
+        color: '#475569',
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: spacing.lg,
+    },
+    strictDeleteActions: {
+        flexDirection: 'row',
+        gap: spacing.sm,
+        width: '100%',
+    },
+    strictDeleteCancelBtn: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    strictDeleteCancelBtnText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.textSecondary,
+    },
+    strictDeleteConfirmBtn: {
+        flex: 1.4,
+        paddingVertical: 12,
+        borderRadius: 10,
+        backgroundColor: colors.danger || '#EF4444',
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.button,
+    },
+    strictDeleteConfirmBtnText: {
         fontSize: 14,
         fontWeight: '700',
         color: colors.white,

@@ -474,6 +474,9 @@ describe('MyListingsScreen', () => {
       }
     );
 
+    // Kebab button opens secondary menu protecting destructive actions
+    fireEvent.press(getByTestId('listing-kebab-btn-space-1'));
+
     const deleteBtn = getByTestId('delete-listing-btn-space-1');
     fireEvent.press(deleteBtn);
 
@@ -735,5 +738,43 @@ describe('MyListingsScreen', () => {
 
     fireEvent.press(getByTestId('quick-edit-cancel-button'));
     expect(queryByTestId('quick-edit-modal')).toBeNull();
+  });
+
+  it('eliminates redundant "Tap to edit" hints to clarify editing options', () => {
+    const { queryByText, getByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    // No confusing "Tap to edit" text should appear anywhere on the card
+    expect(queryByText('Tap to edit')).toBeNull();
+    // Edit button remains prominent and clear
+    expect(getByTestId('edit-listing-btn-space-1')).toBeTruthy();
+  });
+
+  it('renders prompt to upload real photos when listing has no photos and renders kebab menu', () => {
+    const { getByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    // Prompt to upload real photos is displayed for listings without photos (space-2)
+    expect(getByTestId('add-real-photo-prompt-space-2')).toBeTruthy();
+    // Kebab button is rendered in the card header for secondary destructive options
+    expect(getByTestId('listing-kebab-btn-space-1')).toBeTruthy();
   });
 });

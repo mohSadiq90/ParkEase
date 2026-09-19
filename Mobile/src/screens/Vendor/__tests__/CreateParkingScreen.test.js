@@ -485,5 +485,40 @@ describe('CreateParkingScreen', () => {
     const titleErrors = getAllByText(/Title: Title must not exceed 100 characters./);
     expect(titleErrors.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('provides location autocomplete suggestions and standardizes spelling variations like "kartaj"', async () => {
+    const { getByPlaceholderText, getByTestId, findByTestId, getByText } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    // Type typo "kartaj" into street address
+    fireEvent.changeText(getByPlaceholderText('Street address'), 'kartaj');
+
+    // Autocomplete suggestions container should appear
+    const suggestionsBox = await findByTestId('location-suggestions-container');
+    expect(suggestionsBox).toBeTruthy();
+
+    // Select the standardized suggestion "Katraj"
+    fireEvent.press(getByTestId('location-suggestion-0'));
+
+    // Standardized badge appears confirming standardization
+    expect(getByTestId('standardized-location-badge')).toBeTruthy();
+    expect(getByText(/Standardized: Katraj, Pune/)).toBeTruthy();
+
+    // City and State should be auto-filled and standardized
+    expect(getByPlaceholderText('City').props.value).toBe('Pune');
+    expect(getByPlaceholderText('State').props.value).toBe('Maharashtra');
+    expect(getByPlaceholderText('Zip code').props.value).toBe('411046');
+  });
+
+  it('renders photo trust banner prompting for real photos instead of illustrations', () => {
+    const { getByTestId, getByText } = renderWithProviders(
+      <CreateParkingScreen navigation={mockNavigation} route={{}} />
+    );
+
+    expect(getByTestId('photo-trust-banner')).toBeTruthy();
+    expect(getByText('Upload Real Photos for Trust')).toBeTruthy();
+    expect(getByText(/Please upload actual photos of your space rather than using illustrations/)).toBeTruthy();
+  });
 });
 
