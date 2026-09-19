@@ -878,12 +878,11 @@ describe('MyListingsScreen', () => {
     );
 
     // Disambiguated capacity
-    expect(getByText('20 spots')).toBeTruthy();
+    expect(getByText(/20 spots/)).toBeTruthy();
     // Performance stats row
     expect(getByTestId('performance-stats-space-1')).toBeTruthy();
-    expect(getByText('45')).toBeTruthy();
-    expect(getByText('bookings')).toBeTruthy();
-    expect(getByText('8')).toBeTruthy(); // Occupied = 20 - 12 = 8
+    expect(getByText(/45 bookings/)).toBeTruthy();
+    expect(getByText(/Occupied:\s*8/)).toBeTruthy(); // Occupied = 20 - 12 = 8
   });
 
   it('normalizes location spelling variations such as "katraj, Pune" to "Katraj, Pune"', () => {
