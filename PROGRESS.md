@@ -9,6 +9,37 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-19] - Home Screen Feedback: Copy Shortening, Testing Subheader, Occupancy, Action Nudge & Share Listing (<@U06FVANTNHL>)
+- **Tools Grid Copy Shortening & Layout Polish (`Mobile/src/screens/Vendor/VendorDashboardScreen.js`)**:
+  - Shortened all feature tile subtitles to fit cleanly without truncation or ellipsis ("List a new spot", "Manage bays & rates", "Barrier & OCR rules", "Venue zones & passes", "Manage bookings", "Driver inquiries").
+  - Shortened "Event Packages" title to "Event Passes" so the tile title never truncates.
+  - Adjusted tile card padding (`paddingVertical: 12`, `paddingHorizontal: 10`) and icon margins (`marginRight: 8`) to give ample room on all mobile screen widths.
+  - Grouped tools into two distinct sections: "Host Operations & Tools" (6 operational tiles) and "Testing & Simulators" (LPR Simulator and EV Simulator), giving clear visual hierarchy.
+  - Renamed "View Menu →" link to "All Tools →" to clarify that it opens the complete catalog of tools and settings.
+- **Actionable Pending Nudge & Real-Time Occupancy (`Mobile/src/screens/Vendor/VendorDashboardScreen.js`)**:
+  - Added a prominent, tappable pending action nudge banner ("⚡ X actions require attention (pending driver payment / approval)") linking to `IncomingBookings` with the pending tab.
+  - Added real-time live occupancy indicator ("0/5 spots occupied right now" with live pulse dot) and direct "View Spaces →" link.
+- **Starter Tip for Zero-State Dashboards (`Mobile/src/screens/Vendor/VendorDashboardScreen.js`)**:
+  - Added an onboarding starter tip card for zero-space / zero-booking accounts ("Get Started as a Host: List your first parking spot to start receiving bookings and earning revenue" with direct Add Space CTA).
+- **Secondary Actions & Share Listing (`Mobile/src/screens/Vendor/VendorDashboardScreen.js`)**:
+  - Added a "Share Listing" action alongside "Find Parking", utilizing React Native `Share.share` so hosts can easily market their spots across WhatsApp, SMS, or social media.
+  - Balanced action bar with primary Gate Access Scanner CTA and side-by-side secondary actions.
+- **Recent Bookings "See All", Tap Affordance & Host-Friendly Status Labels (`Mobile/src/screens/Vendor/VendorDashboardScreen.js`)**:
+  - Capped Recent Bookings feed to 5 items and added "See All →" header link to prevent unbounded dashboard growth.
+  - Added right chevron (`chevron-forward`) to every booking row for clear tap affordance.
+  - Disambiguated status pills from the host perspective: "Awaiting driver payment" (for status 6), "Rejected by host" (for status 7), and "Awaiting approval" (for status 0).
+  - Confirmed 2-decimal currency formatting (`formatCurrency`) for fractional amounts (e.g. ₹12.30).
+  - Normalized host name formatting (`Welcome, Alex/Hostuser`) with trimmed capitalization.
+- **Automated Verification (`Mobile/src/screens/Vendor/__tests__/VendorDashboardScreen.test.js`)**:
+  - Updated unit tests to verify Event Passes, Testing & Simulators subheader, All Tools link, Share Listing, See All navigation, Occupancy indicator, Pending nudge, Starter tip, and host status badges.
+  - Ran targeted test suites: `npm test -- --watchAll=false --testPathPattern=VendorDashboardScreen` (9/9 tests passing).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Vendor/VendorDashboardScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/VendorDashboardScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - Staged, committed, and pushed to `origin/main` to trigger Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-19] - Details Screen Feedback: Neutral Hero Graphic, Kebab Menu Delete, Map Preview & Correctness Fixes (<@U06FVANTNHL>)
 - **Neutral Branded Illustrated Parking Graphic (`Mobile/src/screens/Search/ParkingDetailScreen.js`, `Mobile/src/utils/formatters.js`, `Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
   - Eliminated meme / placeholder images by adding `isMemeOrPlaceholderUrl` and updating `getParkingImageUrls` to filter out tokenfeller/meme/placeholder URLs.

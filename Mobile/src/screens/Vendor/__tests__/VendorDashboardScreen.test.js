@@ -147,22 +147,33 @@ describe('VendorDashboardScreen', () => {
     );
 
     expect(await findByText('Host Operations & Tools')).toBeTruthy();
+    expect(getByText('All Tools →')).toBeTruthy();
     expect(getByText('Add Space')).toBeTruthy();
     expect(getByText('My Listings')).toBeTruthy();
     expect(getByText('Host Bookings')).toBeTruthy();
     expect(getByText('Messages')).toBeTruthy();
     expect(getByText('LPR Cameras')).toBeTruthy();
-    expect(getByText('Event Packages')).toBeTruthy();
+    expect(getByText('Event Passes')).toBeTruthy();
+    expect(getByText('Testing & Simulators')).toBeTruthy();
+    expect(getByText('LPR Simulator')).toBeTruthy();
+    expect(getByText('EV Simulator')).toBeTruthy();
 
     const { fireEvent } = require('@testing-library/react-native');
 
-    // Press Find & Explore Parking big button (now working smoothly)
+    // Press Find & Explore Parking button
     fireEvent.press(getByLabelText('Find & Explore Parking'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('Search', { focusSearch: true });
 
     // Press Gate Access Scanner primary action button
     fireEvent.press(getByLabelText('Gate Access Scanner'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('AccessPassScanner');
+
+    // Press Share Listing button
+    const { Share } = require('react-native');
+    const shareSpy = jest.spyOn(Share, 'share').mockImplementation(() => Promise.resolve());
+    fireEvent.press(getByLabelText('Share Listing'));
+    expect(shareSpy).toHaveBeenCalled();
+    shareSpy.mockRestore();
 
     // Verify redundant duplicate tiles (Explore Spots, duplicate Gate Scanner) are not in the grid
     const { queryByText } = renderWithProviders(
@@ -231,7 +242,74 @@ describe('VendorDashboardScreen', () => {
       <VendorDashboardScreen navigation={{}} />,
       { preloadedState: { auth: { user: { email: 'hostuser@example.com' } } } }
     );
-    expect(await findByTextEmail('Welcome, hostuser')).toBeTruthy();
+    expect(await findByTextEmail('Welcome, Hostuser')).toBeTruthy();
+  });
+
+  it('renders occupancy indicator and pending actions nudge when data is available', async () => {
+    const mockDashboard = {
+      data: {
+        totalParkingSpaces: 5,
+        activeParkingSpaces: 5,
+        totalBookings: 10,
+        pendingBookings: 3,
+        recentBookings: [
+          {
+            id: 'b-awaiting-1',
+            userName: 'Renter',
+            vehiclePlateNumber: 'DL 01 AB 9999',
+            startDateTime: new Date().toISOString(),
+            status: 6, // Awaiting payment
+            totalAmount: 12.3,
+          },
+        ],
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce({ data: mockDashboard });
+
+    const mockNavigation = { navigate: jest.fn(), getParent: jest.fn() };
+    const { findByText, getByText, getByLabelText } = renderWithProviders(
+      <VendorDashboardScreen navigation={mockNavigation} />
+    );
+
+    // Occupancy indicator
+    expect(await findByText(/0\/5 spots/)).toBeTruthy();
+    expect(getByText(/occupied right now/)).toBeTruthy();
+
+    // Pending actions nudge
+    expect(getByText(/3 actions require/)).toBeTruthy();
+
+    // Host badge label
+    expect(getByText('Awaiting driver payment')).toBeTruthy();
+
+    // See All link
+    expect(getByText('See All →')).toBeTruthy();
+    const { fireEvent } = require('@testing-library/react-native');
+    fireEvent.press(getByLabelText('See All Recent Bookings'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('IncomingBookings', { initialTab: 'all' });
+  });
+
+  it('renders starter tip card when host has 0 spaces', async () => {
+    const mockDashboard = {
+      data: {
+        totalParkingSpaces: 0,
+        activeParkingSpaces: 0,
+        totalBookings: 0,
+        recentBookings: [],
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce({ data: mockDashboard });
+
+    const mockNavigation = { navigate: jest.fn() };
+    const { findByText, getByLabelText } = renderWithProviders(
+      <VendorDashboardScreen navigation={mockNavigation} />
+    );
+
+    expect(await findByText('Get Started as a Host')).toBeTruthy();
+    const { fireEvent } = require('@testing-library/react-native');
+    fireEvent.press(getByLabelText('Add Space Starter Tip'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {});
   });
 });
 

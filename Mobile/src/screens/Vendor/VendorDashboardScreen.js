@@ -14,6 +14,7 @@ import {
     RefreshControl,
     TouchableOpacity,
     Alert,
+    Share,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,11 +30,11 @@ import EmptyState from '../../components/Common/EmptyState';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
 
-export const VENDOR_FEATURE_TILES = [
+export const VENDOR_OPERATIONAL_TILES = [
     {
         id: 'create_parking',
         title: 'Add Space',
-        subtitle: 'List new bay or spot',
+        subtitle: 'List a new spot',
         icon: 'add-circle-outline',
         color: '#10B981',
         screen: 'CreateParking',
@@ -51,15 +52,24 @@ export const VENDOR_FEATURE_TILES = [
     {
         id: 'incoming_bookings',
         title: 'Host Bookings',
-        subtitle: 'Manage reservations',
+        subtitle: 'Manage bookings',
         icon: 'calendar-outline',
         color: '#8B5CF6',
         screen: 'IncomingBookings',
         params: { initialTab: 'all' },
     },
     {
+        id: 'guest_messages',
+        title: 'Messages',
+        subtitle: 'Driver inquiries',
+        icon: 'chatbubbles-outline',
+        color: '#EC4899',
+        screen: 'ConversationList',
+        params: {},
+    },
+    {
         id: 'event_packages',
-        title: 'Event Packages',
+        title: 'Event Passes',
         subtitle: 'Venue zones & passes',
         icon: 'ticket-outline',
         color: '#F59E0B',
@@ -75,15 +85,9 @@ export const VENDOR_FEATURE_TILES = [
         screen: 'LprSettings',
         params: {},
     },
-    {
-        id: 'guest_messages',
-        title: 'Messages',
-        subtitle: 'Driver inquiries',
-        icon: 'chatbubbles-outline',
-        color: '#EC4899',
-        screen: 'ConversationList',
-        params: {},
-    },
+];
+
+export const VENDOR_SIMULATOR_TILES = [
     {
         id: 'lpr_simulator',
         title: 'LPR Simulator',
@@ -103,6 +107,21 @@ export const VENDOR_FEATURE_TILES = [
         params: {},
     },
 ];
+
+export const VENDOR_FEATURE_TILES = [...VENDOR_OPERATIONAL_TILES, ...VENDOR_SIMULATOR_TILES];
+
+export const getHostBadgeLabel = (status) => {
+    if (status === 6 || status === 'AWAITING_PAYMENT' || status === 'Pending Payment' || status === 'PENDING PAYMENT') {
+        return 'Awaiting driver payment';
+    }
+    if (status === 7 || status === 'REJECTED' || status === 'Rejected') {
+        return 'Rejected by host';
+    }
+    if (status === 0 || status === 'PENDING' || status === 'Pending') {
+        return 'Awaiting approval';
+    }
+    return undefined;
+};
 
 const MetricCard = ({ icon, label, value, isCurrency = false, onPress }) => {
     const cardContent = (
@@ -227,6 +246,15 @@ const VendorDashboardScreen = ({ navigation }) => {
         }
     }, [navigation]);
 
+    const handleShareListing = useCallback(async () => {
+        try {
+            await Share.share({
+                message: 'Book secure and verified parking spots with ParkEase! Check out my listings:\nhttps://parkease.app',
+                title: 'Share ParkEase Listings',
+            });
+        } catch (_) {}
+    }, []);
+
     if (loading && !data) return <LoadingScreen type="dashboard" message="Loading Host Control Center..." />;
 
     const pendingApprovalsCount = data?.pendingBookings ??
@@ -236,22 +264,38 @@ const VendorDashboardScreen = ({ navigation }) => {
         ).length) ??
         0;
 
+    const totalSpaces = data?.activeParkingSpaces ?? data?.totalParkingSpaces ?? 0;
+    const occupiedSpaces = data?.occupiedSpaces ??
+        data?.currentlyOccupied ??
+        (data?.recentBookings?.filter(
+            (b) => b.status === 'ACTIVE' || b.status === 2 || b.status === 'Active' || b.status === 'IN_PROGRESS'
+        ).length) ??
+        0;
+
+    const recentBookingsList = (data?.recentBookings || []).slice(0, 5);
+
     const sections = [
         { type: 'header' },
         { type: 'metrics' },
-        { type: 'gateScanner' },
+        ...(pendingApprovalsCount > 0 ? [{ type: 'pendingNudge' }] : []),
+        ...(totalSpaces > 0 ? [{ type: 'occupancy' }] : []),
+        ...(totalSpaces === 0 || ((data?.totalBookings ?? 0) === 0 && (data?.recentBookings?.length ?? 0) === 0)
+            ? [{ type: 'starterTip' }]
+            : []),
+        { type: 'actionButtons' },
         { type: 'vendorFeatures' },
-        ...(data?.recentBookings?.length ? [{ type: 'sectionTitle', title: 'Recent Bookings' }] : []),
-        ...(data?.recentBookings || []).map((b) => ({ type: 'booking', data: b })),
-        ...(!data?.recentBookings?.length ? [{ type: 'empty' }] : []),
+        ...(recentBookingsList.length ? [{ type: 'recentBookingsHeader', totalCount: data?.recentBookings?.length || 0 }] : []),
+        ...recentBookingsList.map((b) => ({ type: 'booking', data: b })),
+        ...(!recentBookingsList.length ? [{ type: 'empty' }] : []),
     ];
 
-    const hostName =
+    const rawName =
         user?.firstName ||
         (user?.fullName ? user.fullName.split(' ')[0] : null) ||
         (user?.name ? user.name.split(' ')[0] : null) ||
         (user?.email ? user.email.split('@')[0] : null) ||
         'Partner';
+    const hostName = rawName.trim().charAt(0).toUpperCase() + rawName.trim().slice(1);
 
     const handleFeatureTilePress = (tile) => {
         if (tile.id === 'incoming_bookings' || tile.screen === 'IncomingBookings') {
@@ -288,7 +332,7 @@ const VendorDashboardScreen = ({ navigation }) => {
                             <MetricCard
                                 icon="car-outline"
                                 label="Active Spaces"
-                                value={data?.activeParkingSpaces ?? data?.totalParkingSpaces ?? 0}
+                                value={totalSpaces}
                                 onPress={() => navigation?.navigate?.('MyListings', { filter: 'active', initialFilter: 'active' })}
                             />
                             <MetricCard
@@ -316,6 +360,81 @@ const VendorDashboardScreen = ({ navigation }) => {
                     </View>
                 );
 
+            case 'pendingNudge':
+                return (
+                    <TouchableOpacity
+                        style={styles.pendingNudgeCard}
+                        onPress={() => navigateToBookings({ initialTab: 'pending', filter: 'pending' })}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Pending Actions Nudge"
+                    >
+                        <View style={styles.pendingNudgeIconWrap}>
+                            <Ionicons name="time" size={18} color="#D97706" />
+                        </View>
+                        <Text style={styles.pendingNudgeText}>
+                            <Text style={styles.pendingNudgeBold}>
+                                {pendingApprovalsCount} {pendingApprovalsCount === 1 ? 'action requires' : 'actions require'}
+                            </Text>{' '}
+                            attention (pending driver payment / approval)
+                        </Text>
+                        <Ionicons name="chevron-forward" size={16} color="#D97706" />
+                    </TouchableOpacity>
+                );
+
+            case 'occupancy':
+                return (
+                    <View style={styles.occupancyBar}>
+                        <View style={styles.occupancyLeft}>
+                            <View style={styles.livePulseDot} />
+                            <Text style={styles.occupancyText}>
+                                <Text style={styles.occupancyHighlight}>{occupiedSpaces}/{totalSpaces} spots</Text> occupied right now
+                            </Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => navigation?.navigate?.('MyListings', { filter: 'active', initialFilter: 'active' })}
+                            activeOpacity={0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel="View Spaces Occupancy"
+                        >
+                            <Text style={styles.occupancyLink}>View Spaces →</Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+
+            case 'starterTip':
+                if (totalSpaces === 0) {
+                    return (
+                        <TouchableOpacity
+                            style={styles.starterTipCard}
+                            onPress={() => navigation?.navigate?.('CreateParking', {})}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Add Space Starter Tip"
+                        >
+                            <View style={[styles.starterTipIcon, { backgroundColor: '#ECFDF5' }]}>
+                                <Ionicons name="sparkles" size={20} color="#10B981" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.starterTipTitle}>Get Started as a Host</Text>
+                                <Text style={styles.starterTipSub}>List your first parking spot to start receiving bookings and earning revenue.</Text>
+                            </View>
+                            <Ionicons name="arrow-forward" size={16} color={colors.primaryAccent} />
+                        </TouchableOpacity>
+                    );
+                }
+                return (
+                    <View style={styles.starterTipCard}>
+                        <View style={[styles.starterTipIcon, { backgroundColor: '#EFF6FF' }]}>
+                            <Ionicons name="bulb-outline" size={20} color="#3B82F6" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.starterTipTitle}>Host Pro Tip</Text>
+                            <Text style={styles.starterTipSub}>Add photos & set competitive hourly rates to start getting bookings.</Text>
+                        </View>
+                    </View>
+                );
+
             case 'actionButtons':
             case 'gateScanner':
                 return (
@@ -330,17 +449,29 @@ const VendorDashboardScreen = ({ navigation }) => {
                             <Ionicons name="qr-code-outline" size={22} color={colors.white} style={{ marginRight: 8 }} />
                             <Text style={styles.gateScannerText}>Gate Access Scanner</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.findParkingBtn}
-                            onPress={handleFindParking}
-                            activeOpacity={0.85}
-                            accessibilityRole="button"
-                            accessibilityLabel="Find & Explore Parking"
-                            testID="find-explore-parking-button"
-                        >
-                            <Ionicons name="search-outline" size={20} color={colors.primaryAccent} style={{ marginRight: 8 }} />
-                            <Text style={styles.findParkingText}>Find & Explore Parking</Text>
-                        </TouchableOpacity>
+                        <View style={styles.secondaryActionsRow}>
+                            <TouchableOpacity
+                                style={styles.findParkingBtn}
+                                onPress={handleFindParking}
+                                activeOpacity={0.85}
+                                accessibilityRole="button"
+                                accessibilityLabel="Find & Explore Parking"
+                                testID="find-explore-parking-button"
+                            >
+                                <Ionicons name="search-outline" size={18} color={colors.primaryAccent} style={{ marginRight: 6 }} />
+                                <Text style={styles.findParkingText}>Find Parking</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.shareListingBtn}
+                                onPress={handleShareListing}
+                                activeOpacity={0.85}
+                                accessibilityRole="button"
+                                accessibilityLabel="Share Listing"
+                            >
+                                <Ionicons name="share-social-outline" size={18} color={colors.primaryAccent} style={{ marginRight: 6 }} />
+                                <Text style={styles.shareListingText}>Share Listing</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 );
 
@@ -352,12 +483,14 @@ const VendorDashboardScreen = ({ navigation }) => {
                             <TouchableOpacity
                                 onPress={() => navigation?.navigate?.('MenuTab', { screen: 'MenuHome' })}
                                 activeOpacity={0.7}
+                                accessibilityRole="button"
+                                accessibilityLabel="All Tools"
                             >
-                                <Text style={styles.featuresSectionLink}>View Menu →</Text>
+                                <Text style={styles.featuresSectionLink}>All Tools →</Text>
                             </TouchableOpacity>
                         </View>
                         <View style={styles.featuresGrid}>
-                            {VENDOR_FEATURE_TILES.map((tile) => (
+                            {VENDOR_OPERATIONAL_TILES.map((tile) => (
                                 <TouchableOpacity
                                     key={tile.id}
                                     style={styles.featureTileCard}
@@ -367,16 +500,57 @@ const VendorDashboardScreen = ({ navigation }) => {
                                     accessibilityLabel={tile.title}
                                 >
                                     <View style={[styles.featureTileIconWrap, { backgroundColor: tile.color + '15' }]}>
-                                        <Ionicons name={tile.icon} size={22} color={tile.color} />
+                                        <Ionicons name={tile.icon} size={20} color={tile.color} />
                                     </View>
                                     <View style={styles.featureTileTextWrap}>
                                         <Text style={styles.featureTileTitle} numberOfLines={1}>{tile.title}</Text>
                                         <Text style={styles.featureTileSubtitle} numberOfLines={1}>{tile.subtitle}</Text>
                                     </View>
-                                    <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                                    <Ionicons name="chevron-forward" size={13} color={colors.textTertiary} />
                                 </TouchableOpacity>
                             ))}
                         </View>
+
+                        {/* Testing & Simulators Subheader & Grid */}
+                        <View style={styles.simulatorSectionHeader}>
+                            <Text style={styles.simulatorSectionTitle}>Testing & Simulators</Text>
+                        </View>
+                        <View style={styles.featuresGrid}>
+                            {VENDOR_SIMULATOR_TILES.map((tile) => (
+                                <TouchableOpacity
+                                    key={tile.id}
+                                    style={styles.featureTileCard}
+                                    onPress={() => handleFeatureTilePress(tile)}
+                                    activeOpacity={0.75}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={tile.title}
+                                >
+                                    <View style={[styles.featureTileIconWrap, { backgroundColor: tile.color + '15' }]}>
+                                        <Ionicons name={tile.icon} size={20} color={tile.color} />
+                                    </View>
+                                    <View style={styles.featureTileTextWrap}>
+                                        <Text style={styles.featureTileTitle} numberOfLines={1}>{tile.title}</Text>
+                                        <Text style={styles.featureTileSubtitle} numberOfLines={1}>{tile.subtitle}</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={13} color={colors.textTertiary} />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                );
+
+            case 'recentBookingsHeader':
+                return (
+                    <View style={styles.recentBookingsHeaderRow}>
+                        <Text style={styles.sectionHeader}>Recent Bookings</Text>
+                        <TouchableOpacity
+                            onPress={() => navigateToBookings({ initialTab: 'all' })}
+                            activeOpacity={0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel="See All Recent Bookings"
+                        >
+                            <Text style={styles.seeAllLink}>See All →</Text>
+                        </TouchableOpacity>
                     </View>
                 );
 
@@ -409,6 +583,8 @@ const VendorDashboardScreen = ({ navigation }) => {
                             booking,
                             isVendor: true,
                         })}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Booking for ${vehiclePlate}`}
                     >
                         <View style={styles.bookingRow}>
                             <View style={styles.bookingInfoCol}>
@@ -429,7 +605,10 @@ const VendorDashboardScreen = ({ navigation }) => {
                             </View>
 
                             <View style={styles.bookingRightCol}>
-                                <Badge status={booking.status} />
+                                <Badge
+                                    status={booking.status}
+                                    label={getHostBadgeLabel(booking.status)}
+                                />
                                 {isPending ? (
                                     <View style={styles.inlineActionsRow}>
                                         <TouchableOpacity
@@ -455,6 +634,7 @@ const VendorDashboardScreen = ({ navigation }) => {
                                     </Text>
                                 )}
                             </View>
+                            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={styles.bookingChevron} />
                         </View>
                     </Card>
                 );
@@ -563,6 +743,113 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
+    // Occupancy Indicator
+    occupancyBar: {
+        marginHorizontal: spacing.screenHorizontal,
+        marginTop: spacing.md,
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        paddingVertical: spacing.sm + 2,
+        paddingHorizontal: spacing.base,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        ...shadows.sm,
+    },
+    occupancyLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    livePulseDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#10B981',
+    },
+    occupancyText: {
+        fontSize: 13,
+        color: colors.textSecondary,
+    },
+    occupancyHighlight: {
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    occupancyLink: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: colors.primaryAccent,
+    },
+
+    // Pending Nudge Card
+    pendingNudgeCard: {
+        marginHorizontal: spacing.screenHorizontal,
+        marginTop: spacing.md,
+        backgroundColor: '#FFFBEB',
+        borderRadius: 12,
+        paddingVertical: spacing.sm + 2,
+        paddingHorizontal: spacing.base,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#FDE68A',
+        gap: spacing.sm,
+        ...shadows.sm,
+    },
+    pendingNudgeIconWrap: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        backgroundColor: '#FEF3C7',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    pendingNudgeText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#92400E',
+        lineHeight: 18,
+    },
+    pendingNudgeBold: {
+        fontWeight: '700',
+        color: '#78350F',
+    },
+
+    // Starter Tip Card (All-zero state)
+    starterTipCard: {
+        marginHorizontal: spacing.screenHorizontal,
+        marginTop: spacing.md,
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        padding: spacing.base,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        gap: spacing.sm,
+        ...shadows.sm,
+    },
+    starterTipIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    starterTipTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        marginBottom: 2,
+    },
+    starterTipSub: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        lineHeight: 16,
+    },
+
     actionButtonsContainer: {
         marginHorizontal: spacing.screenHorizontal,
         marginTop: spacing.md,
@@ -583,8 +870,13 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: colors.white,
     },
+    secondaryActionsRow: {
+        flexDirection: 'row',
+        gap: spacing.sm,
+    },
     findParkingBtn: {
-        height: 48,
+        flex: 1,
+        height: 44,
         backgroundColor: colors.surface,
         borderRadius: 12,
         borderWidth: 1.5,
@@ -595,20 +887,47 @@ const styles = StyleSheet.create({
         ...shadows.sm,
     },
     findParkingText: {
-        fontSize: 15,
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.primaryAccent,
+    },
+    shareListingBtn: {
+        flex: 1,
+        height: 44,
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: colors.primaryAccent,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...shadows.sm,
+    },
+    shareListingText: {
+        fontSize: 14,
         fontWeight: '600',
         color: colors.primaryAccent,
     },
 
     // Recent Bookings Section
+    recentBookingsHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: spacing.screenHorizontal,
+        marginTop: spacing.lg,
+        marginBottom: spacing.xs,
+    },
     sectionHeader: {
         ...typography.h4,
         fontSize: 18,
         fontWeight: '700',
         color: colors.textPrimary,
-        paddingHorizontal: spacing.screenHorizontal,
-        marginTop: spacing.lg,
-        marginBottom: spacing.md,
+    },
+    seeAllLink: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.primaryAccent,
     },
     bookingCard: {
         marginHorizontal: spacing.screenHorizontal,
@@ -682,6 +1001,9 @@ const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
         marginTop: 2,
     },
+    bookingChevron: {
+        marginLeft: 8,
+    },
     // Vendor Feature Tiles
     featuresSection: {
         marginTop: spacing.xl,
@@ -705,6 +1027,18 @@ const styles = StyleSheet.create({
         color: colors.primaryAccent,
         fontWeight: '600',
     },
+    simulatorSectionHeader: {
+        marginTop: spacing.lg,
+        marginBottom: spacing.sm,
+    },
+    simulatorSectionTitle: {
+        ...typography.label,
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
     featuresGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -714,22 +1048,23 @@ const styles = StyleSheet.create({
         width: '48.5%',
         backgroundColor: colors.surface,
         borderRadius: 14,
-        padding: spacing.md,
+        paddingVertical: 12,
+        paddingHorizontal: 10,
         flexDirection: 'row',
         alignItems: 'center',
         ...shadows.card,
     },
     featureTileIconWrap: {
-        width: 38,
-        height: 38,
+        width: 36,
+        height: 36,
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: spacing.sm,
+        marginRight: 8,
     },
     featureTileTextWrap: {
         flex: 1,
-        marginRight: 4,
+        marginRight: 2,
     },
     featureTileTitle: {
         ...typography.label,
