@@ -193,6 +193,7 @@ describe('Mobile Profile Extension Screens', () => {
       expect(queryByText('My Garage (Vehicles)')).toBeNull();
       expect(queryByText('Saved Favorites')).toBeNull();
       expect(queryByText('Parking Passes')).toBeNull();
+      expect(queryByText('Notifications')).toBeNull();
       expect(getByText('Edit Profile')).toBeTruthy();
       expect(getByText('Change Password')).toBeTruthy();
       expect(getByText('Delete Account')).toBeTruthy();

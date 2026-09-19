@@ -9,6 +9,26 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-19] - Streamline Menu & Profile Redundancies (<@U06FVANTNHL>)
+- **Remove Duplicate Account & Security Options (`Mobile/src/screens/Menu/MenuScreen.js`)**:
+  - Removed "Edit Profile", "Change Password", and "Log Out" menu items from the "Account & Security" section in `MenuScreen.js`, as these are already present in the "Profile Details" screen (`ProfileScreen.js`).
+  - Retained "Profile Details" as the clean single entry point to user profile and account management.
+  - Cleaned up unused `logout`, `isLoggingOut`, and `handleLogout` code in `MenuScreen.js`.
+- **Remove Redundant Notifications Option (`Mobile/src/screens/Profile/ProfileScreen.js`)**:
+  - Removed "Notifications" menu item from `ProfileScreen.js` ("Profile Details") since Notifications is already directly accessible from the main menus (`MenuScreen.js`).
+  - Cleaned up unused `useSelector` and `notificationUnreadCount` state in `ProfileScreen.js`.
+- **Automated Verification**:
+  - Updated `MenuScreen.test.js` and `ProfileScreens.test.js` to assert the removal of duplicate options.
+  - Verified targeted tests passed: `npm test -- --watchAll=false --testPathPattern="MenuScreen|ProfileScreens"` (13/13 tests passing).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Menu/MenuScreen.js`
+  - `Mobile/src/screens/Menu/__tests__/MenuScreen.test.js`
+  - `Mobile/src/screens/Profile/ProfileScreen.js`
+  - `Mobile/src/screens/Profile/__tests__/ProfileScreens.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - Staged, committed, and pushed to `origin/main` to trigger Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-19] - Remove Redundant Profile Screen Entry Points & Fix Profile Async Test Matcher (<@U06FVANTNHL>)
 - **Remove Redundant Entry Points (`Mobile/src/screens/Profile/ProfileScreen.js`)**:
   - Removed the `<Card>` container enclosing `My Garage (Vehicles) - Manage registered plates`, `Saved Favorites - Quick-book pinned locations`, and `Parking Passes - Active gate access tokens` from `ProfileScreen.js`.

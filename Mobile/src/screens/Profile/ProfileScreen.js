@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { deleteAccountThunk } from '../../store/slices/authSlice';
@@ -57,9 +57,6 @@ const ProfileScreen = ({ navigation }) => {
     const dispatch = useDispatch();
     const { user, logout, isAdmin, isCorporate, isVendor } = useAuth();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-    // Get unread count safely
-    const { unreadCount: notificationUnreadCount } = useSelector((s) => s.notification || { unreadCount: 0 });
 
     const handleLogout = useCallback(() => {
         if (isLoggingOut) {
@@ -187,12 +184,6 @@ const ProfileScreen = ({ navigation }) => {
                         icon="lock-closed-outline"
                         label="Change Password"
                         onPress={handleChangePassword}
-                    />
-                    <MenuItem
-                        icon="notifications-outline"
-                        label="Notifications"
-                        badge={notificationUnreadCount}
-                        onPress={() => navigation.navigate('Notifications')}
                     />
                 </Card>
 

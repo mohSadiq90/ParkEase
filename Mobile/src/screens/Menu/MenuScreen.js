@@ -3,8 +3,8 @@
  * Central navigation hub for Account, Garage, Messages, Corporate, and System Settings
  */
 
-import React, { useCallback, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet, Modal, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
@@ -65,8 +65,7 @@ const MenuItem = ({ icon, label, subtitle, onPress, badge = 0, danger = false })
 );
 
 const MenuScreen = ({ navigation }) => {
-    const { user, logout, isVendor, isAdmin, isCorporate } = useAuth();
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const { user, isVendor, isAdmin, isCorporate } = useAuth();
     const [builtWithModalVisible, setBuiltWithModalVisible] = useState(false);
     const { unreadCount: notificationUnreadCount } = useSelector((s) => s.notification || { unreadCount: 0 });
     const { unreadTotalCount: messageUnreadCount } = useSelector((s) => s.chat || { unreadTotalCount: 0 });
@@ -82,25 +81,6 @@ const MenuScreen = ({ navigation }) => {
 
     const avatarInitial1 = (user?.firstName?.[0] || displayName?.[0] || 'U').toUpperCase();
     const avatarInitial2 = (user?.lastName?.[0] || displayName?.split(' ')?.[1]?.[0] || '').toUpperCase();
-
-    const handleLogout = useCallback(() => {
-        if (isLoggingOut) return;
-        Alert.alert('Logout', 'Are you sure you want to logout?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Logout',
-                style: 'destructive',
-                onPress: async () => {
-                    try {
-                        setIsLoggingOut(true);
-                        await logout();
-                    } catch (error) {
-                        setIsLoggingOut(false);
-                    }
-                },
-            },
-        ]);
-    }, [logout, isLoggingOut]);
 
     return (
         <ScreenLayout scrollable>
@@ -328,25 +308,6 @@ const MenuScreen = ({ navigation }) => {
                     label="Profile Details"
                     subtitle="Name, email, phone number"
                     onPress={() => navigation.navigate('Profile')}
-                />
-                <MenuItem
-                    icon="create-outline"
-                    label="Edit Profile"
-                    subtitle="Update personal information"
-                    onPress={() => navigation.navigate('EditProfile')}
-                />
-                <MenuItem
-                    icon="lock-closed-outline"
-                    label="Change Password"
-                    subtitle="Update your security credentials"
-                    onPress={() => navigation.navigate('ChangePassword')}
-                />
-                <MenuItem
-                    icon="log-out-outline"
-                    label="Log Out"
-                    subtitle="Sign out of your account"
-                    danger
-                    onPress={handleLogout}
                 />
             </Card>
 

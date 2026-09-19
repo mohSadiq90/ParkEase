@@ -1,6 +1,5 @@
 import React from 'react';
-import { Alert } from 'react-native';
-import { fireEvent, act } from '@testing-library/react-native';
+import { fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../utils/test-utils';
 import MenuScreen from '../MenuScreen';
 
@@ -98,16 +97,10 @@ describe('MenuScreen', () => {
     expect(getByText('Profile Details')).toBeTruthy();
     fireEvent.press(getByText('Profile Details'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('Profile');
+    expect(queryByText('Edit Profile')).toBeNull();
+    expect(queryByText('Change Password')).toBeNull();
+    expect(queryByText('Log Out')).toBeNull();
 
-    expect(getByText('Edit Profile')).toBeTruthy();
-    fireEvent.press(getByText('Edit Profile'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('EditProfile');
-
-    expect(getByText('Change Password')).toBeTruthy();
-    fireEvent.press(getByText('Change Password'));
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('ChangePassword');
-
-    expect(getByText('Log Out')).toBeTruthy();
     expect(getByText('About & System')).toBeTruthy();
     expect(getByText('Built With')).toBeTruthy();
   });
@@ -203,26 +196,5 @@ describe('MenuScreen', () => {
 
     // Close via header close icon
     fireEvent.press(getByLabelText('Close Built With Modal'));
-  });
-
-  it('triggers Alert confirmation and handles logout on Press', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert');
-    const { getByText } = renderWithProviders(
-      <MenuScreen navigation={mockNavigation} />
-    );
-
-    fireEvent.press(getByText('Log Out'));
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Logout',
-      'Are you sure you want to logout?',
-      expect.any(Array)
-    );
-
-    const alertButtons = alertSpy.mock.calls[0][2];
-    const logoutButton = alertButtons.find((btn) => btn.text === 'Logout');
-    await act(async () => {
-      await logoutButton.onPress();
-    });
-    alertSpy.mockRestore();
   });
 });
