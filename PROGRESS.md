@@ -9,6 +9,24 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-19] - Remove Redundant Profile Screen Entry Points & Fix Profile Async Test Matcher (<@U06FVANTNHL>)
+- **Remove Redundant Entry Points (`Mobile/src/screens/Profile/ProfileScreen.js`)**:
+  - Removed the `<Card>` container enclosing `My Garage (Vehicles) - Manage registered plates`, `Saved Favorites - Quick-book pinned locations`, and `Parking Passes - Active gate access tokens` from `ProfileScreen.js`.
+  - Retained core user account management, admin console, email/phone display, password management, and notification settings.
+- **Fix Async Test Latency & Matcher in Profile Screens (`Mobile/src/screens/Profile/__tests__/ProfileScreens.test.js`)**:
+  - Replaced strict string matcher with regex matcher `/MH02AB1234/` for vehicle license plate query in `renders vehicles correctly from API`, eliminating test timeout and dropping execution time from ~8.5s failure down to ~590ms passing.
+  - Updated profile screen assertions to verify `My Garage (Vehicles)`, `Saved Favorites`, and `Parking Passes` are no longer rendered in `ProfileScreen`.
+- **Automated Verification**:
+  - Verified `ProfileScreens.test.js` (10/10 passing).
+  - Executed full Mobile test suite (`npm test -- --watchAll=false`) with 100% test pass rate.
+- **Key Files Modified**:
+  - `Mobile/src/screens/Profile/ProfileScreen.js`
+  - `Mobile/src/screens/Profile/__tests__/ProfileScreens.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - All test suites passing cleanly.
+  - Staged, committed, and pushed to `origin/main` to trigger Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-19] - Complete Feedback Fixes: Detail Screen Redundancy, Filter Pills Clipping & Kebab Menu Streamlining (<@U06FVANTNHL>)
 - **Consolidate Action Redundancy & Destructive Action Proximity (`Mobile/src/screens/Search/ParkingDetailScreen.js`)**:
   - Removed duplicate "Edit" and "Delete" buttons from the hero image overlay and the blue status banner, eliminating cognitive load and preventing accidental deletions next to the "Share" button.

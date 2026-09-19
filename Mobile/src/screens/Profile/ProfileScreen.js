@@ -150,33 +150,6 @@ const ProfileScreen = ({ navigation }) => {
                     </View>
                 </View>
 
-                {/* Features & Garage Menu - Each option appears only ONCE in its proper place */}
-                <Card style={{ marginBottom: spacing.md }}>
-                    <MenuItem
-                        icon="car-sport-outline"
-                        label="My Garage (Vehicles)"
-                        value="Manage registered plates"
-                        onPress={() => {
-                            try {
-                                navigation.navigate('Vehicles');
-                            } catch (_) {
-                                navigation.navigate('MyVehicles');
-                            }
-                        }}
-                    />
-                    <MenuItem
-                        icon="heart-outline"
-                        label="Saved Favorites"
-                        value="Quick-book pinned locations"
-                        onPress={() => navigation.navigate('Favorites')}
-                    />
-                    <MenuItem
-                        icon="ticket-outline"
-                        label="Parking Passes"
-                        value="Active gate access tokens"
-                        onPress={() => navigation.navigate('MyPasses')}
-                    />
-                </Card>
 
                 {/* Platform Admin Console (Only visible to Admin) */}
                 {isAdmin && (

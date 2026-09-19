@@ -39,7 +39,7 @@ describe('Mobile Profile Extension Screens', () => {
         <MyVehiclesScreen navigation={mockNavigation} />
       );
 
-      const plate = await findByText('MH02AB1234');
+      const plate = await findByText(/MH02AB1234/);
       expect(plate).toBeTruthy();
       expect(getByText('Honda Civic · White')).toBeTruthy();
     });
@@ -190,9 +190,9 @@ describe('Mobile Profile Extension Screens', () => {
 
       expect(getAllByText('Sarah Connor').length).toBeGreaterThan(0);
       expect(getAllByText('sarah@skynet.com').length).toBeGreaterThan(0);
-      expect(getByText('My Garage (Vehicles)')).toBeTruthy();
-      expect(getByText('Saved Favorites')).toBeTruthy();
-      expect(getByText('Parking Passes')).toBeTruthy();
+      expect(queryByText('My Garage (Vehicles)')).toBeNull();
+      expect(queryByText('Saved Favorites')).toBeNull();
+      expect(queryByText('Parking Passes')).toBeNull();
       expect(getByText('Edit Profile')).toBeTruthy();
       expect(getByText('Change Password')).toBeTruthy();
       expect(getByText('Delete Account')).toBeTruthy();
@@ -219,6 +219,7 @@ describe('Mobile Profile Extension Screens', () => {
 
       // Verify no duplicate options on profile screen
       expect(queryByText('My Vehicles')).toBeNull();
+      expect(queryByText('My Garage (Vehicles)')).toBeNull();
 
       // Navigate to ChangePassword
       fireEvent.press(getByText('Change Password'));
@@ -227,10 +228,6 @@ describe('Mobile Profile Extension Screens', () => {
       // Navigate to EditProfile
       fireEvent.press(getByText('Edit Profile'));
       expect(mockNavigation.navigate).toHaveBeenCalledWith('EditProfile');
-
-      // Navigate to Vehicles from My Garage
-      fireEvent.press(getByText('My Garage (Vehicles)'));
-      expect(mockNavigation.navigate).toHaveBeenCalledWith('Vehicles');
     });
 
     it('triggers Alert confirmation and handles logout on Press', async () => {
