@@ -21,6 +21,7 @@ import {
     ActivityIndicator,
     ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ import {
     deleteParkingThunk,
     updateParkingThunk,
 } from '../../store/slices/parkingSlice';
+import locationAutocompleteService, { toTitleCase } from '../../services/location/locationAutocompleteService';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import Card from '../../components/Common/Card';
 import EmptyState from '../../components/Common/EmptyState';
@@ -39,6 +41,22 @@ import StarRating from '../../components/Common/StarRating';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
 import { formatCurrency } from '../../utils/formatters';
 import { ParkingTypeLabels } from '../../utils/constants';
+
+const normalizeLocationText = (address, city) => {
+    const rawAddress = (address || '').trim();
+    const rawCity = (city || '').trim();
+
+    const resolvedAddress = locationAutocompleteService.resolveStandardizedPlace(rawAddress);
+    const resolvedCity = locationAutocompleteService.resolveStandardizedPlace(rawCity);
+
+    const normAddress = resolvedAddress ? resolvedAddress.primaryText : toTitleCase(rawAddress);
+    const normCity = resolvedCity ? (resolvedCity.city || resolvedCity.primaryText) : toTitleCase(rawCity);
+
+    if (normAddress && normCity && !normAddress.toLowerCase().includes(normCity.toLowerCase())) {
+        return `${normAddress}, ${normCity}`;
+    }
+    return normAddress || normCity || 'Location not specified';
+};
 
 const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, onDelete, onQuickEdit, onOpenKebab }) => {
     const thumbnailUri =
@@ -56,26 +74,54 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
 
     const hasReviews = Boolean(listing.totalReviews && listing.totalReviews > 0 && listing.averageRating);
 
+    // Differentiators: spot number, identifier, or category name
+    const spotDifferentiator = listing.spotNumber ? `Spot #${listing.spotNumber}` : (listing.spotIdentifier ? `Spot ${listing.spotIdentifier}` : null);
+
+    // Normalized location text to prevent "katraj, Pune" vs "Kartaj, Pune" inconsistency
+    const normalizedLocation = normalizeLocationText(listing.address, listing.city);
+
+    // Capacity & Occupancy disambiguation ("1 spot" with separate "Occupied: 0")
+    const totalSpotsCount = listing.totalSpots || 1;
+    const availableSpotsCount = listing.availableSpots !== undefined ? listing.availableSpots : totalSpotsCount;
+    const occupiedCount = Math.max(0, totalSpotsCount - availableSpotsCount);
+
     return (
         <Card
-            onPress={() => onEdit(listing)}
+            onPress={() => onView(listing)}
             accessibilityRole="button"
             accessibilityLabel={`Listing: ${listing.title}`}
             testID={`listing-card-${listing.id}`}
+            style={[listing.isActive === false && cardStyles.cardInactive]}
         >
             <View style={cardStyles.headerRow}>
-                {thumbnailUri ? (
-                    <Image
-                        source={{ uri: thumbnailUri }}
-                        style={cardStyles.thumb}
-                        resizeMode="cover"
-                        testID={`listing-thumb-${listing.id}`}
-                    />
-                ) : (
-                    <View style={cardStyles.thumbPlaceholder} testID={`listing-thumb-placeholder-${listing.id}`}>
-                        <Ionicons name="car-outline" size={24} color={colors.primary} />
-                    </View>
-                )}
+                <View style={cardStyles.thumbContainer}>
+                    {thumbnailUri ? (
+                        <Image
+                            source={{ uri: thumbnailUri }}
+                            style={cardStyles.thumb}
+                            resizeMode="cover"
+                            testID={`listing-thumb-${listing.id}`}
+                        />
+                    ) : (
+                        <View style={cardStyles.thumbPlaceholder} testID={`listing-thumb-placeholder-${listing.id}`}>
+                            <Ionicons name="car-outline" size={24} color={colors.primary} />
+                        </View>
+                    )}
+                    {/* Small edit affordance on the thumbnail so users can direct edit without consuming 50% of the card action row */}
+                    <TouchableOpacity
+                        style={cardStyles.thumbEditBadge}
+                        onPress={(e) => {
+                            e?.stopPropagation?.();
+                            onEdit(listing);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit ${listing.title}`}
+                        testID={`edit-listing-btn-${listing.id}`}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                        <Ionicons name="pencil" size={11} color={colors.white} />
+                    </TouchableOpacity>
+                </View>
 
                 <View style={cardStyles.headerInfo}>
                     <View style={cardStyles.titleChevronRow}>
@@ -90,10 +136,16 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                             testID={`edit-chevron-${listing.id}`}
                         />
                     </View>
+                    {spotDifferentiator && (
+                        <View style={cardStyles.differentiatorRow} testID={`differentiator-${listing.id}`}>
+                            <Ionicons name="pricetag-outline" size={11} color={colors.primary} />
+                            <Text style={cardStyles.differentiatorText}>{spotDifferentiator}</Text>
+                        </View>
+                    )}
                     <View style={cardStyles.locationRow}>
                         <Ionicons name="location-outline" size={13} color="#475569" />
                         <Text style={cardStyles.address} numberOfLines={1}>
-                            {listing.address}, {listing.city}
+                            {normalizedLocation}
                         </Text>
                     </View>
                 </View>
@@ -131,7 +183,7 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                         style={isToggleDisabled ? { opacity: 0.45 } : null}
                     />
 
-                    {/* Secondary Kebab Menu for Destructive & Secondary Options */}
+                    {/* Secondary Kebab Menu for Destructive, Duplicate & Secondary Options (Bumped to 44px touch target) */}
                     <TouchableOpacity
                         style={cardStyles.kebabBtn}
                         onPress={(e) => {
@@ -148,24 +200,31 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                 </View>
             </View>
 
-            {/* Prompt to upload actual photos instead of using illustrations */}
+            {/* Listing Completeness Indicator / Prompt to upload actual photos */}
             {!thumbnailUri && (
                 <TouchableOpacity
-                    style={cardStyles.photoPromptCard}
+                    style={cardStyles.completenessCard}
                     onPress={(e) => {
                         e?.stopPropagation?.();
                         onEdit(listing);
                     }}
-                    testID={`add-real-photo-prompt-${listing.id}`}
+                    testID={`completeness-indicator-${listing.id}`}
                     accessibilityRole="button"
-                    accessibilityLabel="Upload real photos of your parking space"
-                    activeOpacity={0.8}
+                    accessibilityLabel="Listing completeness 60%. Add photos to get 3x more bookings"
+                    activeOpacity={0.85}
                 >
-                    <Ionicons name="camera-outline" size={14} color="#B45309" />
-                    <Text style={cardStyles.photoPromptText}>
-                        Upload real photos of your space to build trust & bookings
-                    </Text>
-                    <Ionicons name="chevron-forward" size={13} color="#B45309" />
+                    <View style={cardStyles.completenessHeader}>
+                        <View style={cardStyles.completenessTitleRow} testID={`add-real-photo-prompt-${listing.id}`}>
+                            <Ionicons name="sparkles" size={13} color="#B45309" />
+                            <Text style={cardStyles.completenessTitle}>
+                                60% Complete • Add photos to get 3x more bookings
+                            </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={13} color="#B45309" />
+                    </View>
+                    <View style={cardStyles.progressBarBg}>
+                        <View style={cardStyles.progressBarFill} />
+                    </View>
                 </TouchableOpacity>
             )}
 
@@ -183,11 +242,17 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                 </View>
             )}
 
-            {/* Badges / Features */}
+            {/* Badges / Features (Includes Paused badge for inactive listings) */}
             <View style={cardStyles.badgesRow}>
                 <View style={cardStyles.chip}>
                     <Text style={cardStyles.chipText}>{typeLabel}</Text>
                 </View>
+                {listing.isActive === false && (
+                    <View style={[cardStyles.chip, cardStyles.pausedChip]} testID={`paused-badge-${listing.id}`}>
+                        <Ionicons name="pause-circle" size={11} color="#64748B" />
+                        <Text style={[cardStyles.chipText, { color: '#64748B', fontWeight: '600' }]}>Paused</Text>
+                    </View>
+                )}
                 {Boolean(listing.hasEvCharging) && (
                     <View style={[cardStyles.chip, cardStyles.evChip]}>
                         <Ionicons name="flash" size={11} color="#10B981" />
@@ -208,7 +273,7 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                 )}
             </View>
 
-            {/* Pricing & Availability Metrics (Clarified: Redundant 'Tap to edit' hints removed) */}
+            {/* Pricing & Capacity Metrics (Disambiguated: "1 spot" + "Occupied: 0") */}
             <View style={cardStyles.infoRow}>
                 <TouchableOpacity
                     style={cardStyles.infoCard}
@@ -234,7 +299,7 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                         onQuickEdit(listing, 'spots');
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Capacity: ${listing.availableSpots ?? listing.totalSpots} of ${listing.totalSpots} spots`}
+                    accessibilityLabel={`Capacity: ${totalSpotsCount} ${totalSpotsCount === 1 ? 'spot' : 'spots'}, Occupied: ${occupiedCount}`}
                     testID={`quick-edit-spots-${listing.id}`}
                     activeOpacity={0.85}
                 >
@@ -242,12 +307,36 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                         <Text style={cardStyles.infoLabel}>Capacity</Text>
                     </View>
                     <Text style={cardStyles.infoValue}>
-                        {listing.availableSpots ?? listing.totalSpots}/{listing.totalSpots} spots
+                        {totalSpotsCount} {totalSpotsCount === 1 ? 'spot' : 'spots'}
                     </Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Rating / Review Summary: Darkened for WCAG AA Contrast */}
+            {/* Value Addition: Performance Stats Row (Earnings, Occupancy, Bookings) */}
+            <View style={cardStyles.performanceRow} testID={`performance-stats-${listing.id}`}>
+                <View style={cardStyles.perfStat}>
+                    <Ionicons name="calendar-outline" size={12} color="#64748B" />
+                    <Text style={cardStyles.perfStatText}>
+                        <Text style={cardStyles.perfStatBold}>{listing.totalBookings ?? 0}</Text> bookings
+                    </Text>
+                </View>
+                <View style={cardStyles.perfDivider} />
+                <View style={cardStyles.perfStat}>
+                    <Ionicons name="cash-outline" size={12} color="#64748B" />
+                    <Text style={cardStyles.perfStatText}>
+                        <Text style={cardStyles.perfStatBold}>{formatCurrency(listing.totalEarnings ?? 0)}</Text> earned
+                    </Text>
+                </View>
+                <View style={cardStyles.perfDivider} />
+                <View style={cardStyles.perfStat}>
+                    <Ionicons name="pie-chart-outline" size={12} color="#64748B" />
+                    <Text style={cardStyles.perfStatText}>
+                        Occupied: <Text style={cardStyles.perfStatBold}>{occupiedCount}</Text>
+                    </Text>
+                </View>
+            </View>
+
+            {/* Rating / Review Summary: Empty-state nudge encouraging hosts to share listing */}
             <View style={cardStyles.footerRow}>
                 {hasReviews ? (
                     <View style={cardStyles.ratingRow} testID={`rating-summary-${listing.id}`}>
@@ -259,15 +348,17 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                 ) : (
                     <View style={cardStyles.noReviewsRow} testID={`no-reviews-${listing.id}`}>
                         <Ionicons name="chatbubble-outline" size={13} color="#475569" />
-                        <Text style={cardStyles.noReviewsText}>No reviews yet</Text>
+                        <Text style={cardStyles.noReviewsText}>
+                            No reviews yet • Share your listing to get your first review
+                        </Text>
                     </View>
                 )}
             </View>
 
-            {/* Primary Action Buttons: View & Edit (Destructive Delete relocated to Kebab menu to prevent accidental taps) */}
+            {/* Primary Action Button: Full-width View Details (Option A recommended - frees visual space) */}
             <View style={cardStyles.actionRow}>
                 <TouchableOpacity
-                    style={cardStyles.viewBtn}
+                    style={cardStyles.viewBtnFull}
                     onPress={(e) => {
                         e?.stopPropagation?.();
                         onView(listing);
@@ -276,22 +367,8 @@ const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, on
                     accessibilityLabel={`View ${listing.title}`}
                     testID={`view-listing-btn-${listing.id}`}
                 >
-                    <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
-                    <Text style={cardStyles.viewBtnText}>View</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={cardStyles.editBtn}
-                    onPress={(e) => {
-                        e?.stopPropagation?.();
-                        onEdit(listing);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit ${listing.title}`}
-                    testID={`edit-listing-btn-${listing.id}`}
-                >
-                    <Ionicons name="create-outline" size={16} color={colors.white} />
-                    <Text style={cardStyles.editBtnText}>Edit</Text>
+                    <Ionicons name="eye-outline" size={16} color={colors.primary} />
+                    <Text style={cardStyles.viewBtnFullText}>View Details</Text>
                 </TouchableOpacity>
             </View>
         </Card>
@@ -304,6 +381,9 @@ const cardStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: spacing.sm,
+    },
+    thumbContainer: {
+        position: 'relative',
     },
     thumb: {
         width: 52,
@@ -318,6 +398,19 @@ const cardStyles = StyleSheet.create({
         backgroundColor: colors.primarySoft || '#EEF2FF',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    thumbEditBadge: {
+        position: 'absolute',
+        bottom: -3,
+        right: -3,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: colors.white,
     },
     headerInfo: {
         flex: 1,
@@ -336,6 +429,17 @@ const cardStyles = StyleSheet.create({
     },
     chevron: {
         marginTop: 1,
+    },
+    differentiatorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+        marginTop: 1,
+    },
+    differentiatorText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: colors.primary,
     },
     locationRow: {
         flexDirection: 'row',
@@ -357,12 +461,59 @@ const cardStyles = StyleSheet.create({
         marginRight: 2,
     },
     kebabBtn: {
-        width: 32,
-        height: 32,
-        borderRadius: 8,
+        width: 44,
+        height: 44,
+        borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#F1F5F9',
+    },
+    cardInactive: {
+        opacity: 0.88,
+        backgroundColor: '#F8FAFC',
+        borderColor: '#E2E8F0',
+    },
+    pausedChip: {
+        backgroundColor: '#F1F5F9',
+    },
+    completenessCard: {
+        marginTop: spacing.xs,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: '#FEF3C7',
+        borderWidth: 1,
+        borderColor: '#FDE68A',
+        gap: 6,
+    },
+    completenessHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    completenessTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        flex: 1,
+    },
+    completenessTitle: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#92400E',
+        flex: 1,
+    },
+    progressBarBg: {
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#FDE68A',
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        width: '60%',
+        borderRadius: 2,
+        backgroundColor: '#D97706',
     },
     photoPromptCard: {
         flexDirection: 'row',
@@ -493,6 +644,36 @@ const cardStyles = StyleSheet.create({
         fontWeight: '700',
         fontSize: 14,
     },
+    performanceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: spacing.xs,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    perfStat: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    perfStatText: {
+        fontSize: 11,
+        color: '#64748B',
+    },
+    perfStatBold: {
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    perfDivider: {
+        width: 1,
+        height: 12,
+        backgroundColor: '#CBD5E1',
+    },
     footerRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -527,6 +708,23 @@ const cardStyles = StyleSheet.create({
         paddingTop: spacing.sm,
         borderTopWidth: 1,
         borderTopColor: colors.borderLight,
+    },
+    viewBtnFull: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.primarySoft || '#EEF2FF',
+        backgroundColor: colors.primarySoft || '#EEF2FF',
+    },
+    viewBtnFullText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: colors.primary,
     },
     viewBtn: {
         flex: 1,
@@ -588,12 +786,15 @@ const FILTERS = [
 
 const MyListingsScreen = ({ navigation, route }) => {
     const dispatch = useDispatch();
+    const insets = useSafeAreaInsets();
     const { myListings, listingsLoading, togglingListingIds = [] } = useSelector((s) => s.parking);
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     const initialFilter = route?.params?.filter || route?.params?.initialFilter || 'all';
     const [activeFilter, setActiveFilter] = useState(initialFilter);
+
+    const fabBottom = Math.max(insets?.bottom || 0, 16) + 20;
 
     // Quick Edit modal states
     const [quickEditModalVisible, setQuickEditModalVisible] = useState(false);
@@ -654,6 +855,20 @@ const MyListingsScreen = ({ navigation, route }) => {
     const handleEdit = useCallback(
         (listing) => {
             navigation.navigate('CreateParking', { editData: listing });
+        },
+        [navigation]
+    );
+
+    const handleDuplicate = useCallback(
+        (listing) => {
+            setKebabModalVisible(false);
+            if (!listing) return;
+            const duplicateData = {
+                ...listing,
+                id: undefined,
+                title: `${listing.title} (Copy)`,
+            };
+            navigation.navigate('CreateParking', { editData: duplicateData });
         },
         [navigation]
     );
@@ -898,7 +1113,7 @@ const MyListingsScreen = ({ navigation, route }) => {
                             onQuickEdit={handleOpenQuickEdit}
                         />
                     )}
-                    contentContainerStyle={styles.listContent}
+                    contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(insets?.bottom || 0, 16) + 220 }]}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}
@@ -932,9 +1147,9 @@ const MyListingsScreen = ({ navigation, route }) => {
                 />
             )}
 
-            {/* Floating Action Button (FAB) - Ergonomic Thumb Reach */}
+            {/* Floating Action Button (FAB) - Ergonomic Thumb Reach with Safe Area Offset */}
             <TouchableOpacity
-                style={styles.fab}
+                style={[styles.fab, { bottom: fabBottom }]}
                 onPress={handleAdd}
                 accessibilityRole="button"
                 accessibilityLabel="Add Parking Space"
@@ -1144,6 +1359,21 @@ const MyListingsScreen = ({ navigation, route }) => {
                                     <Ionicons name="close" size={20} color={colors.textSecondary} />
                                 </TouchableOpacity>
                             </View>
+
+                            <TouchableOpacity
+                                style={styles.kebabMenuItem}
+                                onPress={() => {
+                                    if (selectedKebabListing) handleDuplicate(selectedKebabListing);
+                                }}
+                                testID={selectedKebabListing ? `duplicate-listing-btn-${selectedKebabListing.id}` : 'duplicate-listing-btn'}
+                                accessibilityRole="button"
+                                accessibilityLabel="Duplicate this listing"
+                            >
+                                <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                                <Text style={styles.kebabMenuText}>Duplicate Listing</Text>
+                            </TouchableOpacity>
+
+                            <View style={styles.kebabDivider} />
 
                             <TouchableOpacity
                                 style={[styles.kebabMenuItem, styles.kebabDeleteMenuItem]}

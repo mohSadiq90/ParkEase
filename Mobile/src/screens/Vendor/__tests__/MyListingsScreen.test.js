@@ -116,7 +116,7 @@ describe('MyListingsScreen', () => {
     expect(getByTestId('toggle-switch-space-1')).toBeTruthy();
   });
 
-  it('navigates to CreateParking with editData when tapping listing card body', () => {
+  it('navigates to ParkingDetail when tapping listing card body (Option A)', () => {
     const { getByTestId } = renderWithProviders(
       <MyListingsScreen navigation={mockNavigation} route={{}} />,
       {
@@ -132,8 +132,9 @@ describe('MyListingsScreen', () => {
     const card = getByTestId('listing-card-space-1');
     fireEvent.press(card);
 
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {
-      editData: sampleListings[0],
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ParkingDetail', {
+      parkingId: 'space-1',
+      isOwnListing: true,
     });
   });
 
@@ -610,7 +611,7 @@ describe('MyListingsScreen', () => {
     expect(getByText('4.8 (14)')).toBeTruthy();
 
     expect(getByTestId('no-reviews-rev-space-2')).toBeTruthy();
-    expect(getByText('No reviews yet')).toBeTruthy();
+    expect(getByText(/No reviews yet/)).toBeTruthy();
     expect(queryByTestId('rating-summary-rev-space-2')).toBeNull();
   });
 
@@ -803,5 +804,137 @@ describe('MyListingsScreen', () => {
     expect(queryByTestId('kebab-view-btn')).toBeNull();
     expect(queryByTestId('kebab-edit-btn')).toBeNull();
     expect(queryByTestId('kebab-quick-edit-btn')).toBeNull();
+  });
+
+  it('opens kebab menu and navigates to CreateParking with duplicate data when tapping Duplicate Listing', () => {
+    const { getByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    // Press kebab button on space-1
+    fireEvent.press(getByTestId('listing-kebab-btn-space-1'));
+
+    // Duplicate Listing button is rendered in the kebab menu
+    const duplicateBtn = getByTestId('duplicate-listing-btn-space-1');
+    expect(duplicateBtn).toBeTruthy();
+    fireEvent.press(duplicateBtn);
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {
+      editData: expect.objectContaining({
+        title: 'Downtown Secure Garage (Copy)',
+        id: undefined,
+      }),
+    });
+  });
+
+  it('renders visual distinction (Paused badge) for inactive listings', () => {
+    const { getByTestId, queryByTestId } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: sampleListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    // Space-1 is active -> no paused badge
+    expect(queryByTestId('paused-badge-space-1')).toBeNull();
+    // Space-2 is inactive -> has paused badge
+    expect(getByTestId('paused-badge-space-2')).toBeTruthy();
+  });
+
+  it('renders disambiguated capacity and performance stats row (bookings, earnings, occupied)', () => {
+    const listingsWithStats = [
+      {
+        ...sampleListings[0],
+        totalSpots: 20,
+        availableSpots: 12,
+        totalBookings: 45,
+        totalEarnings: 3200,
+      },
+    ];
+
+    const { getByTestId, getByText } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: listingsWithStats,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    // Disambiguated capacity
+    expect(getByText('20 spots')).toBeTruthy();
+    // Performance stats row
+    expect(getByTestId('performance-stats-space-1')).toBeTruthy();
+    expect(getByText('45')).toBeTruthy();
+    expect(getByText('bookings')).toBeTruthy();
+    expect(getByText('8')).toBeTruthy(); // Occupied = 20 - 12 = 8
+  });
+
+  it('normalizes location spelling variations such as "katraj, Pune" to "Katraj, Pune"', () => {
+    const unnormalizedListings = [
+      {
+        ...sampleListings[0],
+        id: 'unnorm-1',
+        address: 'kartaj',
+        city: 'Pune',
+      },
+    ];
+
+    const { getByText } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: unnormalizedListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    // Standardized to Katraj, Pune
+    expect(getByText('Katraj, Pune')).toBeTruthy();
+  });
+
+  it('renders listing completeness indicator with prompt when listing has no photos', () => {
+    const noPhotoListings = [
+      {
+        ...sampleListings[0],
+        id: 'no-photo-space',
+        imageUrl: null,
+        imageUrls: [],
+      },
+    ];
+
+    const { getByTestId, getByText } = renderWithProviders(
+      <MyListingsScreen navigation={mockNavigation} route={{}} />,
+      {
+        preloadedState: {
+          parking: {
+            myListings: noPhotoListings,
+            listingsLoading: false,
+          },
+        },
+      }
+    );
+
+    expect(getByTestId('completeness-indicator-no-photo-space')).toBeTruthy();
+    expect(getByText(/60% Complete • Add photos to get 3x more bookings/)).toBeTruthy();
   });
 });

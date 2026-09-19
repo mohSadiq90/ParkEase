@@ -9,6 +9,35 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-19] - My Listings Screen Feedback: FAB Clearance, Action Streamlining, Completeness & Performance Stats (<@U06FVANTNHL>)
+- **FAB Clearance & Ergonomic Offset (`Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
+  - Dynamically positioned the "Add Space" FAB with safe area insets offset (`bottom: Math.max(insets?.bottom || 0, 16) + 20`).
+  - Increased `FlatList` content container bottom padding to `Math.max(insets?.bottom || 0, 16) + 220` so scrolling easily brings all listing cards and controls above the FAB.
+- **Option A Button Redundancy Resolution (`Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
+  - Streamlined the action row by removing the redundant 50%-width Edit button and promoting "View Details" to the full-width primary button.
+  - Set card row tap to navigate to `ParkingDetail` (where complete rich context lives), while adding an intuitive pencil icon affordance on the thumbnail for direct edits.
+- **Listing Completeness Indicator & Photo Trust Prompt (`Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
+  - Replaced the passive photo prompt with an interactive 60% completeness progress indicator ("60% Complete • Add photos to get 3x more bookings") to guide hosts toward high-converting listings.
+- **Performance Stats Row & Disambiguated Capacity (`Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
+  - Replaced ambiguous "1/1 spots" capacity display with clear spot count ("1 spot" / "20 spots") and separate occupancy calculation.
+  - Added dedicated Performance Stats row displaying total bookings count, total earnings (`₹`), and occupied spots count.
+- **Kebab Menu Enhancements: Duplicate Action & 44px Touch Target (`Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
+  - Bumped kebab menu (⋮) touch target to 44x44px for accessibility.
+  - Added "Duplicate Listing" action in the kebab menu to allow hosts to quickly replicate similar spaces with pre-filled details.
+- **Location Normalization & Inactive Visual Distinction (`Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
+  - Normalized location strings using `locationAutocompleteService` to eliminate spelling variations (e.g. "katraj, Pune" vs "Kartaj, Pune" -> "Katraj, Pune").
+  - Added distinct "Paused" chip and dimmed card styling for inactive listings.
+  - Updated review summary empty state to an encouraging nudge ("No reviews yet • Share your listing to get your first review").
+- **Automated Verification (`Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`)**:
+  - Updated existing tests and added 5 new unit tests verifying Option A navigation, duplicate listing action, visual paused badge, performance stats, location normalization, and completeness indicator.
+  - Ran targeted test suite: `npm test -- --watchAll=false --testPathPattern=MyListingsScreen` (32/32 tests passing).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Vendor/MyListingsScreen.js`
+  - `Mobile/src/screens/Vendor/__tests__/MyListingsScreen.test.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - Staged, committed, and pushed to `origin/main` to trigger Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-19] - Streamline Menu & Profile Redundancies (<@U06FVANTNHL>)
 - **Remove Duplicate Account & Security Options (`Mobile/src/screens/Menu/MenuScreen.js`)**:
   - Removed "Edit Profile", "Change Password", and "Log Out" menu items from the "Account & Security" section in `MenuScreen.js`, as these are already present in the "Profile Details" screen (`ProfileScreen.js`).
