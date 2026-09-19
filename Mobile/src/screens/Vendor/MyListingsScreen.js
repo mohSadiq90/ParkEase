@@ -39,7 +39,7 @@ import LoadingScreen from '../../components/Common/LoadingScreen';
 import { ListSkeleton } from '../../components/Common/ShimmerPlaceholder';
 import StarRating from '../../components/Common/StarRating';
 import { colors, spacing, typography, shadows } from '../../styles/globalStyles';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, isMemeOrPlaceholderUrl } from '../../utils/formatters';
 import { ParkingTypeLabels } from '../../utils/constants';
 
 const normalizeLocationText = (address, city) => {
@@ -59,11 +59,12 @@ const normalizeLocationText = (address, city) => {
 };
 
 const ListingCard = ({ listing, isToggling = false, onToggle, onEdit, onView, onDelete, onQuickEdit, onOpenKebab }) => {
-    const thumbnailUri =
+    const rawThumb =
         (typeof listing.imageUrl === 'string' && listing.imageUrl.trim() !== '') ? listing.imageUrl.trim() :
         (Array.isArray(listing.imageUrls) && listing.imageUrls.length > 0 && typeof listing.imageUrls[0] === 'string') ? listing.imageUrls[0] :
         (Array.isArray(listing.images) && listing.images.length > 0 && typeof listing.images[0] === 'string') ? listing.images[0] :
         null;
+    const thumbnailUri = isMemeOrPlaceholderUrl(rawThumb) ? null : rawThumb;
 
     const typeLabel = ParkingTypeLabels[listing.parkingType] || 'Standard';
 

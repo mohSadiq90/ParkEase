@@ -156,10 +156,11 @@ describe('ParkingDetailScreen', () => {
     expect(queryByTestId('owner-banner-edit-btn')).toBeNull();
     expect(queryByTestId('owner-banner-delete-btn')).toBeNull();
 
-    // Consolidated bottom bar actions
+    // Consolidated bottom bar actions: Edit Space + Share (No delete button in bottom bar)
     expect(getByText('Your Listing')).toBeTruthy();
     expect(getByTestId('edit-listing-bottom-button')).toBeTruthy();
-    expect(getByTestId('delete-listing-bottom-button')).toBeTruthy();
+    expect(getByTestId('share-listing-bottom-button')).toBeTruthy();
+    expect(queryByTestId('delete-listing-bottom-button')).toBeNull();
 
     fireEvent.press(getByTestId('edit-listing-bottom-button'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateParking', {
@@ -235,7 +236,7 @@ describe('ParkingDetailScreen', () => {
     });
   });
 
-  it('triggers delete confirmation and deletes parking space when tapping delete in sticky bottom bar', async () => {
+  it('triggers delete confirmation and deletes parking space when tapping delete in kebab menu', async () => {
     jest.spyOn(Alert, 'alert');
     apiClient.delete.mockResolvedValueOnce({
       data: { success: true },
@@ -285,12 +286,21 @@ describe('ParkingDetailScreen', () => {
 
     await findByText('Host Listing To Delete');
 
-    const deleteBtn = getByTestId('delete-listing-bottom-button');
-    fireEvent.press(deleteBtn);
+    // Open kebab menu from top toolbar
+    const kebabBtn = getByTestId('hero-kebab-btn');
+    fireEvent.press(kebabBtn);
+
+    // Verify Kebab modal options
+    expect(getByTestId('kebab-modal-backdrop')).toBeTruthy();
+    expect(getByTestId('kebab-share-option')).toBeTruthy();
+    expect(getByTestId('kebab-preview-option')).toBeTruthy();
+
+    const deleteOption = getByTestId('kebab-delete-option');
+    fireEvent.press(deleteOption);
 
     expect(Alert.alert).toHaveBeenCalledWith(
-      'Delete Parking Space',
-      expect.stringContaining('Host Listing To Delete'),
+      'Delete "Host Listing To Delete"?',
+      "This can't be undone.",
       expect.any(Array)
     );
 
@@ -303,5 +313,87 @@ describe('ParkingDetailScreen', () => {
         expect.stringContaining('spot-888')
       );
     });
+  });
+
+  it('renders neutral branded hero graphic, normalized location, map preview, EV rates, and owner reviews empty state', async () => {
+    const mockParking = {
+      data: {
+        id: 'spot-999',
+        title: 'Downtown Parking',
+        address: 'kartaj',
+        city: 'Pune',
+        state: 'Maharashtra',
+        averageRating: 0.0,
+        totalReviews: 0,
+        parkingType: 0,
+        availableSpots: 2,
+        totalSpots: 2,
+        hourlyRate: 5,
+        hasEvCharging: true,
+        evChargerCount: 1,
+        evPricingMode: 0,
+        evChargingRatePerHour: 30,
+        isLprEnabled: true,
+        ownerId: 'user-host-1',
+        isActive: true,
+      },
+    };
+
+    apiClient.get.mockImplementation((url) => {
+      if (url.includes('forecast')) {
+        return Promise.resolve({ success: true, data: {} });
+      }
+      if (url.includes('reviews')) {
+        return Promise.resolve({ data: { reviews: [] } });
+      }
+      return Promise.resolve({ data: { data: mockParking.data } });
+    });
+
+    const { findByText, getByTestId, getByText, getAllByText, queryByText } = renderWithProviders(
+      <ParkingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { parkingId: 'spot-999', isOwnListing: true } }}
+      />,
+      {
+        preloadedState: {
+          auth: {
+            user: { id: 'user-host-1', name: 'Host User' },
+            isAuthenticated: true,
+          },
+        },
+      }
+    );
+
+    await findByText('Downtown Parking');
+
+    // 1. Neutral branded illustrated parking graphic (No meme)
+    expect(getByTestId('neutral-parking-graphic')).toBeTruthy();
+    expect(getByText('PARKEASE BAY')).toBeTruthy();
+    expect(getByText('Verified Facility')).toBeTruthy();
+
+    // 2. Disambiguated capacity: "2 spots · 0 occupied"
+    expect(getByText('2 spots · 0 occupied')).toBeTruthy();
+
+    // 3. Location normalization: "Katraj, Pune" instead of typo "kartaj"
+    expect(getByTestId('parking-address-text')).toBeTruthy();
+    expect(getAllByText('Katraj, Pune').length).toBeGreaterThanOrEqual(1);
+
+    // 4. Map Preview with "Verify pin location" CTA
+    expect(getByTestId('map-preview-section')).toBeTruthy();
+    expect(getByTestId('verify-pin-btn')).toBeTruthy();
+    expect(getByText('Verify pin location')).toBeTruthy();
+
+    // 5. EV Charging: singular "1 bay" and explicit "(in addition to parking)"
+    expect(getByText(/Chargers:/)).toBeTruthy();
+    expect(getByText(/1 bay/)).toBeTruthy();
+    expect(getByText(/in addition to parking/)).toBeTruthy();
+
+    // 6. Rating: "No reviews" instead of "0.0 (0)"
+    expect(getByText('No reviews')).toBeTruthy();
+    expect(queryByText('0.0')).toBeNull();
+
+    // 7. Reviews: owner-specific empty state and hidden "See All"
+    expect(getByText('No reviews yet — share your listing to get bookings.')).toBeTruthy();
+    expect(queryByText('See All')).toBeNull();
   });
 });

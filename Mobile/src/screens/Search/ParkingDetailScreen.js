@@ -24,9 +24,26 @@ import { formatCurrency, formatDate, formatTime, getParkingImageUrls } from '../
 import { ParkingTypeLabels, PricingTypeLabels } from '../../utils/constants';
 import chatService from '../../services/chat/chatService';
 import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
+import locationAutocompleteService, { toTitleCase } from '../../services/location/locationAutocompleteService';
 
 const { width } = Dimensions.get('window');
 const HERO_HEIGHT = 300;
+
+const normalizeLocationText = (address, city) => {
+    const rawAddress = (address || '').trim();
+    const rawCity = (city || '').trim();
+
+    const resolvedAddress = locationAutocompleteService.resolveStandardizedPlace(rawAddress);
+    const resolvedCity = locationAutocompleteService.resolveStandardizedPlace(rawCity);
+
+    const normAddress = resolvedAddress ? resolvedAddress.primaryText : toTitleCase(rawAddress);
+    const normCity = resolvedCity ? (resolvedCity.city || resolvedCity.primaryText) : toTitleCase(rawCity);
+
+    if (normAddress && normCity && !normAddress.toLowerCase().includes(normCity.toLowerCase())) {
+        return `${normAddress}, ${normCity}`;
+    }
+    return normAddress || normCity || 'Location not specified';
+};
 
 const getForecastBuckets = (forecast) => {
     const buckets = forecast?.buckets || forecast?.forecast || forecast?.items || forecast;
@@ -63,6 +80,10 @@ const ParkingDetailScreen = ({ navigation, route }) => {
     const [selectedReview, setSelectedReview] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [submittingReply, setSubmittingReply] = useState(false);
+
+    // Owner Kebab Menu & Preview state
+    const [kebabMenuVisible, setKebabMenuVisible] = useState(false);
+    const [previewAsRenter, setPreviewAsRenter] = useState(false);
 
     const handleSendReply = async () => {
         if (!selectedReview || !replyText.trim()) return;
@@ -124,7 +145,7 @@ const ParkingDetailScreen = ({ navigation, route }) => {
         return () => clearInterval(intervalId);
     }, [imageUrls]);
 
-    const isOwnListing = Boolean(
+    const isOwnListingReal = Boolean(
         route?.params?.isOwnListing ||
         (user?.id && (
             (parking?.ownerId && String(parking.ownerId).trim().toLowerCase() === String(user.id).trim().toLowerCase()) ||
@@ -132,6 +153,7 @@ const ParkingDetailScreen = ({ navigation, route }) => {
             (parking?.vendorId && String(parking.vendorId).trim().toLowerCase() === String(user.id).trim().toLowerCase())
         ))
     );
+    const isOwnListing = isOwnListingReal && !previewAsRenter;
 
     const isListingActive = parking?.isActive !== undefined ? Boolean(parking.isActive) : true;
     const isTogglingActive = Boolean(togglingListingIds?.includes(parking?.id));
@@ -151,8 +173,8 @@ const ParkingDetailScreen = ({ navigation, route }) => {
     const handleDeleteListing = useCallback(() => {
         if (!parking?.id) return;
         Alert.alert(
-            'Delete Parking Space',
-            `Are you sure you want to permanently delete "${parking.title}"?`,
+            `Delete "${parking.title}"?`,
+            "This can't be undone.",
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -345,8 +367,25 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                             )}
                         </>
                     ) : (
-                        <View style={styles.heroPlaceholder}>
-                            <Ionicons name="car" size={60} color={colors.lightGray} />
+                        <View style={styles.neutralHeroContainer} testID="neutral-parking-graphic">
+                            <View style={styles.neutralHeroBackdrop}>
+                                <View style={styles.neutralHeroLot}>
+                                    <View style={styles.neutralLotLine} />
+                                    <View style={styles.neutralLotBay}>
+                                        <View style={styles.neutralLotPill}>
+                                            <Text style={styles.neutralLotPillText}>PARKEASE BAY</Text>
+                                        </View>
+                                        <View style={styles.neutralCarCircle}>
+                                            <Ionicons name="car-sport" size={54} color={colors.primary} />
+                                        </View>
+                                        <View style={styles.neutralLotBadge}>
+                                            <Ionicons name="shield-checkmark" size={14} color="#059669" />
+                                            <Text style={styles.neutralLotBadgeText}>Verified Facility</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.neutralLotLine} />
+                                </View>
+                            </View>
                         </View>
                     )}
 
@@ -368,25 +407,37 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                         >
                             <Ionicons name="share-outline" size={20} color={colors.white} />
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.heroBtn}
-                            onPress={handleToggleFavorite}
-                            disabled={favLoading}
-                            accessibilityRole="button"
-                            accessibilityLabel={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                            testID="hero-favorite-btn"
-                        >
-                            <Ionicons
-                                name={isFavorited ? 'heart' : 'heart-outline'}
-                                size={20}
-                                color={isFavorited ? '#EF4444' : colors.white}
-                            />
-                        </TouchableOpacity>
+                        {isOwnListing ? (
+                            <TouchableOpacity
+                                style={styles.heroBtn}
+                                onPress={() => setKebabMenuVisible(true)}
+                                accessibilityRole="button"
+                                accessibilityLabel="Listing Options"
+                                testID="hero-kebab-btn"
+                            >
+                                <Ionicons name="ellipsis-vertical" size={20} color={colors.white} />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.heroBtn}
+                                onPress={handleToggleFavorite}
+                                disabled={favLoading}
+                                accessibilityRole="button"
+                                accessibilityLabel={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                                testID="hero-favorite-btn"
+                            >
+                                <Ionicons
+                                    name={isFavorited ? 'heart' : 'heart-outline'}
+                                    size={20}
+                                    color={isFavorited ? '#EF4444' : colors.white}
+                                />
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {/* Price Badge */}
                     <View style={styles.heroPriceBadge}>
-                        <Text style={styles.heroPriceLabel}>STARTING FROM</Text>
+                        {!isOwnListing && <Text style={styles.heroPriceLabel}>STARTING FROM</Text>}
                         <View style={styles.heroPriceRow}>
                             <Text style={styles.heroPriceValue}>
                                 {formatCurrency(parking.hourlyRate)}
@@ -398,6 +449,20 @@ const ParkingDetailScreen = ({ navigation, route }) => {
 
                 {/* Content */}
                 <View style={styles.content}>
+                    {previewAsRenter && (
+                        <View style={styles.previewRenterBanner} testID="preview-renter-banner">
+                            <Ionicons name="eye-outline" size={16} color={colors.white} />
+                            <Text style={styles.previewRenterText}>Viewing as renter</Text>
+                            <TouchableOpacity
+                                style={styles.previewRenterExitBtn}
+                                onPress={() => setPreviewAsRenter(false)}
+                                testID="exit-preview-btn"
+                            >
+                                <Text style={styles.previewRenterExitText}>Exit Preview</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
                     {/* Type + Status Badge + Rating */}
                     <View style={styles.typeRatingRow}>
                         <View style={styles.typeBadge}>
@@ -428,23 +493,98 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                             </View>
                         )}
                         <View style={styles.ratingRow}>
-                            <Ionicons name="star" size={16} color="#F59E0B" />
-                            <Text style={styles.ratingText}>
-                                {parking.averageRating?.toFixed(1) || '0.0'}
-                            </Text>
-                            <Text style={styles.ratingCount}>({parking.totalReviews})</Text>
+                            {parking.totalReviews > 0 ? (
+                                <>
+                                    <Ionicons name="star" size={16} color="#F59E0B" />
+                                    <Text style={styles.ratingText}>
+                                        {parking.averageRating?.toFixed(1) || '0.0'}
+                                    </Text>
+                                    <Text style={styles.ratingCount}>({parking.totalReviews})</Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Ionicons name="star-outline" size={15} color={colors.textTertiary} />
+                                    <Text style={[styles.ratingCount, { fontSize: 13, color: colors.textTertiary }]}>No reviews</Text>
+                                </>
+                            )}
                         </View>
                     </View>
 
                     {/* Title */}
-                    <Text style={styles.title}>{parking.title}</Text>
+                    <Text style={styles.title} testID="parking-title">{parking.title}</Text>
 
                     {/* Address */}
                     <View style={styles.addressRow}>
                         <Ionicons name="location-outline" size={16} color={colors.textTertiary} />
-                        <Text style={styles.addressText}>
-                            {parking.address}, {parking.city}
+                        <Text style={styles.addressText} testID="parking-address-text">
+                            {normalizeLocationText(parking.address, parking.city)}
                         </Text>
+                    </View>
+
+                    {/* Location Map Preview */}
+                    <View style={styles.mapSection} testID="map-preview-section">
+                        <View style={styles.mapCard}>
+                            <View style={styles.mapVisualContainer}>
+                                <View style={styles.mapPlaceholderBg}>
+                                    <View style={styles.mapRoadHorizontal} />
+                                    <View style={styles.mapRoadVertical} />
+                                    <View style={styles.mapPinContainer}>
+                                        <View style={styles.mapPinPulse} />
+                                        <Ionicons name="location" size={28} color={colors.primary} />
+                                    </View>
+                                    <View style={styles.mapPinBadge}>
+                                        <Text style={styles.mapPinBadgeText} numberOfLines={1}>
+                                            Entrance Pin
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                            <View style={styles.mapFooter}>
+                                <View style={{ flex: 1, marginRight: 10 }}>
+                                    <Text style={styles.mapFooterAddress} numberOfLines={1}>
+                                        {normalizeLocationText(parking.address, parking.city)}
+                                    </Text>
+                                    <Text style={styles.mapFooterHint}>
+                                        {isOwnListing ? 'Precise entrance pin visible to renters' : 'Tap to open directions in maps'}
+                                    </Text>
+                                </View>
+                                {isOwnListing ? (
+                                    <TouchableOpacity
+                                        style={styles.mapActionBtn}
+                                        onPress={() => {
+                                            Alert.alert(
+                                                'Verify Pin Location',
+                                                `Pin coordinates: ${parking.latitude || 18.4575}, ${parking.longitude || 73.8677}\n\nAddress: ${normalizeLocationText(parking.address, parking.city)}\n\nWould you like to edit your listing to adjust the map pin?`,
+                                                [
+                                                    { text: 'Looks Good', style: 'cancel' },
+                                                    {
+                                                        text: 'Adjust Pin',
+                                                        onPress: () => navigation.navigate('CreateParking', { editData: parking }),
+                                                    },
+                                                ]
+                                            );
+                                        }}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Verify pin location"
+                                        testID="verify-pin-btn"
+                                    >
+                                        <Ionicons name="navigate-circle-outline" size={16} color={colors.primary} />
+                                        <Text style={styles.mapActionBtnText}>Verify pin location</Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.mapActionBtn}
+                                        onPress={handleShare}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Get Directions"
+                                        testID="get-directions-btn"
+                                    >
+                                        <Ionicons name="navigate-outline" size={16} color={colors.primary} />
+                                        <Text style={styles.mapActionBtnText}>Directions</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
                     </View>
 
                     {/* Own listing banner with Status Toggle */}
@@ -562,7 +702,7 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                         <View style={styles.quickInfoItem}>
                             <Ionicons name="car-outline" size={18} color={colors.primary} />
                             <Text style={styles.quickInfoText}>
-                                {parking.availableSpots}/{parking.totalSpots} spots
+                                {`${parking.totalSpots || 1} ${parking.totalSpots === 1 ? 'spot' : 'spots'} · ${Math.max(0, (parking.totalSpots || 0) - (parking.availableSpots ?? parking.totalSpots ?? 0))} occupied`}
                             </Text>
                         </View>
                         <View style={styles.quickInfoItem}>
@@ -582,10 +722,10 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                             </View>
                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
                                 <Text style={styles.description}>
-                                    ⚡ <Text style={{ fontWeight: '600' }}>Chargers:</Text> {parking.evChargerCount || 1} bays
+                                    ⚡ <Text style={{ fontWeight: '600' }}>Chargers:</Text> {parking.evChargerCount || 1} {(parking.evChargerCount || 1) === 1 ? 'bay' : 'bays'}
                                 </Text>
                                 <Text style={styles.description}>
-                                    💰 <Text style={{ fontWeight: '600' }}>Rate:</Text> {parking.evPricingMode === 1 ? `${formatCurrency(parking.evRatePerKwh || 18)}/kWh` : `${formatCurrency(parking.evChargingRatePerHour || 30)}/hr`}
+                                    💰 <Text style={{ fontWeight: '600' }}>EV Charging:</Text> {parking.evPricingMode === 1 ? `${formatCurrency(parking.evRatePerKwh || 18)}/kWh (in addition to parking)` : `${formatCurrency(parking.evChargingRatePerHour || 30)}/hr (in addition to parking)`}
                                 </Text>
                                 {parking.evIdleRatePerHour > 0 && (
                                     <Text style={styles.description}>
@@ -675,12 +815,14 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                             <Text style={styles.sectionTitle}>
                                 Reviews ({reviews.length})
                             </Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('ReviewsList', {
-                                parkingSpaceId: parkingId,
-                                parkingTitle: parking?.title,
-                            })}>
-                                <Text style={styles.seeAllText}>See All</Text>
-                            </TouchableOpacity>
+                            {reviews.length > 0 && (
+                                <TouchableOpacity onPress={() => navigation.navigate('ReviewsList', {
+                                    parkingSpaceId: parkingId,
+                                    parkingTitle: parking?.title,
+                                })}>
+                                    <Text style={styles.seeAllText}>See All</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                         {reviews.length > 0 ? (
                             reviews.slice(0, 2).map((review) => (
@@ -719,7 +861,9 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                             ))
                         ) : (
                             <Text style={{ fontSize: 14, color: colors.textTertiary, marginTop: 4 }}>
-                                No reviews yet. Be the first to book!
+                                {isOwnListing
+                                    ? 'No reviews yet — share your listing to get bookings.'
+                                    : 'No reviews yet. Be the first to book!'}
                             </Text>
                         )}
                     </View>
@@ -740,6 +884,16 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                             </View>
                         </View>
                         <TouchableOpacity
+                            style={styles.bottomShareBtn}
+                            onPress={handleShare}
+                            accessibilityRole="button"
+                            accessibilityLabel="Share Listing"
+                            testID="share-listing-bottom-button"
+                        >
+                            <Ionicons name="share-outline" size={18} color={colors.textPrimary} style={{ marginRight: 6 }} />
+                            <Text style={styles.bottomShareBtnText}>Share</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
                             style={[styles.bookBtn, styles.bottomEditBtn]}
                             onPress={() => navigation.navigate('CreateParking', { editData: parking })}
                             accessibilityRole="button"
@@ -747,17 +901,7 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                             testID="edit-listing-bottom-button"
                         >
                             <Ionicons name="create-outline" size={18} color={colors.white} style={{ marginRight: 6 }} />
-                            <Text style={styles.bookBtnText}>Edit</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.bottomDeleteBtn}
-                            onPress={handleDeleteListing}
-                            accessibilityRole="button"
-                            accessibilityLabel="Delete Listing"
-                            testID="delete-listing-bottom-button"
-                        >
-                            <Ionicons name="trash-outline" size={18} color={colors.error || '#EF4444'} style={{ marginRight: 4 }} />
-                            <Text style={styles.bottomDeleteBtnText}>Delete</Text>
+                            <Text style={styles.bookBtnText}>Edit Space</Text>
                         </TouchableOpacity>
                     </>
                 ) : (
@@ -838,6 +982,70 @@ const ParkingDetailScreen = ({ navigation, route }) => {
                         </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Owner Kebab Menu Modal */}
+            <Modal
+                visible={kebabMenuVisible}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setKebabMenuVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.kebabModalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setKebabMenuVisible(false)}
+                    testID="kebab-modal-backdrop"
+                >
+                    <View style={styles.kebabModalContent}>
+                        <View style={styles.kebabModalHeader}>
+                            <Text style={styles.kebabModalTitle}>Listing Options</Text>
+                            <TouchableOpacity onPress={() => setKebabMenuVisible(false)} testID="close-kebab-btn">
+                                <Ionicons name="close" size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.kebabMenuItem}
+                            onPress={() => {
+                                setKebabMenuVisible(false);
+                                handleShare();
+                            }}
+                            testID="kebab-share-option"
+                        >
+                            <Ionicons name="share-outline" size={20} color={colors.textPrimary} />
+                            <Text style={styles.kebabMenuItemText}>Share Listing</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.kebabMenuItem}
+                            onPress={() => {
+                                setKebabMenuVisible(false);
+                                setPreviewAsRenter((prev) => !prev);
+                            }}
+                            testID="kebab-preview-option"
+                        >
+                            <Ionicons name={previewAsRenter ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textPrimary} />
+                            <Text style={styles.kebabMenuItemText}>
+                                {previewAsRenter ? 'Exit Renter Preview' : 'Preview as Renter'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.kebabMenuDivider} />
+
+                        <TouchableOpacity
+                            style={[styles.kebabMenuItem, styles.kebabMenuItemDestructive]}
+                            onPress={() => {
+                                setKebabMenuVisible(false);
+                                handleDeleteListing();
+                            }}
+                            testID="kebab-delete-option"
+                        >
+                            <Ionicons name="trash-outline" size={20} color={colors.error || '#EF4444'} />
+                            <Text style={styles.kebabMenuItemTextDestructive}>Delete Parking Space</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
             </Modal>
         </View>
     );
@@ -1315,6 +1523,23 @@ const styles = StyleSheet.create({
         backgroundColor: colors.textPrimary,
         paddingHorizontal: 24,
     },
+    bottomShareBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 52,
+        borderRadius: 14,
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: 16,
+        marginRight: spacing.sm,
+    },
+    bottomShareBtnText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: colors.textPrimary,
+    },
     bottomDeleteBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1336,6 +1561,278 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: colors.white,
+    },
+    // Neutral Illustrated Parking Graphic
+    neutralHeroContainer: {
+        width,
+        height: HERO_HEIGHT,
+        backgroundColor: '#F1F5F9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    neutralHeroBackdrop: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
+    },
+    neutralHeroLot: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '85%',
+        height: '70%',
+        borderWidth: 2,
+        borderStyle: 'dashed',
+        borderColor: '#CBD5E1',
+        borderRadius: 20,
+        backgroundColor: '#FFFFFF',
+        padding: 16,
+        ...shadows.sm,
+    },
+    neutralLotLine: {
+        width: 4,
+        height: '80%',
+        backgroundColor: '#E2E8F0',
+        borderRadius: 2,
+    },
+    neutralLotBay: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+    },
+    neutralLotPill: {
+        backgroundColor: '#E0F2FE',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+        marginBottom: 10,
+    },
+    neutralLotPillText: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: colors.primary,
+        letterSpacing: 0.8,
+    },
+    neutralCarCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#EFF6FF',
+        borderWidth: 2,
+        borderColor: '#BFDBFE',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10,
+        ...shadows.sm,
+    },
+    neutralLotBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+    },
+    neutralLotBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#065F46',
+    },
+    // Preview Renter Banner
+    previewRenterBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#1E293B',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 10,
+        marginBottom: 16,
+    },
+    previewRenterText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.white,
+        marginLeft: 8,
+        flex: 1,
+    },
+    previewRenterExitBtn: {
+        backgroundColor: '#334155',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 6,
+    },
+    previewRenterExitText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.white,
+    },
+    // Map Preview Section
+    mapSection: {
+        marginBottom: 20,
+    },
+    mapCard: {
+        backgroundColor: colors.surface,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        overflow: 'hidden',
+        ...shadows.sm,
+    },
+    mapVisualContainer: {
+        height: 120,
+        backgroundColor: '#E2E8F0',
+        position: 'relative',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    mapPlaceholderBg: {
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#E2E8F0',
+        position: 'relative',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    mapRoadHorizontal: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        height: 24,
+        backgroundColor: '#CBD5E1',
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: '#94A3B8',
+    },
+    mapRoadVertical: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: 24,
+        backgroundColor: '#CBD5E1',
+        borderLeftWidth: 1,
+        borderRightWidth: 1,
+        borderColor: '#94A3B8',
+    },
+    mapPinContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2,
+    },
+    mapPinPulse: {
+        position: 'absolute',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(2, 132, 199, 0.25)',
+    },
+    mapPinBadge: {
+        position: 'absolute',
+        top: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: colors.border,
+        zIndex: 2,
+        ...shadows.xs,
+    },
+    mapPinBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    mapFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 12,
+        backgroundColor: colors.white,
+    },
+    mapFooterAddress: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    mapFooterHint: {
+        fontSize: 11,
+        color: colors.textTertiary,
+        marginTop: 2,
+    },
+    mapActionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        backgroundColor: colors.primarySoft,
+        borderRadius: 8,
+    },
+    mapActionBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.primary,
+    },
+    // Kebab Menu Modal
+    kebabModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'flex-end',
+    },
+    kebabModalContent: {
+        backgroundColor: colors.surface,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: spacing.lg,
+        paddingBottom: 36,
+        ...shadows.lg,
+    },
+    kebabModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.md,
+        paddingBottom: spacing.sm,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.borderLight,
+    },
+    kebabModalTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    kebabMenuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 14,
+    },
+    kebabMenuItemText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: colors.textPrimary,
+    },
+    kebabMenuDivider: {
+        height: 1,
+        backgroundColor: colors.borderLight,
+        marginVertical: 4,
+    },
+    kebabMenuItemDestructive: {
+        marginTop: 2,
+    },
+    kebabMenuItemTextDestructive: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: colors.error || '#EF4444',
     },
     modalOverlay: {
         flex: 1,

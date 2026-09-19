@@ -1,4 +1,4 @@
-import { formatCurrency, formatTimeRange, formatDate, formatTime } from '../formatters';
+import { formatCurrency, formatTimeRange, formatDate, formatTime, isMemeOrPlaceholderUrl, getParkingImageUrls } from '../formatters';
 
 describe('formatters', () => {
     describe('formatCurrency', () => {
@@ -54,6 +54,40 @@ describe('formatters', () => {
             const start = '2026-09-17T14:00:00.000Z';
             expect(formatTimeRange(start, null)).toBe(formatTime(start));
             expect(formatTimeRange(null, start)).toBe(formatTime(start));
+        });
+    });
+
+    describe('isMemeOrPlaceholderUrl', () => {
+        it('identifies tokenfeller and meme URLs', () => {
+            expect(isMemeOrPlaceholderUrl('https://example.com/tokenfeller-meme.jpg')).toBe(true);
+            expect(isMemeOrPlaceholderUrl('https://via.placeholder.com/800x600')).toBe(true);
+            expect(isMemeOrPlaceholderUrl('https://cdn.meme.xyz/pic.png')).toBe(true);
+        });
+
+        it('returns false for valid real photo URLs', () => {
+            expect(isMemeOrPlaceholderUrl('https://images.unsplash.com/photo-1506521781263-d8422e82f27a')).toBe(false);
+            expect(isMemeOrPlaceholderUrl('https://storage.googleapis.com/parkease/garage1.jpg')).toBe(false);
+        });
+    });
+
+    describe('getParkingImageUrls', () => {
+        it('filters out meme and placeholder URLs', () => {
+            const parking = {
+                imageUrls: [
+                    'https://images.unsplash.com/photo-1506521781263-d8422e82f27a',
+                    'https://example.com/tokenfeller.png',
+                ],
+            };
+            const result = getParkingImageUrls(parking);
+            expect(result).toEqual(['https://images.unsplash.com/photo-1506521781263-d8422e82f27a']);
+        });
+
+        it('returns empty array when all images are memes or placeholders', () => {
+            const parking = {
+                imageUrl: 'https://example.com/tokenfeller-meme.jpg',
+            };
+            const result = getParkingImageUrls(parking);
+            expect(result).toEqual([]);
         });
     });
 });

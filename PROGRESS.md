@@ -9,6 +9,45 @@
 
 ## 📅 Daily Work & Progress Log
 
+### [2026-09-19] - Details Screen Feedback: Neutral Hero Graphic, Kebab Menu Delete, Map Preview & Correctness Fixes (<@U06FVANTNHL>)
+- **Neutral Branded Illustrated Parking Graphic (`Mobile/src/screens/Search/ParkingDetailScreen.js`, `Mobile/src/utils/formatters.js`, `Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
+  - Eliminated meme / placeholder images by adding `isMemeOrPlaceholderUrl` and updating `getParkingImageUrls` to filter out tokenfeller/meme/placeholder URLs.
+  - Replaced the placeholder hero with a modern, neutral branded illustrated parking graphic (`PARKEASE BAY`, `car-sport` emblem, dashed lane markings, and `Verified Facility` badge).
+  - Retained the "Upload Real Photos for Trust" upgrade prompt underneath for space owners.
+  - Filtered meme URLs in `MyListingsScreen.js` thumbnail renderer as well.
+- **Relocate Delete Behind Kebab Menu (⋮) with Confirmation Sheet (`Mobile/src/screens/Search/ParkingDetailScreen.js`)**:
+  - Removed destructive Delete button completely from the bottom bar.
+  - Replaced the heart/favorite button on own listings with a 3-dot kebab menu button (`hero-kebab-btn`).
+  - Added Kebab Menu modal sheet featuring "Share Listing", "Preview as Renter" (with exit preview banner), and "Delete Parking Space" (destructive action).
+  - Implemented the requested strict confirmation dialog: `Delete "<Title>"?` — `This can't be undone.` with Cancel and Delete options.
+- **Bottom Bar Streamlining & Flat Pricing for Owners (`Mobile/src/screens/Search/ParkingDetailScreen.js`)**:
+  - Redesigned owner bottom bar to display flat rate (`₹5/hr`), secondary "Share" button, and primary "Edit Space" button.
+  - Removed renter-facing "STARTING FROM" label from hero price badge when viewing own listing.
+- **Location Normalization & Static Map Preview (`Mobile/src/screens/Search/ParkingDetailScreen.js`)**:
+  - Integrated `locationAutocompleteService.resolveStandardizedPlace` to standardize location strings and fix typos (e.g. "kartaj" -> "Katraj, Pune").
+  - Added static Map Preview section with street grid lines, entrance pin badge, normalized address, and owner CTA "Verify pin location" (or renter CTA "Directions").
+- **Correctness Bugs & Copy Fixes (`Mobile/src/screens/Search/ParkingDetailScreen.js`)**:
+  - Disambiguated capacity display: formatted as `2 spots · 0 occupied` instead of ambiguous `2/2 spots`.
+  - Fixed grammar bug on EV chargers: `1 bay` vs `2 bays` using singular/plural logic.
+  - Clarified EV pricing relationship: `EV Charging: ₹30/hr (in addition to parking)`.
+  - Replaced meaningless `0.0 (0)` header rating with `No reviews` when `totalReviews === 0`.
+  - Updated reviews section empty state for owners: `No reviews yet — share your listing to get bookings.`
+  - Hid "See All" link in reviews section when `reviews.length === 0`.
+  - Confirmed LPR and EV blocks are visible to both renters and owners, and verified feature chips on listing cards.
+- **Automated Verification (`Mobile/src/screens/Search/__tests__/ParkingDetailScreen.test.js`, `Mobile/src/utils/__tests__/formatters.test.js`)**:
+  - Added unit tests for `isMemeOrPlaceholderUrl` and `getParkingImageUrls`.
+  - Updated `ParkingDetailScreen.test.js` to assert kebab menu delete flow, bottom bar actions, neutral hero graphic, capacity disambiguation, location normalization, map preview, and owner review copy.
+  - Ran targeted test suites: `npm test -- --watchAll=false --testPathPattern="ParkingDetailScreen|formatters|MyListingsScreen"` (49/49 tests passing).
+- **Key Files Modified**:
+  - `Mobile/src/screens/Search/ParkingDetailScreen.js`
+  - `Mobile/src/screens/Search/__tests__/ParkingDetailScreen.test.js`
+  - `Mobile/src/utils/formatters.js`
+  - `Mobile/src/utils/__tests__/formatters.test.js`
+  - `Mobile/src/screens/Vendor/MyListingsScreen.js`
+  - `PROGRESS.md`
+- **Current Status & Next Steps**:
+  - Staged, committed, and pushed to `origin/main` to trigger Android Release APK build & Firebase App Distribution pipeline.
+
 ### [2026-09-19] - My Listings Screen Feedback: FAB Clearance, Action Streamlining, Completeness & Performance Stats (<@U06FVANTNHL>)
 - **FAB Clearance & Ergonomic Offset (`Mobile/src/screens/Vendor/MyListingsScreen.js`)**:
   - Dynamically positioned the "Add Space" FAB with safe area insets offset (`bottom: Math.max(insets?.bottom || 0, 16) + 20`).

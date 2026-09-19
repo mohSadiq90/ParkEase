@@ -158,24 +158,38 @@ export const formatRating = (rating) => {
 };
 
 /**
- * Get an array of image URLs for a parking space, with a fallback
+ * Check if a URL is a meme, mock placeholder, or generic placeholder
+ * @param {string} url
+ * @returns {boolean}
+ */
+export const isMemeOrPlaceholderUrl = (url) => {
+    if (!url || typeof url !== 'string') return true;
+    const lower = url.toLowerCase().trim();
+    if (!lower || lower.startsWith('data:image/svg')) return false;
+    return (
+        lower.includes('tokenfeller') ||
+        lower.includes('meme') ||
+        lower.includes('via.placeholder.com') ||
+        lower.includes('placeholder.com')
+    );
+};
+
+/**
+ * Get an array of image URLs for a parking space, filtering out memes and placeholders
  * @param {Object} parking
  * @returns {Array<string>}
  */
 export const getParkingImageUrls = (parking) => {
-    if (!parking) return ['https://via.placeholder.com/800x600?text=No+Image'];
+    if (!parking) return [];
     
+    let raw = [];
     if (Array.isArray(parking.imageUrls) && parking.imageUrls.length > 0) {
-        return parking.imageUrls;
+        raw = parking.imageUrls;
+    } else if (Array.isArray(parking.images) && parking.images.length > 0) {
+        raw = parking.images;
+    } else if (typeof parking.imageUrl === 'string' && parking.imageUrl.trim() !== '') {
+        raw = [parking.imageUrl];
     }
     
-    if (Array.isArray(parking.images) && parking.images.length > 0) {
-        return parking.images;
-    }
-
-    if (typeof parking.imageUrl === 'string' && parking.imageUrl.trim() !== '') {
-        return [parking.imageUrl];
-    }
-    
-    return ['https://via.placeholder.com/800x600?text=No+Image'];
+    return raw.filter((url) => !isMemeOrPlaceholderUrl(url));
 };
