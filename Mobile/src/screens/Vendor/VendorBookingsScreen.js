@@ -126,68 +126,73 @@ const VendorBookingsScreen = ({ navigation, route }) => {
 
     const renderBooking = ({ item }) => {
         const hasPendingExtension = item.hasPendingExtension || item.extensionStatus === 'Pending' || item.pendingExtension;
+        const isDeemphasized = [BookingStatus.Cancelled, BookingStatus.Rejected].includes(item.status);
 
         return (
-            <Card onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id, isVendor: true })} activeOpacity={0.7}>
-                <View style={styles.cardHeader}>
+            <Card onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id, isVendor: true })} activeOpacity={0.7} style={[isDeemphasized && { opacity: 0.6 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.bookingTitle}>{item.userName}</Text>
-                        <Text style={styles.parkingName}>{item.vehicleNumber || item.bookingReference}</Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                        <Badge status={item.status} />
-                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={{ marginTop: 4 }} />
-                    </View>
-                </View>
-
-                <View style={styles.detailRow}>
-                    <View style={styles.detailItem}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.textTertiary} />
-                        <Text style={styles.detailText}>{formatDate(item.startDateTime)}</Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                        <Ionicons name="time-outline" size={14} color={colors.textTertiary} />
-                        <Text style={styles.detailText}>{formatTimeRange(item.startDateTime, item.endDateTime)}</Text>
-                    </View>
-                    <Text style={styles.amount}>{formatCurrency(item.totalAmount)}</Text>
-                </View>
-
-                {/* Extension Request Banner for Vendor */}
-                {hasPendingExtension && (
-                    <View style={styles.extensionBox}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
-                            <Ionicons name="time" size={16} color={colors.warningDark} />
-                            <Text style={styles.extensionTitle}>Extension Requested</Text>
+                        <View style={styles.cardHeader}>
+                            <View style={{ flex: 1, paddingRight: spacing.sm }}>
+                                <Text style={styles.bookingTitle} numberOfLines={1}>{item.userName}</Text>
+                                <Text style={styles.parkingName}>{item.vehicleNumber || item.bookingReference}</Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end' }}>
+                                <Badge status={item.status} />
+                            </View>
                         </View>
-                        <Text style={styles.extensionSubtitle}>
-                            Driver requested end: {item.pendingEndDateTime ? formatDateTime(item.pendingEndDateTime) : 'Additional time'}
-                        </Text>
-                        <View style={styles.actionRow}>
-                            <Button
-                                title="Approve Extension"
-                                onPress={() => handleApproveExtension(item.id)}
-                                size="sm"
-                                style={{ flex: 1 }}
-                                icon={<Ionicons name="checkmark" size={16} color={colors.white} />}
-                            />
-                            <Button
-                                title="Decline"
-                                onPress={() => handleRejectExtension(item.id)}
-                                size="sm"
-                                variant="outline"
-                                style={{ flex: 1 }}
-                            />
-                        </View>
-                    </View>
-                )}
 
-                {/* Actions for pending bookings */}
-                {item.status === BookingStatus.Pending && (
-                    <View style={styles.actionRow}>
-                        <Button title="Approve" onPress={() => handleApprove(item.id)} size="sm" style={{ flex: 1 }} icon={<Ionicons name="checkmark" size={18} color={colors.white} />} />
-                        <Button title="Reject" onPress={() => handleReject(item.id)} size="sm" variant="danger" style={{ flex: 1 }} icon={<Ionicons name="close" size={18} color={colors.white} />} />
+                        <View style={styles.detailRow}>
+                            <View style={styles.detailItem}>
+                                <Ionicons name="calendar-outline" size={14} color={colors.textTertiary} />
+                                <Text style={styles.detailText}>{formatDate(item.startDateTime)}</Text>
+                            </View>
+                            <View style={styles.detailItem}>
+                                <Ionicons name="time-outline" size={14} color={colors.textTertiary} />
+                                <Text style={styles.detailText}>{formatTimeRange(item.startDateTime, item.endDateTime)}</Text>
+                            </View>
+                            <Text style={styles.amount}>{formatCurrency(item.totalAmount)}</Text>
+                        </View>
+
+                        {/* Extension Request Banner for Vendor */}
+                        {hasPendingExtension && (
+                            <View style={styles.extensionBox}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
+                                    <Ionicons name="time" size={16} color={colors.warningDark} />
+                                    <Text style={styles.extensionTitle}>Extension Requested</Text>
+                                </View>
+                                <Text style={styles.extensionSubtitle}>
+                                    Driver requested end: {item.pendingEndDateTime ? formatDateTime(item.pendingEndDateTime) : 'Additional time'}
+                                </Text>
+                                <View style={styles.actionRow}>
+                                    <Button
+                                        title="Approve Extension"
+                                        onPress={() => handleApproveExtension(item.id)}
+                                        size="sm"
+                                        style={{ flex: 1 }}
+                                        icon={<Ionicons name="checkmark" size={16} color={colors.white} />}
+                                    />
+                                    <Button
+                                        title="Decline"
+                                        onPress={() => handleRejectExtension(item.id)}
+                                        size="sm"
+                                        variant="outline"
+                                        style={{ flex: 1 }}
+                                    />
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Actions for pending bookings */}
+                        {item.status === BookingStatus.Pending && (
+                            <View style={styles.actionRow}>
+                                <Button title="Approve" onPress={() => handleApprove(item.id)} size="sm" style={{ flex: 1 }} icon={<Ionicons name="checkmark" size={18} color={colors.white} />} />
+                                <Button title="Reject" onPress={() => handleReject(item.id)} size="sm" variant="danger" style={{ flex: 1 }} icon={<Ionicons name="close" size={18} color={colors.white} />} />
+                            </View>
+                        )}
                     </View>
-                )}
+                    <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} style={{ marginLeft: spacing.sm }} />
+                </View>
             </Card>
         );
     };
@@ -202,7 +207,8 @@ const VendorBookingsScreen = ({ navigation, route }) => {
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.filterRow, { paddingRight: spacing.screenHorizontal * 2 }]}
+                fadingEdgeLength={50}
+                contentContainerStyle={[styles.filterRow, { paddingRight: spacing.screenHorizontal * 3 }]}
                 style={styles.filterRowScroll}
             >
                 {FILTERS.map((filter, idx) => {
@@ -220,7 +226,7 @@ const VendorBookingsScreen = ({ navigation, route }) => {
                             style={[styles.filterTab, activeFilter === idx && styles.filterTabActive]}
                         >
                             <Text style={[styles.filterTabText, activeFilter === idx && styles.filterTabTextActive]}>
-                                {filter.label} {count != null ? `(${count})` : ''}
+                                {filter.label} <Text style={{ color: activeFilter === idx ? colors.primary : colors.textTertiary }}>{count != null ? `(${count})` : ''}</Text>
                             </Text>
                         </TouchableOpacity>
                     );

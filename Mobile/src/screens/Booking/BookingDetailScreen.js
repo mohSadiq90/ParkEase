@@ -359,7 +359,7 @@ const BookingDetailScreen = ({ navigation, route }) => {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={[styles.headerTitle, { flex: 1, marginLeft: spacing.md }]}>Booking Details</Text>
+                    <Text style={[styles.headerTitle, { flex: 1, marginLeft: spacing.md, includeFontPadding: false, textAlignVertical: 'center' }]}>Booking Details</Text>
                 </View>
 
                 <View style={styles.content}>
@@ -375,9 +375,9 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         <TouchableOpacity onPress={() => {
                             Clipboard.setStringAsync(booking.bookingReference);
                             Alert.alert('Copied', 'Booking reference copied to clipboard');
-                        }} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        }} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, padding: spacing.xs, minHeight: 44, minWidth: 44, justifyContent: 'center' }}>
                             <Text style={styles.refCode}>Ref: {booking.bookingReference}</Text>
-                            <Ionicons name="copy-outline" size={14} color={colors.textTertiary} />
+                            <Ionicons name="copy-outline" size={16} color={colors.textTertiary} />
                         </TouchableOpacity>
                     </Card>
 
@@ -564,7 +564,11 @@ const BookingDetailScreen = ({ navigation, route }) => {
                         {durationHours > 0 && (
                             <View style={{ marginBottom: spacing.xs }}>
                                 <Text style={{ ...typography.bodySmall, color: colors.textSecondary }}>
-                                    Duration: {durationHours} hr{durationHours > 1 ? 's' : ''} × {formatCurrency(ratePerHour)}/hr
+                                    {booking.pricingType === 1 ? (
+                                        `Duration: ${Math.max(1, Math.round(durationHours / 24))} day(s) × ${formatCurrency(booking.totalAmount / Math.max(1, Math.round(durationHours / 24)))}/day`
+                                    ) : (
+                                        `Duration: ${durationHours} hr${durationHours > 1 ? 's' : ''} × ${formatCurrency(ratePerHour)}/hr`
+                                    )}
                                 </Text>
                             </View>
                         )}
@@ -671,7 +675,7 @@ const BookingDetailScreen = ({ navigation, route }) => {
                     </View>
 
                     {/* Vendor Operations Section */}
-                    {isVendorUser || isFacilityHost ? (
+                    {(isVendorUser || isFacilityHost) && ([BookingStatus.Confirmed, BookingStatus.InProgress, BookingStatus.Completed].includes(booking.status) || valetInfo.isRequested || valetInfo.isInProgress || valetInfo.isReady) ? (
                     <Card style={styles.vendorCard}>
                         <View style={styles.vendorHeader}>
                             <Ionicons name="business-outline" size={20} color={colors.primary} />

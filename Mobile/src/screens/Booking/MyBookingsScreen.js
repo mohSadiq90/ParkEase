@@ -93,35 +93,40 @@ const MyBookingsScreen = ({ navigation, route }) => {
         return false;
     });
 
-    const renderBookingItem = ({ item }) => (
-        <Card onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })} activeOpacity={0.7} style={styles.bookingCard}>
-            <View style={styles.cardHeader}>
-                <Text style={styles.bookingTitle} numberOfLines={1}>{item.parkingSpaceTitle}</Text>
-                <View style={{ alignItems: 'flex-end' }}>
-                    <Badge status={item.status} />
-                    <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={{ marginTop: 4 }} />
+    const renderBookingItem = ({ item }) => {
+        const isDeemphasized = [BookingStatus.Cancelled, BookingStatus.Rejected].includes(item.status);
+        return (
+            <Card onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })} activeOpacity={0.7} style={[styles.bookingCard, isDeemphasized && { opacity: 0.6 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flex: 1 }}>
+                        <View style={styles.cardHeader}>
+                            <Text style={styles.bookingTitle} numberOfLines={1}>{item.parkingSpaceTitle}</Text>
+                            <Badge status={item.status} />
+                        </View>
+                        <View style={styles.cardBody}>
+                            <View style={styles.infoRow}>
+                                <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
+                                <Text style={styles.infoText} numberOfLines={1}>{item.parkingSpaceAddress || 'N/A'}</Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                                <Ionicons name="calendar-outline" size={14} color={colors.textTertiary} />
+                                <Text style={styles.infoText}>{formatDate(item.startDateTime)}</Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                                <Ionicons name="time-outline" size={14} color={colors.textTertiary} />
+                                <Text style={styles.infoText}>{formatTimeRange(item.startDateTime, item.endDateTime)}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.cardFooter}>
+                            <Text style={styles.refCode}>Ref: {item.bookingReference}</Text>
+                            <Text style={styles.amount}>{formatCurrency(item.totalAmount)}</Text>
+                        </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} style={{ marginLeft: spacing.sm }} />
                 </View>
-            </View>
-            <View style={styles.cardBody}>
-                <View style={styles.infoRow}>
-                    <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
-                    <Text style={styles.infoText} numberOfLines={1}>{item.parkingSpaceAddress || 'N/A'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                    <Ionicons name="calendar-outline" size={14} color={colors.textTertiary} />
-                    <Text style={styles.infoText}>{formatDate(item.startDateTime)}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                    <Ionicons name="time-outline" size={14} color={colors.textTertiary} />
-                    <Text style={styles.infoText}>{formatTimeRange(item.startDateTime, item.endDateTime)}</Text>
-                </View>
-            </View>
-            <View style={styles.cardFooter}>
-                <Text style={styles.refCode}>Ref: {item.bookingReference}</Text>
-                <Text style={styles.amount}>{formatCurrency(item.totalAmount)}</Text>
-            </View>
-        </Card>
-    );
+            </Card>
+        );
+    };
 
     return (
         <ScreenLayout>
@@ -134,7 +139,8 @@ const MyBookingsScreen = ({ navigation, route }) => {
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.filterRow, { paddingRight: spacing.screenHorizontal * 2 }]}
+                fadingEdgeLength={50}
+                contentContainerStyle={[styles.filterRow, { paddingRight: spacing.screenHorizontal * 3 }]}
                 style={styles.filterRowScroll}
             >
                 {FILTERS.map((filter, idx) => {
@@ -152,7 +158,7 @@ const MyBookingsScreen = ({ navigation, route }) => {
                             style={[styles.filterTab, activeFilter === idx && styles.filterTabActive]}
                         >
                             <Text style={[styles.filterTabText, activeFilter === idx && styles.filterTabTextActive]}>
-                                {filter.label} {count != null ? `(${count})` : ''}
+                                {filter.label} <Text style={{ color: activeFilter === idx ? colors.primary : colors.textTertiary }}>{count != null ? `(${count})` : ''}</Text>
                             </Text>
                         </TouchableOpacity>
                     );

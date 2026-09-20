@@ -1,4 +1,18 @@
 ## [2026-09-20] - Booking List & Details UI/UX Overhaul
+
+- **Features & Enhancements**:
+  - UI Polishing for Booking flows: addressed user feedback on tab counts color, clipping, chevron vertical centering on list cards, copy icon touch targets, and button hierarchy (Cancel booking made outline).
+- **Bug Fixes & Refactoring**:
+  - Fixed Pricing math contradiction in BookingDetailScreen (Daily pricing correctly shows as `days × rate/day`).
+  - Fixed empty Host & Vendor Controls card by properly gating the entire section.
+  - De-emphasized cancelled/rejected booking cards with reduced opacity.
+  - Fixed Back button vs Title alignment in details screen.
+- **Key Files Modified**:
+  - `Mobile/src/screens/Booking/BookingDetailScreen.js`
+  - `Mobile/src/screens/Booking/MyBookingsScreen.js`
+  - `Mobile/src/screens/Vendor/VendorBookingsScreen.js`
+- **Current Status & Next Steps**:
+  - Verified layout fixes and conditional logic for vendor cards.
 - **Features & Enhancements**: Added "Pay Now" button, Duration & Rate display, and "Copy Ref" feature on Booking Details. Added right chevron affordances on list cards.
 - **Bug Fixes & Refactoring**: Fixed time duration formatting bug where identical times on different dates collapsed. Gated Host/Vendor "Assign Bay" controls behind Paid/Confirmed status. Rounded standard currency display to whole rupees while preserving exact decimals in tax receipts. Renamed Cancelled tab and fixed clipping.
 - **Key Files Changed**: `BookingDetailScreen.js`, `VendorBookingsScreen.js`, `MyBookingsScreen.js`, `formatters.js`, `package.json`.
