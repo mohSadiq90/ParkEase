@@ -36,7 +36,7 @@ describe('VendorBookingsScreen', () => {
 
     apiClient.get.mockResolvedValueOnce({ data: mockBookings });
 
-    const { getByText, findByText } = renderWithProviders(
+    const { getByText, findByText, getByTestId } = renderWithProviders(
       <VendorBookingsScreen navigation={mockNavigation} />
     );
 
@@ -65,7 +65,7 @@ describe('VendorBookingsScreen', () => {
 
     apiClient.get.mockResolvedValueOnce({ data: mockBookings });
 
-    const { getByText, findByText } = renderWithProviders(
+    const { getByText, findByText, getByTestId } = renderWithProviders(
       <VendorBookingsScreen navigation={mockNavigation} />
     );
 
@@ -112,7 +112,7 @@ describe('VendorBookingsScreen', () => {
 
     apiClient.get.mockResolvedValueOnce({ data: mockBookings });
 
-    const { getByText, findByText } = renderWithProviders(
+    const { getByText, findByText, getByTestId } = renderWithProviders(
       <VendorBookingsScreen navigation={mockNavigation} />
     );
 
@@ -136,15 +136,15 @@ describe('VendorBookingsScreen', () => {
   it('renders all filter tabs including Cancelled and Pending', async () => {
     apiClient.get.mockResolvedValueOnce({ data: { data: { bookings: [] } } });
 
-    const { getByText, findByText } = renderWithProviders(
+    const { getByText, findByText, getByTestId } = renderWithProviders(
       <VendorBookingsScreen navigation={mockNavigation} />
     );
 
     expect(await findByText('Bookings')).toBeTruthy();
-    expect(getByText('All')).toBeTruthy();
-    expect(getByText('Pending')).toBeTruthy();
-    expect(getByText('Active')).toBeTruthy();
-    expect(getByText('Completed')).toBeTruthy();
+    expect(getByTestId('filter-tab-all')).toBeTruthy();
+    expect(getByTestId('filter-tab-pending')).toBeTruthy();
+    expect(getByTestId('filter-tab-active')).toBeTruthy();
+    expect(getByTestId('filter-tab-completed')).toBeTruthy();
     expect(getByText('Cancelled')).toBeTruthy();
   });
 
@@ -188,7 +188,7 @@ describe('VendorBookingsScreen', () => {
     expect(getByText('Pending Payment')).toBeTruthy();
 
     // Filter by Cancelled
-    fireEvent.press(getByTestId('filter-tab-cancelled'));
+    fireEvent.press(getByTestId('filter-tab-cancelled / rejected'));
 
     // Spot D (Cancelled) should be visible, Spot C (Pending Payment) should be filtered out
     expect(getByText('Spot D')).toBeTruthy();

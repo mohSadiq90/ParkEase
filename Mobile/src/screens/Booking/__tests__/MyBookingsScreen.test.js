@@ -34,7 +34,7 @@ describe('MyBookingsScreen', () => {
 
     apiClient.get.mockResolvedValueOnce({ data: mockBookings });
 
-    const { getByText, findByText } = renderWithProviders(
+    const { getByText, findByText, getByTestId } = renderWithProviders(
       <MyBookingsScreen navigation={mockNavigation} />
     );
 
@@ -87,16 +87,16 @@ describe('MyBookingsScreen', () => {
   it('renders all filter tabs including Pending and Cancelled', async () => {
     apiClient.get.mockResolvedValueOnce({ data: { data: { bookings: [] } } });
 
-    const { getByText, findByText } = renderWithProviders(
+    const { getByText, findByText, getByTestId } = renderWithProviders(
       <MyBookingsScreen navigation={mockNavigation} />
     );
 
     expect(await findByText('My Bookings')).toBeTruthy();
-    expect(getByText('All')).toBeTruthy();
-    expect(getByText('Pending')).toBeTruthy();
-    expect(getByText('Active')).toBeTruthy();
-    expect(getByText('Completed')).toBeTruthy();
-    expect(getByText('Cancelled')).toBeTruthy();
+    expect(getByTestId('filter-tab-all')).toBeTruthy();
+    expect(getByTestId('filter-tab-pending')).toBeTruthy();
+    expect(getByTestId('filter-tab-active')).toBeTruthy();
+    expect(getByTestId('filter-tab-completed')).toBeTruthy();
+    expect(getByTestId('filter-tab-cancelled / rejected')).toBeTruthy();
   });
 
   it('filters bookings by Pending and displays 2 decimal currency formatting', async () => {

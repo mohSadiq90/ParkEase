@@ -505,7 +505,7 @@ describe('Automated Flow Tests: Authentication & Role-Based Navigation', () => {
         await findByText('Driver Member');
 
         // Press Log Out button
-        const logoutButton = getByText('Log Out');
+        const logoutButton = getByText('Logout');
         fireEvent.press(logoutButton);
 
         // Confirmation Alert pops up

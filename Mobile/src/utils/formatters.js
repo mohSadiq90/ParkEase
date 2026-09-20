@@ -10,12 +10,18 @@
  * @returns {string}
  */
 export const formatCurrency = (amount, currency = 'INR', options = {}) => {
+    const isExact = options.exact || options.minimumFractionDigits === 2;
     if (amount == null || isNaN(amount)) {
-        return options.exact ? '₹0.00' : '₹0';
+        return isExact ? '₹0.00' : '₹0';
     }
-    const num = options.exact ? Number(amount) : Math.round(Number(amount));
-    const minDigits = options.exact ? 2 : 0;
-    const maxDigits = options.exact ? 2 : 0;
+    
+    const amountNum = Number(amount);
+    const hasDecimals = amountNum % 1 !== 0;
+    const shouldShowDecimals = isExact || hasDecimals;
+    
+    const num = isExact ? amountNum : (hasDecimals ? amountNum : Math.round(amountNum));
+    const minDigits = options.minimumFractionDigits !== undefined ? options.minimumFractionDigits : (shouldShowDecimals ? 2 : 0);
+    const maxDigits = options.maximumFractionDigits !== undefined ? options.maximumFractionDigits : (shouldShowDecimals ? 2 : 0);
 
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',

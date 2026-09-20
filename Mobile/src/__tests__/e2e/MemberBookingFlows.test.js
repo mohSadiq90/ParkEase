@@ -196,7 +196,7 @@ describe('Member Discovery & Booking End-to-End Flows', () => {
             // Spot loaded
             const title = await findByText('Downtown Secure Garage');
             expect(title).toBeTruthy();
-            expect(getByText(/100 Main St/i)).toBeTruthy();
+            expect(getAllByText(/100 Main St/i)[0]).toBeTruthy();
 
             // Check Book Now button press navigates to BookParking
             const bookButton = getByText('Book Now');
