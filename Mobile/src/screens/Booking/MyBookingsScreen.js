@@ -40,7 +40,7 @@ const FILTERS = [
         stringMatches: ['COMPLETED'],
     },
     {
-        label: 'Cancelled',
+        label: 'Cancelled / Rejected',
         value: [BookingStatus.Cancelled, BookingStatus.Rejected, BookingStatus.Expired],
         stringMatches: ['CANCELLED', 'CANCELED', 'REJECTED', 'EXPIRED'],
     },
@@ -94,10 +94,13 @@ const MyBookingsScreen = ({ navigation, route }) => {
     });
 
     const renderBookingItem = ({ item }) => (
-        <Card onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })} style={styles.bookingCard}>
+        <Card onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })} activeOpacity={0.7} style={styles.bookingCard}>
             <View style={styles.cardHeader}>
                 <Text style={styles.bookingTitle} numberOfLines={1}>{item.parkingSpaceTitle}</Text>
-                <Badge status={item.status} />
+                <View style={{ alignItems: 'flex-end' }}>
+                    <Badge status={item.status} />
+                    <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={{ marginTop: 4 }} />
+                </View>
             </View>
             <View style={styles.cardBody}>
                 <View style={styles.infoRow}>
@@ -131,21 +134,29 @@ const MyBookingsScreen = ({ navigation, route }) => {
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterRow}
+                contentContainerStyle={[styles.filterRow, { paddingRight: spacing.screenHorizontal * 2 }]}
                 style={styles.filterRowScroll}
             >
-                {FILTERS.map((filter, idx) => (
-                    <TouchableOpacity
-                        key={idx}
-                        testID={`filter-tab-${filter.label.toLowerCase()}`}
-                        onPress={() => setActiveFilter(idx)}
-                        style={[styles.filterTab, activeFilter === idx && styles.filterTabActive]}
-                    >
-                        <Text style={[styles.filterTabText, activeFilter === idx && styles.filterTabTextActive]}>
-                            {filter.label}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+                {FILTERS.map((filter, idx) => {
+                    const count = filter.value === null ? bookingsList.length : bookingsList.filter(b => {
+                        if (Array.isArray(filter.value)) return filter.value.includes(b.status);
+                        if (b.status === filter.value) return true;
+                        if (typeof b.status === 'string' && filter.stringMatches) return filter.stringMatches.includes(b.status.toUpperCase());
+                        return false;
+                    }).length;
+                    return (
+                        <TouchableOpacity
+                            key={idx}
+                            testID={`filter-tab-${filter.label.toLowerCase()}`}
+                            onPress={() => setActiveFilter(idx)}
+                            style={[styles.filterTab, activeFilter === idx && styles.filterTabActive]}
+                        >
+                            <Text style={[styles.filterTabText, activeFilter === idx && styles.filterTabTextActive]}>
+                                {filter.label} {count != null ? `(${count})` : ''}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
             </ScrollView>
 
             {/* List */}

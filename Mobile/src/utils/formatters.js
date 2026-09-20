@@ -11,16 +11,11 @@
  */
 export const formatCurrency = (amount, currency = 'INR', options = {}) => {
     if (amount == null || isNaN(amount)) {
-        return options.minimumFractionDigits === 2 ? '₹0.00' : '₹0';
+        return options.exact ? '₹0.00' : '₹0';
     }
-    const num = Number(amount);
-    const hasFraction = num % 1 !== 0;
-    const minDigits = options.minimumFractionDigits !== undefined
-        ? options.minimumFractionDigits
-        : (hasFraction ? 2 : 0);
-    const maxDigits = options.maximumFractionDigits !== undefined
-        ? options.maximumFractionDigits
-        : 2;
+    const num = options.exact ? Number(amount) : Math.round(Number(amount));
+    const minDigits = options.exact ? 2 : 0;
+    const maxDigits = options.exact ? 2 : 0;
 
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
@@ -45,16 +40,15 @@ export const formatTimeRange = (start, end) => {
     const startTime = formatTime(start);
     const endTime = formatTime(end);
 
-    // If start and end times are identical, display single time
-    if (startTime === endTime) {
-        return startTime;
-    }
-
-    // Edge case: multi-day booking
     const startDateStr = formatDate(start);
     const endDateStr = formatDate(end);
     if (startDateStr && endDateStr && startDateStr !== endDateStr) {
         return `${startTime} - ${endDateStr} ${endTime}`;
+    }
+
+    // If start and end times are identical on the same day, display single time
+    if (startTime === endTime) {
+        return startTime;
     }
 
     return `${startTime} - ${endTime}`;

@@ -1,3 +1,9 @@
+## [2026-09-20] - Booking List & Details UI/UX Overhaul
+- **Features & Enhancements**: Added "Pay Now" button, Duration & Rate display, and "Copy Ref" feature on Booking Details. Added right chevron affordances on list cards.
+- **Bug Fixes & Refactoring**: Fixed time duration formatting bug where identical times on different dates collapsed. Gated Host/Vendor "Assign Bay" controls behind Paid/Confirmed status. Rounded standard currency display to whole rupees while preserving exact decimals in tax receipts. Renamed Cancelled tab and fixed clipping.
+- **Key Files Changed**: `BookingDetailScreen.js`, `VendorBookingsScreen.js`, `MyBookingsScreen.js`, `formatters.js`, `package.json`.
+- **Status**: Completed UI feedback validation phase fixes.
+
 # ParkEase Progress & Daily Work Tracker 🚗
 
 ## Project Context

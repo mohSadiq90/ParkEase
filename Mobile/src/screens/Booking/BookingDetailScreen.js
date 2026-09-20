@@ -5,6 +5,7 @@
 
 import React, { useEffect, useCallback, useState } from 'react';
 import { View, Text, ScrollView, Alert, TouchableOpacity, StyleSheet, Modal, Linking, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { 
@@ -345,25 +346,39 @@ const BookingDetailScreen = ({ navigation, route }) => {
     const valetInfo = getValetStatusInfo(booking.valetStatus);
 
     const currentEnd = new Date(booking.endDateTime);
+    const start = new Date(booking.startDateTime);
+    const durationHours = Math.round((currentEnd - start) / 3600000 * 100) / 100;
+    const ratePerHour = durationHours > 0 ? (booking.totalAmount / durationHours) : 0;
     const extendedEndDate = new Date(currentEnd.getTime() + extendHours * 3600000);
 
     return (
         <ScreenLayout>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Header */}
-                <View style={styles.header}>
+                <View style={[styles.header, { justifyContent: 'flex-start' }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Booking Details</Text>
-                    <View style={{ width: 40 }} />
+                    <Text style={[styles.headerTitle, { flex: 1, marginLeft: spacing.md }]}>Booking Details</Text>
                 </View>
 
                 <View style={styles.content}>
                     {/* Status Banner */}
                     <Card style={styles.statusCard}>
-                        <Badge status={booking.status} />
-                        <Text style={styles.refCode}>Ref: {booking.bookingReference}</Text>
+                        {booking.status === BookingStatus.Pending ? (
+                            <TouchableOpacity onPress={() => Alert.alert('Payment Due', 'Please complete your payment within the next 15 minutes to secure this booking.')}>
+                                <Badge status={booking.status} />
+                            </TouchableOpacity>
+                        ) : (
+                            <Badge status={booking.status} />
+                        )}
+                        <TouchableOpacity onPress={() => {
+                            Clipboard.setStringAsync(booking.bookingReference);
+                            Alert.alert('Copied', 'Booking reference copied to clipboard');
+                        }} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Text style={styles.refCode}>Ref: {booking.bookingReference}</Text>
+                            <Ionicons name="copy-outline" size={14} color={colors.textTertiary} />
+                        </TouchableOpacity>
                     </Card>
 
                     {/* Pending Extension Notice */}
@@ -481,7 +496,7 @@ const BookingDetailScreen = ({ navigation, route }) => {
                     {/* Parking Info */}
                     <Card>
                         <Text style={styles.sectionTitle}>Parking Location</Text>
-                        <Text style={styles.parkingTitle}>{booking.parkingSpaceTitle}</Text>
+                        <Text style={styles.parkingTitle} numberOfLines={1}>{booking.parkingSpaceTitle}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                             <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
                             <Text style={styles.parkingAddress}>{booking.parkingSpaceAddress || 'N/A'}</Text>
@@ -546,6 +561,13 @@ const BookingDetailScreen = ({ navigation, route }) => {
                     {/* Payment */}
                     <Card style={styles.paymentCard}>
                         <Text style={styles.sectionTitle}>Payment</Text>
+                        {durationHours > 0 && (
+                            <View style={{ marginBottom: spacing.xs }}>
+                                <Text style={{ ...typography.bodySmall, color: colors.textSecondary }}>
+                                    Duration: {durationHours} hr{durationHours > 1 ? 's' : ''} × {formatCurrency(ratePerHour)}/hr
+                                </Text>
+                            </View>
+                        )}
                         <View style={styles.totalRow}>
                             <Text style={styles.totalLabel}>Total Amount</Text>
                             <Text style={styles.totalValue}>{formatCurrency(booking.totalAmount)}</Text>
@@ -561,6 +583,17 @@ const BookingDetailScreen = ({ navigation, route }) => {
 
                     {/* Primary Lifecycle Actions */}
                     <View style={styles.actions}>
+                        {/* 0. Pay Now Action */}
+                        {(booking.status === BookingStatus.Pending || booking.status === BookingStatus.AwaitingPayment) && (
+                            <Button
+                                title="Pay Now"
+                                onPress={() => navigation.navigate('PaymentScreen', { bookingId: booking.id, amount: booking.totalAmount, isOverstay: false })}
+                                variant="primary"
+                                loading={actionLoading}
+                                icon={<Ionicons name="card-outline" size={20} color={colors.white} />}
+                            />
+                        )}
+
                         {/* 1. Check-In Action */}
                         {isConfirmed && (
                             <Button
@@ -638,6 +671,7 @@ const BookingDetailScreen = ({ navigation, route }) => {
                     </View>
 
                     {/* Vendor Operations Section */}
+                    {isVendorUser || isFacilityHost ? (
                     <Card style={styles.vendorCard}>
                         <View style={styles.vendorHeader}>
                             <Ionicons name="business-outline" size={20} color={colors.primary} />
@@ -647,14 +681,16 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             Manage indoor bay assignment and valet retrieval operations.
                         </Text>
                         <View style={styles.vendorBtnGroup}>
-                            <Button
-                                title="Assign Bay"
-                                testID="assign-bay-btn"
-                                onPress={openAssignBayModal}
-                                variant="outline"
-                                loading={actionLoading}
-                                icon={<Ionicons name="grid-outline" size={18} color={colors.primary} />}
-                            />
+                            {[BookingStatus.Confirmed, BookingStatus.InProgress, BookingStatus.Completed].includes(booking.status) && (
+                                <Button
+                                    title="Assign Bay"
+                                    testID="assign-bay-btn"
+                                    onPress={openAssignBayModal}
+                                    variant="outline"
+                                    loading={actionLoading}
+                                    icon={<Ionicons name="grid-outline" size={18} color={colors.primary} />}
+                                />
+                            )}
                             {valetInfo.isRequested && (
                                 <Button
                                     title="Acknowledge Valet (Vendor)"
@@ -687,6 +723,7 @@ const BookingDetailScreen = ({ navigation, route }) => {
                             )}
                         </View>
                     </Card>
+                    ) : null}
                 </View>
             </ScrollView>
 
@@ -821,25 +858,25 @@ const BookingDetailScreen = ({ navigation, route }) => {
                                 </View>
                                 <View style={styles.receiptRow}>
                                     <Text style={styles.receiptLabel}>Base Parking Fee</Text>
-                                    <Text style={styles.receiptVal}>{formatCurrency(Math.max(0, (booking.totalAmount || 0) * 0.82))}</Text>
+                                    <Text style={styles.receiptVal}>{formatCurrency(Math.max(0, (booking.totalAmount || 0) * 0.82), 'INR', { exact: true })}</Text>
                                 </View>
                                 <View style={styles.receiptRow}>
                                     <Text style={styles.receiptLabel}>CGST (9%)</Text>
-                                    <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09)}</Text>
+                                    <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09, 'INR', { exact: true })}</Text>
                                 </View>
                                 <View style={styles.receiptRow}>
                                     <Text style={styles.receiptLabel}>SGST (9%)</Text>
-                                    <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09)}</Text>
+                                    <Text style={styles.receiptVal}>{formatCurrency((booking.totalAmount || 0) * 0.09, 'INR', { exact: true })}</Text>
                                 </View>
                                 <View style={styles.receiptRow}>
                                     <Text style={styles.receiptLabel}>Convenience / Platform Fee</Text>
-                                    <Text style={styles.receiptVal}>{formatCurrency(0)}</Text>
+                                    <Text style={styles.receiptVal}>{formatCurrency(0, 'INR', { exact: true })}</Text>
                                 </View>
                                 <View style={styles.receiptDivider} />
                                 <View style={styles.receiptRow}>
                                     <Text style={[styles.receiptLabel, { fontWeight: '700', color: colors.textPrimary }]}>Total Paid (Incl. GST)</Text>
                                     <Text style={[styles.receiptVal, { fontWeight: '700', color: colors.primary, fontSize: 16 }]}>
-                                        {formatCurrency(booking.totalAmount)}
+                                        {formatCurrency(booking.totalAmount, 'INR', { exact: true })}
                                     </Text>
                                 </View>
                                 <View style={styles.receiptRow}>
