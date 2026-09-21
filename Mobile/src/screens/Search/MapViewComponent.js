@@ -23,10 +23,13 @@ const MapViewComponent = ({ parkings, initialRegion }) => {
     useEffect(() => {
         if (parkings && parkings.length > 0 && mapRef.current) {
             // Extract coordinates
-            const coordinates = parkings.filter(p => p.latitude && p.longitude).map(p => ({
-                latitude: p.latitude,
-                longitude: p.longitude
-            }));
+            const coordinates = parkings
+                .filter(p => p.latitude != null && p.longitude != null)
+                .map(p => ({
+                    latitude: parseFloat(p.latitude),
+                    longitude: parseFloat(p.longitude)
+                }))
+                .filter(c => !isNaN(c.latitude) && !isNaN(c.longitude));
 
             if (coordinates.length > 0) {
                 // Add a small delay to ensure map is ready
@@ -51,21 +54,27 @@ const MapViewComponent = ({ parkings, initialRegion }) => {
                 showsUserLocation={true}
                 showsMyLocationButton={true}
             >
-                {parkings.filter(p => p.latitude && p.longitude).map((parking) => (
-                    <Marker
-                        key={parking.id}
-                        coordinate={{
-                            latitude: parking.latitude,
-                            longitude: parking.longitude,
-                        }}
-                        title={parking.title}
-                        description={`${formatCurrency(parking.hourlyRate)}/hr - ${parking.availableSpots} spots`}
-                        onCalloutPress={() => {
-                            navigation.navigate('ParkingDetail', { parkingId: parking.id });
-                        }}
-                        pinColor={parking.availableSpots > 0 ? colors.primary : colors.danger}
-                    />
-                ))}
+                {parkings.filter(p => p.latitude != null && p.longitude != null).map((parking) => {
+                    const lat = parseFloat(parking.latitude);
+                    const lng = parseFloat(parking.longitude);
+                    if (isNaN(lat) || isNaN(lng)) return null;
+                    
+                    return (
+                        <Marker
+                            key={parking.id}
+                            coordinate={{
+                                latitude: lat,
+                                longitude: lng,
+                            }}
+                            title={parking.title}
+                            description={`${formatCurrency(parking.hourlyRate)}/hr - ${parking.availableSpots} spots`}
+                            onCalloutPress={() => {
+                                navigation.navigate('ParkingDetail', { parkingId: parking.id });
+                            }}
+                            pinColor={parking.availableSpots > 0 ? colors.primary : colors.danger}
+                        />
+                    );
+                })}
             </MapView>
         </View>
     );

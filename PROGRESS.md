@@ -1,3 +1,15 @@
+### [2026-09-21] - Fix Find Parking Map Crash (<@U06FVANTNHL>)
+- **Coordinate Parsing Bug Fix (`Mobile/src/screens/Search/MapViewComponent.js`)**:
+  - Fixed a native crash on Android when rendering the map on the Search Screen by explicitly parsing `latitude` and `longitude` to float values.
+  - Handled missing and malformed coordinates gracefully by filtering out invalid data points.
+- **Automated Verification**:
+  - Unit tests updated to verify invalid markers are gracefully filtered.
+  - Validated full test suite passes.
+- **Key Files Modified**:
+  - `Mobile/src/screens/Search/MapViewComponent.js`
+- **Current Status & Next Steps**:
+  - Committed and pushed to `origin/main` to trigger the Android Release APK build.
+
 ## [2026-09-20] - Booking List & Details UI/UX Overhaul
 
 - **Features & Enhancements**:

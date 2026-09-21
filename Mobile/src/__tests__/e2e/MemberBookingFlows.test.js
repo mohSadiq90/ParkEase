@@ -186,7 +186,7 @@ describe('Member Discovery & Booking End-to-End Flows', () => {
                 return Promise.resolve({ data: { success: true } });
             });
 
-            const { findByText, getByText } = renderWithProviders(
+            const { findByText, getByText, getAllByText } = renderWithProviders(
                 <ParkingDetailScreen
                     navigation={mockNavigation}
                     route={{ params: { parkingId: 'spot-101' } }}

@@ -503,9 +503,12 @@ describe('Automated Flow Tests: Authentication & Role-Based Navigation', () => {
 
         // Menu screen displays user profile
         await findByText('Driver Member');
+        
+        // Navigate to Profile Details
+        fireEvent.press(getByText('Profile Details'));
 
         // Press Log Out button
-        const logoutButton = getByText('Logout');
+        const logoutButton = await findByText('Logout');
         fireEvent.press(logoutButton);
 
         // Confirmation Alert pops up

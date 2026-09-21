@@ -25,7 +25,7 @@ describe('VendorBookingsScreen', () => {
           {
             id: '101',
             userName: 'John Doe',
-            parkingSpaceTitle: 'VIP Slot A',
+            vehicleNumber: 'MH02AB1234',
             startDateTime: new Date().toISOString(),
             status: 0,
             totalAmount: 50,
@@ -42,7 +42,7 @@ describe('VendorBookingsScreen', () => {
 
     const name = await findByText('John Doe');
     expect(name).toBeTruthy();
-    expect(getByText('VIP Slot A')).toBeTruthy();
+    expect(getByText('MH02AB1234')).toBeTruthy();
     expect(getByText('Approve')).toBeTruthy();
     expect(getByText('Reject')).toBeTruthy();
   });
@@ -145,7 +145,7 @@ describe('VendorBookingsScreen', () => {
     expect(getByTestId('filter-tab-pending')).toBeTruthy();
     expect(getByTestId('filter-tab-active')).toBeTruthy();
     expect(getByTestId('filter-tab-completed')).toBeTruthy();
-    expect(getByText('Cancelled')).toBeTruthy();
+    expect(getByText(/Cancelled/)).toBeTruthy();
   });
 
   it('formats currency with two decimal places for fractional amounts (₹12.30) and truncates identical start/end times', async () => {
@@ -156,7 +156,7 @@ describe('VendorBookingsScreen', () => {
           {
             id: '103',
             userName: 'Alice Smith',
-            parkingSpaceTitle: 'Spot C',
+            vehicleNumber: 'Spot C',
             status: 6, // AwaitingPayment / Pending Payment
             totalAmount: 12.3,
             startDateTime: identicalTime,
@@ -165,7 +165,7 @@ describe('VendorBookingsScreen', () => {
           {
             id: '104',
             userName: 'Bob Jones',
-            parkingSpaceTitle: 'Spot D',
+            vehicleNumber: 'Spot D',
             status: 4, // Cancelled
             totalAmount: 20,
             startDateTime: identicalTime,
