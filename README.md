@@ -2,6 +2,13 @@
 
 A full-stack parking management platform built with **.NET 9 Web API**, **React**, and **React Native (Expo)**. Users can host parking spaces, discover spots, book, pay, chat, manage corporate fleets, and forecast availability—backed by production-grade caching, transactional outbox, and Clean Architecture.
 
+## 📚 Essential Documentation
+
+- **[Complete Technical & Screen Specification (SPECIFICATION.md)](./SPECIFICATION.md)** — Comprehensive architecture, domain models, navigation hierarchy, and detailed specification for every screen in the ParkEase mobile and web applications.
+- **[Agent Guidelines & Architecture (agents.md)](./agents.md)** — Autonomous agent SOPs, mobile navigation matrix, and operational guidelines.
+- **[Mobile API Reference (API_ENDPOINTS_MOBILE.md)](./API_ENDPOINTS_MOBILE.md)** — Complete endpoint reference matching ASP.NET Core controllers.
+- **[Daily Work & Progress Log (PROGRESS.md)](./PROGRESS.md)** — Continuous log of features implemented, bug fixes, and active builds.
+
 ## Features
 
 ### Marketplace (unified account)

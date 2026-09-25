@@ -1,3 +1,30 @@
+### [2026-09-25] - Complete Application & Screen-by-Screen Specification (<@U06FVANTNHL>)
+
+- **Comprehensive Technical & Functional Specification (`SPECIFICATION.md`)**:
+  - Authored master technical specification document for the entire ParkEase platform (.NET 9 Web API backend, React 18 web portal, React Native / Expo SDK 54 mobile app, Upstash Redis caching, PostgreSQL + PostGIS, SignalR hubs, Stripe payments, and Cloudflare R2 object storage).
+  - Documented complete domain model: User/Identities, Parking Spaces, Bookings, Corporate Organizations & Allocations, Passes, Vehicles, Reviews, IoT / LPR barrier cameras, EV charging stations, and Invoices.
+  - Documented full navigation architecture: `RootNavigator`, `AuthNavigator`, `AppTabNavigator`, `MemberTabNavigator`, `VendorTabNavigator`, adaptive role-based routing, and deep link URL schemes (`parkease://`).
+  - Authored exhaustive, screen-by-screen specifications for over 40 screens across Member, Vendor, Corporate, Admin, Tools, and Web Portals:
+    - *Launch & Auth:* `SplashScreen`, `LoginScreen` (Personal, Corporate, Google SSO), `SignupScreen`.
+    - *Dashboards:* `MemberDashboardScreen`, `VendorDashboardScreen`, `CorporateDashboardScreen`, `AdminDashboardScreen`, `UnifiedDashboardScreen`.
+    - *Discovery & Booking:* `SearchScreen`, `MapViewComponent`, `ParkingDetailScreen`, `BookingScreen`, `BookingDetailScreen`, `MyBookingsScreen`, `VendorBookingsScreen`, `PaymentScreen`.
+    - *Host Operations & IoT:* `MyListingsScreen`, `CreateParkingScreen` (4-step wizard), `AccessPassScannerScreen`, `AncillaryServicesScreen`, `LprSettingsScreen`, `VendorEventPackagesScreen`.
+    - *Tools & Simulators:* `LprSimulatorScreen`, `EvChargeSimulatorScreen`.
+    - *Community & Identity:* `ConversationListScreen`, `ChatScreen`, `NotificationsScreen`, `ProfileScreen`, `EditProfileScreen`, `ChangePasswordScreen`, `VehiclesScreen`, `FavoritesScreen`, `MyPassesScreen`, `ReviewsListScreen`, `CreateReviewScreen`, `MenuScreen`.
+    - *Corporate Suite:* `CompanyManagementScreen`, `CorporateMembersScreen`, `CorporateAllocationsScreen`, `CorporateBookingsScreen`, `CorporateInvoicesScreen`, `CorporateLeaseBrowseScreen`, `CorporateParkingSpacesScreen`.
+    - *Web Frontend:* Driver Portal, Vendor Portal, Corporate Portal, Admin Portal.
+- **Agent Operating Manual (`agents.md`)**:
+  - Created standardized `agents.md` repository guidelines linking `SPECIFICATION.md`, `PROGRESS.md`, `README.md`, `GEMINI.md`, and `API_ENDPOINTS_MOBILE.md`.
+  - Documented directory layout, tab/screen catalog matrix, and developer/agent rules of engagement (pre-work sync, mobile-only scope, 5GB disk limit, keyboard handling SOP, automated CI/CD).
+- **Documentation Linking (`README.md`)**:
+  - Linked `SPECIFICATION.md` and `agents.md` prominently in the root `README.md` under a new "Essential Documentation" section.
+- **Key Files Modified**:
+  - `SPECIFICATION.md` (Created)
+  - `agents.md` (Created)
+  - `README.md`
+  - `PROGRESS.md`
+- **Current Status**: Complete, committed, and synced to remote origin.
+
 ### [2026-09-23] - Reviewed Video Player Feedback
 
 - **Features & Enhancements**:
