@@ -1,3 +1,16 @@
+### [2026-10-02] - Update API Base URL & Trigger Android Release Build (<@U06FVANTNHL>)
+
+- **API Base URL Migration**:
+  - Updated `API_BASE` in `Mobile/src/config/environment.js` to `https://parkease-api-220869925972.asia-south1.run.app`.
+  - Configured `apiUrl` (`${API_BASE}/api`), `uploadUrl` (`${API_BASE}/uploads`), and `hubsUrl` (`${API_BASE}/hubs`) pointing to the active Google Cloud Run backend.
+  - Verified remote API endpoint responsiveness and data retrieval (`/api/parking/search` verified returning 200 OK with active listings).
+- **Key Files Modified**:
+  - `Mobile/src/config/environment.js`
+  - `PROGRESS.md`
+- **Current Status & CI/CD Deployment**:
+  - Validated JavaScript syntax using Node.js.
+  - Committed and pushed to `origin/main` to trigger the `Build and Distribute ParkEase Mobile` GitHub Actions workflow (Release APK compilation & Firebase App Distribution distribution to QA).
+
 ### [2026-09-25] - Complete Application & Screen-by-Screen Specification (<@U06FVANTNHL>)
 
 - **Comprehensive Technical & Functional Specification (`SPECIFICATION.md`)**:

@@ -2,7 +2,7 @@
  * Environment Configuration
  */
 
-const API_BASE = 'https://parkeaseapp.runasp.net';
+const API_BASE = 'https://parkease-api-220869925972.asia-south1.run.app';
 
 export const environment = {
   isDevelopment: __DEV__,
