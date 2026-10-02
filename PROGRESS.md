@@ -1,3 +1,49 @@
+### [2026-10-02] - Push Notification Restoration & Feature Divergence Analysis (<@U06FVANTNHL>)
+
+- **Push Notification Infrastructure Restored**:
+  - Restored `@react-native-firebase/app` (`^23.8.8`) and `@react-native-firebase/messaging` (`^23.8.8`) to `Mobile/package.json` and synchronized `Mobile/package-lock.json`.
+  - Configured Android permissions (`POST_NOTIFICATIONS`) and Expo plugins (`@react-native-firebase/app`, `@react-native-firebase/messaging`) in `Mobile/app.json`.
+  - Restored full production `NotificationService.js` with:
+    - Real physical FCM device token retrieval via `@react-native-firebase/messaging`.
+    - Android 13+ (API 33+) runtime notification permission negotiation.
+    - Persistent unique device ID generation via `AsyncStorage` (`parkease_device_id`).
+    - Device registration dispatch to backend `POST /api/device-tokens/register` (`{ deviceId, platform, fcmToken, appVersion }`).
+    - `messaging().onTokenRefresh` listener to re-register refreshed tokens automatically.
+    - Foreground push handling emitting `SHOW_BANNER` for instant in-app alerts.
+    - Background (`onNotificationOpenedApp`) and quit-state (`getInitialNotification`) notification tap deep-link routing (`BookingDetail`, `ChatScreen`, `ParkingDetail`, `Notifications`).
+    - Local token deletion and listener cleanup on user logout (`NotificationService.deregisterCurrentDevice()`).
+  - Restored `Mobile/src/components/Common/GlobalErrorBanner.js` mounted at app root in `Mobile/App.js` to render foreground notifications and app-wide feedback toasts.
+  - Added headless background notification handler to `Mobile/index.js` (`messaging().setBackgroundMessageHandler`).
+  - Added Firebase App & Messaging mocks to `Mobile/jest.setup.js` to guarantee CI unit test stability.
+
+- **Comprehensive Analysis of Features Removed/Diverged with PR #4**:
+  - *Context:* In April 2026, 43 commits were added to branch `origin/feature/chat-and-booking-management` that were never merged into `main`. On July 27, 2026, PR #4 was merged from an older baseline (`ea6c361`), overwriting or bypassing those changes.
+  - *Itemized Inventory of What Was Removed / Diverged:*
+    1. *Push Notifications & FCM Lifecycle:* Fully restored in this release (FCM SDK, device registration, foreground banners, background deep links).
+    2. *In-App Global Banner System (`GlobalErrorBanner.js`):* Restored in this release. Multiple screens (`PaymentScreen`, `CorporateBookingsScreen`, `CorporateAllocationsScreen`, `CompanyManagementScreen`, `CorporateMembersScreen`) actively emitted `EventBus.emit('SHOW_BANNER', ...)`, but the banner component had been omitted.
+    3. *Firebase Remote Config & Network Logger:*
+       - `RemoteConfigService.js` (dynamic cloud flags via `@react-native-firebase/remote-config`).
+       - Remote-controlled floating debug FAB (`isDebuggerEnabled`) with `react-native-network-logger` for in-app HTTP inspection.
+       - Remote-controlled FCM token display dialog on login (`isDisplayFCMTokenEnabled`) for QA testing.
+    4. *Firebase Crashlytics:* Native crash tracking via `@react-native-firebase/crashlytics` (Analytics was replaced with PostHog, but Crashlytics crash reporting was dropped).
+    5. *Interactive Swipeable Gestures (`SwipeableRow.js`):* Swipe-to-delete animation component used in Notifications, Vehicles, and Listings.
+    6. *Chat Screen Enhancements (Commit `cebda93`):*
+       - Quick suggestions carousel ('Hi, is this space available?').
+       - Date divider pills, delivery receipts, and scroll-to-bottom FAB.
+       - Silencing chat polling errors on background/unmount and resolving duplicate message dispatch race conditions.
+
+- **Key Files Modified**:
+  - `Mobile/package.json`
+  - `Mobile/package-lock.json`
+  - `Mobile/app.json`
+  - `Mobile/index.js`
+  - `Mobile/App.js`
+  - `Mobile/src/components/Common/GlobalErrorBanner.js` (Created)
+  - `Mobile/src/services/notifications/NotificationService.js`
+  - `Mobile/src/services/auth/authService.js`
+  - `Mobile/jest.setup.js`
+  - `PROGRESS.md`
+
 ### [2026-10-02] - LightPlay vs ParkEase Cross-Repo Clarification & Separation (<@U06FVANTNHL>)
 
 - **Inquiries & Context**:

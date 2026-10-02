@@ -9,6 +9,7 @@ import ENDPOINTS from '../api/endpoints';
 import { storageService } from '../storage/secureStorage';
 import logger from '../../utils/logger';
 import posthogService, { AnalyticsEvents } from '../analytics/posthogService';
+import NotificationService from '../notifications/NotificationService';
 
 const TAG = 'AuthService';
 
@@ -227,7 +228,14 @@ export const authService = {
             logger.warn(TAG, 'Background logout dispatch failed', error);
         }
 
-        // 3. Clear local secure storage immediately
+        // 3. Clear device push token locally
+        try {
+            await NotificationService.deregisterCurrentDevice();
+        } catch (error) {
+            logger.warn(TAG, 'FCM token cleanup failed on logout', error);
+        }
+
+        // 4. Clear local secure storage immediately
         try {
             await storageService.clearAll();
         } catch (error) {

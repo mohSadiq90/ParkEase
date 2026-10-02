@@ -23,6 +23,9 @@
       "package": "com.parkease.app",
       "versionCode": 1,
       "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1E3A8A"
@@ -35,7 +38,9 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging"
     ]
   }
 }

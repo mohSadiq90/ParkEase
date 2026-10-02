@@ -203,3 +203,43 @@ jest.mock('expo-image-picker', () => ({
   },
 }));
 
+// Mock @react-native-firebase/app
+jest.mock('@react-native-firebase/app', () => ({
+  __esModule: true,
+  default: {
+    installations: () => ({
+      getId: jest.fn().mockResolvedValue('mock-firebase-installation-id'),
+    }),
+  },
+  firebase: {
+    installations: () => ({
+      getId: jest.fn().mockResolvedValue('mock-firebase-installation-id'),
+    }),
+  },
+}));
+
+// Mock @react-native-firebase/messaging
+jest.mock('@react-native-firebase/messaging', () => {
+  const messagingMock = () => ({
+    getToken: jest.fn().mockResolvedValue('mock-fcm-device-token'),
+    deleteToken: jest.fn().mockResolvedValue(null),
+    onTokenRefresh: jest.fn(() => jest.fn()),
+    onMessage: jest.fn(() => jest.fn()),
+    onNotificationOpenedApp: jest.fn(() => jest.fn()),
+    getInitialNotification: jest.fn().mockResolvedValue(null),
+    isDeviceRegisteredForRemoteMessages: true,
+    registerDeviceForRemoteMessages: jest.fn().mockResolvedValue(true),
+    setBackgroundMessageHandler: jest.fn(),
+  });
+  messagingMock.AuthorizationStatus = {
+    NOT_DETERMINED: -1,
+    DENIED: 0,
+    AUTHORIZED: 1,
+    PROVISIONAL: 2,
+  };
+  return {
+    __esModule: true,
+    default: messagingMock,
+  };
+});
+
