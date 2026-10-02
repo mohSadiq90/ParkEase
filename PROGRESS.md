@@ -1,3 +1,14 @@
+### [2026-10-02] - Branch Divergence & Working Branch Clarification (<@U06FVANTNHL>)
+
+- **Branch Topology & Merge State Audit**:
+  - *Current Working Branch*: Confirmed active branch is `main` (synchronized with `origin/main` at `e78c600`). We are NOT working on a feature branch.
+  - *PR #4 Post-Merge State*: PR #4 (`Feature/corporate passes integration`) was merged into `main` on July 27, 2026 at 08:17 AM (`aab5829`). Eight hours later (04:09 PM), commit `273b9d3` ("feat: Mobile chat performance improvements & test suite") was pushed to `origin/feature/corporate-passes-integration`. Because PR #4 was already closed, that commit was never merged into `main`.
+  - *Historical Divergence (`origin/feature/chat-and-booking-management`)*: Created March 28, 2026 with 43 commits (up to `cebda93`). It was never merged into `main`. PR #4 was developed against a pre-March baseline (`ea6c361`), unintentionally bypassing those 43 commits.
+  - *Inventory of Remaining Unmerged Items*:
+    - From `feature/corporate-passes-integration` (`273b9d3`): SignalR real-time chat connection (`chatHub.js`), optimistic message sending, chat Redux integration, and Auth/Search test suites.
+    - From `feature/chat-and-booking-management` (`cebda93`): Firebase Remote Config (`RemoteConfigService.js`), draggable REST API network logger FAB, `SwipeableRow.js` gesture helper, and chat UX enhancements (quick replies carousel, date dividers, delivery receipts).
+    - Note: Native push notifications (`NotificationService.js`) and `GlobalErrorBanner.js` have already been restored directly to `main` (`e78c600`).
+
 ### [2026-10-02] - Push Notification Restoration & Feature Divergence Analysis (<@U06FVANTNHL>)
 
 - **Push Notification Infrastructure Restored**:
