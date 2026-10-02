@@ -13,9 +13,11 @@ import { validateForm, loginRules } from '../../utils/validators';
 import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
 import { colors, spacing, typography } from '../../styles/globalStyles';
+import * as Clipboard from 'expo-clipboard';
 import authService from '../../services/auth/authService';
 import googleAuthService from '../../services/auth/googleAuthService';
 import NotificationService from '../../services/notifications/NotificationService';
+import RemoteConfigService from '../../services/remoteConfig/RemoteConfigService';
 import { getExternalAuthErrorMessage } from '../../utils/externalAuthErrors';
 import { getCorporateSsoErrorMessage } from '../../utils/corporateSsoErrors';
 
@@ -27,6 +29,37 @@ const LoginScreen = ({ navigation }) => {
     const [isSsoLoading, setIsSsoLoading] = useState(false);
     const passwordRef = React.useRef(null);
 
+    const showFcmTokenIfEnabled = useCallback(async () => {
+        try {
+            const shouldDisplayFcmToken = await RemoteConfigService.getBooleanAsync(
+                'isDisplayFCMTokenEnabled',
+                { refresh: true }
+            );
+
+            if (!shouldDisplayFcmToken) {
+                return;
+            }
+
+            const token = await NotificationService.getAuthorizedDeviceToken();
+            if (!token) {
+                return;
+            }
+
+            Alert.alert('FCM Device Token', token, [
+                {
+                    text: 'Copy Token',
+                    onPress: async () => {
+                        await Clipboard.setStringAsync(token);
+                        Alert.alert('Copied!', 'Token copied to clipboard.');
+                    },
+                },
+                { text: 'Dismiss', style: 'cancel' },
+            ]);
+        } catch {
+            // Silently handle token display failure
+        }
+    }, []);
+
     const handleLogin = useCallback(async () => {
         Keyboard.dismiss();
         dismissError();
@@ -37,19 +70,24 @@ const LoginScreen = ({ navigation }) => {
         }
         setErrors({});
 
+        let res;
         if (loginMode === 'corporate') {
-            await loginCorporate({
+            res = await loginCorporate({
                 email: formData.email,
                 password: formData.password,
                 companyId: formData.companyId?.trim() || undefined,
             });
         } else {
-            await login({
+            res = await login({
                 email: formData.email,
                 password: formData.password,
             });
         }
-    }, [formData, loginMode, login, loginCorporate, dismissError]);
+
+        if (res && !res.error && res.meta?.requestStatus !== 'rejected') {
+            await showFcmTokenIfEnabled();
+        }
+    }, [formData, loginMode, login, loginCorporate, dismissError, showFcmTokenIfEnabled]);
 
     const handleGoogleLogin = useCallback(async () => {
         dismissError();
@@ -77,12 +115,13 @@ const LoginScreen = ({ navigation }) => {
             // 3. If login was successful, register FCM device token for push notifications
             if (res && !res.error) {
                 NotificationService.registerCurrentDevice().catch(() => {});
+                await showFcmTokenIfEnabled();
             }
         } catch (err) {
             const friendly = getExternalAuthErrorMessage(err);
             Alert.alert('Google Sign-In Failed', friendly);
         }
-    }, [loginExternal, dismissError]);
+    }, [loginExternal, dismissError, showFcmTokenIfEnabled]);
 
 
     const handleSsoDiscovery = useCallback(async () => {
@@ -112,6 +151,8 @@ const LoginScreen = ({ navigation }) => {
                                         if (actionResult.payload !== 'user_cancelled') {
                                             Alert.alert('SSO Failed', actionResult.payload || 'Failed to complete SSO login.');
                                         }
+                                    } else if (actionResult && !actionResult.error) {
+                                        await showFcmTokenIfEnabled();
                                     }
                                 } catch (ssoErr) {
                                     const friendly = getCorporateSsoErrorMessage(ssoErr);

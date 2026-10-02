@@ -230,5 +230,34 @@ describe('LoginScreen', () => {
       });
     });
   });
+
+  describe('Remote Config FCM Token Display', () => {
+    it('displays FCM token alert after successful login when remote flag is enabled', async () => {
+      const RemoteConfigService = require('../../../services/remoteConfig/RemoteConfigService').default;
+      const NotificationService = require('../../../services/notifications/NotificationService').default;
+
+      jest.spyOn(RemoteConfigService, 'getBooleanAsync').mockResolvedValueOnce(true);
+      jest.spyOn(NotificationService, 'getAuthorizedDeviceToken').mockResolvedValueOnce('mock-fcm-device-token');
+
+      authService.login.mockResolvedValueOnce({
+        success: true,
+        data: { user: { id: 1 }, accessToken: 'token' },
+      });
+
+      const { getByText, getByPlaceholderText } = renderWithProviders(<LoginScreen navigation={mockNavigation} />);
+      fireEvent.changeText(getByPlaceholderText('Enter your email'), 'test@example.com');
+      fireEvent.changeText(getByPlaceholderText('Enter your password'), 'password123');
+      fireEvent.press(getByText('Sign In'));
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith(
+          'FCM Device Token',
+          'mock-fcm-device-token',
+          expect.any(Array)
+        );
+      });
+    });
+  });
 });
+
 

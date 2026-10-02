@@ -1,3 +1,27 @@
+### [2026-10-02] - Step 3: Firebase Remote Config & In-App Network Logger Integration (<@U06FVANTNHL>)
+
+- **Step-by-Step Feature Integration from Unmerged Branch (`feature/chat-and-booking-management`)**:
+  - *Context:* Executed Step 3 of the incremental merge roadmap, bringing dynamic cloud configuration and remote feature toggles from `origin/feature/chat-and-booking-management` directly into `main` without affecting PostHog analytics, Redux architecture, or existing screen navigation.
+  - *RemoteConfigService (`Mobile/src/services/remoteConfig/RemoteConfigService.js`)*:
+    - Installed official `@react-native-firebase/remote-config` (`^23.8.8`) aligning with `@react-native-firebase/app` and `@react-native-firebase/messaging`.
+    - Configured local fallbacks (`isDisplayFCMTokenEnabled: false`, `isDebuggerEnabled: false`) and development cache bypass (`minimumFetchIntervalMillis: __DEV__ ? 0 : 3600000`).
+    - Implemented singleton caching promise for idempotent concurrent `initialize()` calls and force-refresh capabilities (`refresh()` calling `fetch(0)` and `activate()`).
+    - Implemented type-safe getters (`getBoolean`, `getString`, `getNumber`, and async `getBooleanAsync(key, { refresh })`) with defensive error suppression.
+  - *Draggable Network Logger FAB & Modal (`Mobile/App.js`)*:
+    - Installed `react-native-network-logger` (`^2.0.1`).
+    - Wired `RemoteConfigService.getBooleanAsync('isDebuggerEnabled')` in `App.js` with `AppState` foreground sync to enable/disable debugger at runtime without requiring an app store update.
+    - Conditionally mounts draggable floating action pill (`PanResponder` + `Animated.ValueXY` with edge clamping, touch detection, and spring release physics).
+    - Tapping the FAB presents a full-screen modal inspecting live HTTP/REST traffic with light/compact theming, while ignoring internal Firebase Remote Config background requests (`ignoredPatterns: [/^GET https:\/\/firebaseremoteconfig\.googleapis\.com\//]`).
+  - *FCM Device Token Display on Login (`Mobile/src/screens/Auth/LoginScreen.js`)*:
+    - Added `showFcmTokenIfEnabled` callback triggered upon successful credential, corporate, Google, or SSO login.
+    - If `isDisplayFCMTokenEnabled` is active in Remote Config, prompts an alert with the authorized FCM token and a one-click "Copy Token" button via `expo-clipboard` for QA push testing.
+  - *Automated Test Suites & Jest Mocks*:
+    - Created `Mobile/src/services/remoteConfig/__tests__/RemoteConfigService.test.js` (5 tests) covering defaults, concurrent initialization deduplication, force refresh, and typed getters.
+    - Created `Mobile/__tests__/App.test.js` (3 tests) verifying clean initialization, remote debugger FAB appearance, logger modal open/close, and debugger disabled state.
+    - Updated `Mobile/src/screens/Auth/__tests__/LoginScreen.test.js` with remote-controlled FCM token display assertion (12 tests total).
+    - Updated `Mobile/jest.setup.js` with shared mock instances for `@react-native-firebase/remote-config` and `react-native-network-logger`.
+    - Verified 100% test pass rate across all affected test suites (46/46 unit tests passing).
+
 ### [2026-10-02] - Step 2: SwipeableRow Swipe-to-Delete Gesture Integration (<@U06FVANTNHL>)
 
 - **Step-by-Step Feature Integration from Unmerged Branch (`feature/chat-and-booking-management`)**:

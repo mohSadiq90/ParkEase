@@ -296,3 +296,42 @@ jest.mock('@microsoft/signalr', () => {
   };
 });
 
+// Mock @react-native-firebase/remote-config
+const mockRemoteConfigValues = {
+  isDisplayFCMTokenEnabled: false,
+  isDebuggerEnabled: false,
+};
+
+const mockRemoteConfigInstance = {
+  setDefaults: jest.fn().mockResolvedValue(null),
+  setConfigSettings: jest.fn().mockResolvedValue(null),
+  fetchAndActivate: jest.fn().mockResolvedValue(true),
+  fetch: jest.fn().mockResolvedValue(null),
+  activate: jest.fn().mockResolvedValue(true),
+  getValue: jest.fn((key) => ({
+    asBoolean: jest.fn().mockReturnValue(Boolean(mockRemoteConfigValues[key])),
+    asString: jest.fn().mockReturnValue(String(mockRemoteConfigValues[key] || '')),
+    asNumber: jest.fn().mockReturnValue(Number(mockRemoteConfigValues[key] || 0)),
+  })),
+};
+
+jest.mock('@react-native-firebase/remote-config', () => {
+  const remoteConfigMock = () => mockRemoteConfigInstance;
+  return {
+    __esModule: true,
+    default: remoteConfigMock,
+  };
+});
+
+// Mock react-native-network-logger
+jest.mock('react-native-network-logger', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: (props) => <View testID="network-logger" {...props} />,
+    startNetworkLogging: jest.fn(),
+    stopNetworkLogging: jest.fn(),
+  };
+});
+
