@@ -1,3 +1,28 @@
+### [2026-10-02] - Step 1: SignalR Real-Time Chat & Chat Performance Integration (<@U06FVANTNHL>)
+
+- **Step-by-Step Feature Integration from Unmerged Branch (`feature/corporate-passes-integration`)**:
+  - *Context:* Executed Step 1 of the incremental merge strategy, porting the unmerged chat performance and real-time infrastructure from commit `273b9d3` into `main` without overriding any of `main`'s existing features or layout overhauls.
+  - *SignalR WebSocket Client (`Mobile/src/services/chat/chatHub.js`)*:
+    - Installed official `@microsoft/signalr` (`^10.0.11`) client in `Mobile/package.json`.
+    - Implemented `chatHub.js` connecting to `${environment.hubsUrl}/chat` using authenticated bearer tokens via `storageService.getAccessToken()` with automatic exponential reconnect (`[0, 2000, 10000, 30000]`).
+    - Wired `ReceiveMessage` listener to automatically dispatch `receiveMessage(message)` to Redux and trigger active UI callbacks via `addListener(callback)`.
+    - Added room channel joining/leaving (`joinConversation`, `leaveConversation`) to scope message traffic to active chat threads.
+  - *Optimistic UI & Redux Slice Enhancements (`Mobile/src/store/slices/chatSlice.js`)*:
+    - Added message deduplication by ID in `receiveMessage` reducer to eliminate duplicate messages across WebSocket pushes and REST polls.
+    - Updated `sendMessageThunk` to support `conversationId` and `tempId`.
+    - Implemented optimistic rendering in `sendMessageThunk.pending` (inserts pending message with `isTemp: true` immediately into conversation history and list preview), replaces with confirmed message in `sendMessageThunk.fulfilled`, and cleans up on `sendMessageThunk.rejected`.
+    - Added defensive unwrapping for `getConversationsThunk.fulfilled` handling both `{ conversations: [...] }` and raw arrays.
+  - *Screen & Navigation Lifecycles Wired*:
+    - `AppTabNavigator.js`: Connected `chatHub.connect()` on mount and foreground resume; added `chatHub.disconnect()` on unmount.
+    - `AppTabNavigator.js` Background Polling Optimization: Decoupled heavy member/vendor dashboard fetches from the 60s background polling interval (`refreshCounts` only polls lightweight unread notification and message counts; dashboard stats refresh on launch and foreground resume).
+    - `ChatScreen.js`: Joined conversation channel on screen open, subscribed to instantaneous WebSocket incoming messages via `chatHub.addListener`, and gracefully cleaned up channel on navigation away while preserving existing date dividers, status receipts, and retry affordances.
+    - `ConversationListScreen.js`: Subscribed to `chatHub.addListener` to automatically refresh conversation previews when new messages arrive.
+  - *Test Coverage & Hygiene*:
+    - Created unit test suites `Mobile/src/store/slices/__tests__/chatSlice.test.js` (8 tests) and `Mobile/src/services/chat/__tests__/chatHub.test.js` (5 tests).
+    - Added `@microsoft/signalr` and `expo-constants` test mocks to `Mobile/jest.setup.js`.
+    - Made `expo-constants` access defensive in `NotificationService.js`.
+    - Verified all targeted test suites pass (100% success rate across `chatSlice`, `chatHub`, `bookingSlice`, `authSlice`, `SearchScreen`, `LoginScreen`).
+
 ### [2026-10-02] - Branch Divergence & Working Branch Clarification (<@U06FVANTNHL>)
 
 - **Branch Topology & Merge State Audit**:

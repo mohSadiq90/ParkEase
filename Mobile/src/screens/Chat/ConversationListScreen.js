@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/globalStyles';
 import chatService from '../../services/chat/chatService';
+import chatHub from '../../services/chat/chatHub';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { ConversationListSkeleton } from '../../components/Common/ShimmerPlaceholder';
@@ -85,6 +86,12 @@ const ConversationListScreen = ({ navigation }) => {
 
     useEffect(() => {
         loadConversations();
+        const unsubscribe = chatHub.addListener(() => {
+            loadConversations();
+        });
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     useFocusEffect(

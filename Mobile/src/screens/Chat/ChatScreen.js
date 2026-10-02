@@ -15,6 +15,7 @@ import { colors } from '../../styles/globalStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import chatService from '../../services/chat/chatService';
+import chatHub from '../../services/chat/chatHub';
 import { ChatThreadSkeleton } from '../../components/Common/ShimmerPlaceholder';
 
 const QUICK_SUGGESTIONS = [
@@ -159,19 +160,58 @@ const ChatScreen = ({ route, navigation }) => {
     }, [currentConvId]);
 
     useEffect(() => {
+        let unsubscribeHub = null;
+
         if (currentConvId) {
             loadMessages(currentConvId);
             markRead(currentConvId);
 
-            // Poll for new messages every 5 seconds (lightweight real-time substitute for mobile)
-            pollInterval.current = setInterval(() => loadMessages(currentConvId), 5000);
+            // Join SignalR room for real-time conversation updates
+            chatHub.joinConversation(currentConvId);
+
+            // Listen for instantaneous incoming messages over SignalR WebSocket
+            unsubscribeHub = chatHub.addListener((incomingMsg) => {
+                if (!incomingMsg) return;
+                const incomingConvId = incomingMsg.conversationId || incomingMsg.ConversationId;
+                if (String(incomingConvId) === String(currentConvId)) {
+                    setMessages((prev) => {
+                        // Deduplicate if message is already in thread
+                        if (prev.some((m) => String(m.id) === String(incomingMsg.id))) {
+                            return prev;
+                        }
+                        // Replace pending optimistic message if sender is current user
+                        const pendingIndex = prev.findIndex(
+                            (m) =>
+                                m.status === 'sending' &&
+                                m.content === incomingMsg.content &&
+                                (incomingMsg.senderId === user?.id || incomingMsg.senderId === 'me')
+                        );
+                        if (pendingIndex !== -1) {
+                            const updated = [...prev];
+                            updated[pendingIndex] = { ...incomingMsg, status: 'sent' };
+                            return updated;
+                        }
+                        return [...prev, incomingMsg];
+                    });
+                    // Mark as read immediately since user is actively in this conversation
+                    markRead(currentConvId);
+                    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+                }
+            });
+
+            // Gentle background polling (10s) as safety net for transient network disconnects
+            pollInterval.current = setInterval(() => loadMessages(currentConvId), 10000);
         } else {
             setLoading(false);
         }
         return () => {
+            if (unsubscribeHub) unsubscribeHub();
+            if (currentConvId) {
+                chatHub.leaveConversation(currentConvId);
+            }
             if (pollInterval.current) clearInterval(pollInterval.current);
         };
-    }, [currentConvId, loadMessages, markRead]);
+    }, [currentConvId, loadMessages, markRead, user?.id]);
 
     /**
      * Optimistic Message Dispatch:
@@ -237,6 +277,7 @@ const ChatScreen = ({ route, navigation }) => {
                 }
                 if (confirmedMsg.conversationId && !currentConvId) {
                     setCurrentConvId(confirmedMsg.conversationId);
+                    chatHub.joinConversation(confirmedMsg.conversationId);
                 }
                 setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
             } else {

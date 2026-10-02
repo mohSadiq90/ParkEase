@@ -18,6 +18,7 @@ import { getNotificationsThunk } from '../store/slices/notificationSlice';
 import { getUnreadCountThunk } from '../store/slices/chatSlice';
 import { getMemberDashboardThunk, getVendorDashboardThunk } from '../store/slices/dashboardSlice';
 import NotificationService from '../services/notifications/NotificationService';
+import chatHub from '../services/chat/chatHub';
 
 import MemberDashboardScreen from '../screens/Member/MemberDashboardScreen';
 import VendorDashboardScreen from '../screens/Vendor/VendorDashboardScreen';
@@ -321,7 +322,10 @@ const AppTabNavigator = ({ navigation }) => {
     const refreshCounts = React.useCallback(() => {
         dispatch(getNotificationsThunk());
         dispatch(getUnreadCountThunk());
-        // Also refresh dashboard stats to keep everything in sync
+    }, [dispatch]);
+
+    const refreshDashboards = React.useCallback(() => {
+        // Also refresh dashboard stats on initial load and foreground resume
         dispatch(getMemberDashboardThunk());
         dispatch(getVendorDashboardThunk());
     }, [dispatch]);
@@ -341,22 +345,29 @@ const AppTabNavigator = ({ navigation }) => {
 
         // Initial fetch
         refreshCounts();
+        refreshDashboards();
+
+        // Connect to SignalR chat hub
+        chatHub.connect();
 
         // 1. Listen for app state changes (background -> foreground)
         const subscription = AppState.addEventListener('change', (nextAppState) => {
             if (nextAppState === 'active') {
                 refreshCounts();
+                refreshDashboards();
+                chatHub.connect();
             }
         });
 
-        // 2. Periodic polling (every 60 seconds)
+        // 2. Periodic polling (every 60 seconds) - lightweight unread counts only
         const interval = setInterval(refreshCounts, 60000);
 
         return () => {
             subscription.remove();
             clearInterval(interval);
+            chatHub.disconnect();
         };
-    }, [refreshCounts]);
+    }, [refreshCounts, refreshDashboards]);
 
     return (
         <Tab.Navigator

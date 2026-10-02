@@ -13,7 +13,12 @@ import { EventBus } from '../../utils/EventBus';
 import apiClient from '../api/apiClient';
 import ENDPOINTS from '../api/endpoints';
 import logger from '../../utils/logger';
-import Constants from 'expo-constants';
+let Constants = null;
+try {
+    Constants = require('expo-constants')?.default || require('expo-constants');
+} catch {
+    Constants = {};
+}
 import { storageService } from '../storage/secureStorage';
 
 const TAG = 'NotificationService';

@@ -58,6 +58,19 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+// Mock expo-constants
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: {
+    installationId: 'mock-expo-installation-id',
+    expoConfig: { version: '1.0.0' },
+    manifest: { version: '1.0.0' },
+  },
+  installationId: 'mock-expo-installation-id',
+  expoConfig: { version: '1.0.0' },
+  manifest: { version: '1.0.0' },
+}), { virtual: true });
+
 // Mock react-native-maps
 jest.mock('react-native-maps', () => {
   const React = require('react');
@@ -240,6 +253,46 @@ jest.mock('@react-native-firebase/messaging', () => {
   return {
     __esModule: true,
     default: messagingMock,
+  };
+});
+
+// Mock @microsoft/signalr
+jest.mock('@microsoft/signalr', () => {
+  const mockHubConnection = {
+    start: jest.fn().mockResolvedValue(undefined),
+    stop: jest.fn().mockResolvedValue(undefined),
+    invoke: jest.fn().mockResolvedValue(undefined),
+    on: jest.fn(),
+    off: jest.fn(),
+    onreconnecting: jest.fn(),
+    onreconnected: jest.fn(),
+    onclose: jest.fn(),
+  };
+
+  const HubConnectionBuilder = jest.fn().mockImplementation(() => ({
+    withUrl: jest.fn().mockReturnThis(),
+    withAutomaticReconnect: jest.fn().mockReturnThis(),
+    configureLogging: jest.fn().mockReturnThis(),
+    build: jest.fn().mockReturnValue(mockHubConnection),
+  }));
+
+  return {
+    HubConnectionBuilder,
+    HttpTransportType: {
+      None: 0,
+      WebSockets: 1,
+      ServerSentEvents: 2,
+      LongPolling: 4,
+    },
+    LogLevel: {
+      None: 0,
+      Critical: 1,
+      Error: 2,
+      Warning: 3,
+      Information: 4,
+      Debug: 5,
+      Trace: 6,
+    },
   };
 });
 
