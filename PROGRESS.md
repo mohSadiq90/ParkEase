@@ -1,3 +1,23 @@
+### [2026-10-02] - Step 2: SwipeableRow Swipe-to-Delete Gesture Integration (<@U06FVANTNHL>)
+
+- **Step-by-Step Feature Integration from Unmerged Branch (`feature/chat-and-booking-management`)**:
+  - *Context:* Executed Step 2 of the incremental merge roadmap, porting the standalone `SwipeableRow.js` swipe-to-reveal/swipe-to-delete animation component from `origin/feature/chat-and-booking-management` directly into `main` without altering existing card styling, screen layouts, or API structures.
+  - *SwipeableRow Component (`Mobile/src/components/Common/SwipeableRow.js`)*:
+    - Built with React Native `PanResponder` and `Animated` API for high-performance 60fps horizontal swipe gestures.
+    - Directional swipe constraint: only captures horizontal gestures (`Math.abs(dx) > Math.abs(dy)` and `Math.abs(dx) > 10`), leaving vertical scroll gestures unaffected.
+    - Added snap-to-open and snap-to-close spring animations (`bounciness: 6`, `friction: 6`) with threshold dampening.
+    - Tapping the row when opened automatically snaps the row closed without triggering underlying child actions.
+    - Configurable props: `onDelete`, `isDeleting`, `disabled`, `actionWidth`, `actionIcon`, `actionColor`, `renderRightAction`, `testID`, and style overrides.
+    - Loading and disabled states: shows activity spinner and blocks swipe/touch interactions while deletion is in-flight.
+  - *Screen Adoption*:
+    - `NotificationsScreen.js`: Wrapped notifications list items in `SwipeableRow` (`testID="swipeable-notification-{id}"`), enabling one-swipe deletion while preserving existing single-tap deep navigation, mark-as-read pills, and header clear-all actions.
+    - `VehiclesScreen.js`: Wrapped garage vehicle cards in `SwipeableRow` (`testID="swipeable-vehicle-{id}"`), allowing quick removal via swipe in addition to existing trash icon buttons, without disrupting default vehicle toggling or add-vehicle forms.
+  - *Automated Test Suites*:
+    - Created `Mobile/src/components/Common/__tests__/SwipeableRow.test.js` covering rendering, delete action firing, loading state spinner, disabled state gesture suppression, and custom right actions (5 tests).
+    - Updated `Mobile/src/screens/Notifications/__tests__/NotificationsScreen.test.js` with swipeable delete button test.
+    - Updated `Mobile/src/screens/Vehicles/__tests__/VehiclesScreen.test.js` with swipeable delete trigger test.
+    - Verified all targeted test suites pass (100% success rate across `SwipeableRow`, `NotificationsScreen`, `VehiclesScreen`, `chatSlice`, `chatHub`).
+
 ### [2026-10-02] - Step 1: SignalR Real-Time Chat & Chat Performance Integration (<@U06FVANTNHL>)
 
 - **Step-by-Step Feature Integration from Unmerged Branch (`feature/corporate-passes-integration`)**:

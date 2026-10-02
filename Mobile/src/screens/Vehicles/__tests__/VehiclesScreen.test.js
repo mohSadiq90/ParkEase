@@ -163,4 +163,22 @@ describe('VehiclesScreen', () => {
             );
         });
     });
+
+    it('prompts delete alert when swipeable delete button is pressed', async () => {
+        const { getByTestId } = renderWithProviders(
+            <VehiclesScreen navigation={mockNavigation} />
+        );
+
+        await waitFor(() => {
+            expect(getByTestId('swipeable-vehicle-veh-1-delete-btn')).toBeTruthy();
+        });
+
+        fireEvent.press(getByTestId('swipeable-vehicle-veh-1-delete-btn'));
+
+        expect(Alert.alert).toHaveBeenCalledWith(
+            'Delete Vehicle',
+            expect.stringContaining('Are you sure you want to remove this vehicle'),
+            expect.any(Array)
+        );
+    });
 });

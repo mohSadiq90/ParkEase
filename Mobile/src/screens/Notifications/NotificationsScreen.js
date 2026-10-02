@@ -6,6 +6,7 @@ import { colors, spacing, typography, shadows } from '../../styles/globalStyles'
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import EmptyState from '../../components/Common/EmptyState';
 import LoadingScreen from '../../components/Common/LoadingScreen';
+import SwipeableRow from '../../components/Common/SwipeableRow';
 import { 
     getNotificationsThunk, 
     markAsReadThunk, 
@@ -59,29 +60,35 @@ const NotificationsScreen = ({ navigation }) => {
 
     const renderItem = ({ item }) => {
         return (
-            <TouchableOpacity 
-                style={[styles.notificationCard, !item.isRead && styles.unreadCard]}
-                onPress={() => handleNotificationPress(item)}
-                activeOpacity={0.8}
+            <SwipeableRow
+                onDelete={() => handleDelete(item.id)}
+                testID={`swipeable-notification-${item.id}`}
+                style={styles.swipeableRow}
             >
-                <View style={styles.cardHeader}>
-                    <View style={styles.titleContainer}>
-                        {!item.isRead && <View style={styles.unreadDot} />}
-                        <Text style={[styles.title, !item.isRead && styles.unreadText]}>
-                            {item.title}
-                        </Text>
+                <TouchableOpacity 
+                    style={[styles.notificationCard, !item.isRead && styles.unreadCard]}
+                    onPress={() => handleNotificationPress(item)}
+                    activeOpacity={0.8}
+                >
+                    <View style={styles.cardHeader}>
+                        <View style={styles.titleContainer}>
+                            {!item.isRead && <View style={styles.unreadDot} />}
+                            <Text style={[styles.title, !item.isRead && styles.unreadText]}>
+                                {item.title}
+                            </Text>
+                        </View>
+                        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
+                            <Ionicons name="close-circle-outline" size={20} color={colors.textTertiary} />
+                        </TouchableOpacity>
                     </View>
-                    <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-                        <Ionicons name="close-circle-outline" size={20} color={colors.textTertiary} />
-                    </TouchableOpacity>
-                </View>
-                <Text style={styles.message} numberOfLines={3}>
-                    {item.message}
-                </Text>
-                <Text style={styles.timestamp}>
-                    {new Date(item.createdAt).toLocaleString()}
-                </Text>
-            </TouchableOpacity>
+                    <Text style={styles.message} numberOfLines={3}>
+                        {item.message}
+                    </Text>
+                    <Text style={styles.timestamp}>
+                        {new Date(item.createdAt).toLocaleString()}
+                    </Text>
+                </TouchableOpacity>
+            </SwipeableRow>
         );
     };
 
@@ -173,11 +180,14 @@ const styles = StyleSheet.create({
         paddingBottom: spacing['2xl'],
         flexGrow: 1,
     },
+    swipeableRow: {
+        marginBottom: spacing.sm,
+        borderRadius: spacing.radius.lg,
+    },
     notificationCard: {
         backgroundColor: colors.surface,
         borderRadius: spacing.radius.lg,
         padding: spacing.base,
-        marginBottom: spacing.sm,
         borderWidth: 1,
         borderColor: colors.borderLight,
         ...shadows.sm,

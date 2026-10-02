@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderWithProviders } from '../../../utils/test-utils';
+import { renderWithProviders, fireEvent, waitFor } from '../../../utils/test-utils';
 import NotificationsScreen from '../NotificationsScreen';
 import apiClient from '../../../services/api/apiClient';
 
@@ -64,5 +64,36 @@ describe('NotificationsScreen', () => {
 
     const empty = await findByText('No notifications');
     expect(empty).toBeTruthy();
+  });
+
+  it('triggers delete action from SwipeableRow button', async () => {
+    const mockNotifications = {
+      data: {
+        data: [
+          {
+            id: 'notif-1',
+            title: 'Booking Confirmed',
+            message: 'Your booking at Downtown Bay is confirmed.',
+            isRead: false,
+            createdAt: '2026-08-18T10:00:00Z',
+          },
+        ],
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockNotifications);
+    apiClient.delete = jest.fn().mockResolvedValueOnce({ data: { success: true } });
+
+    const { findByTestId } = renderWithProviders(
+      <NotificationsScreen navigation={mockNavigation} />
+    );
+
+    const deleteBtn = await findByTestId('swipeable-notification-notif-1-delete-btn');
+    expect(deleteBtn).toBeTruthy();
+    fireEvent.press(deleteBtn);
+
+    await waitFor(() => {
+      expect(apiClient.delete).toHaveBeenCalledWith(expect.stringContaining('notif-1'));
+    });
   });
 });

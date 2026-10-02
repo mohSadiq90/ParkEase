@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../../styles/globalStyles';
 import ScreenLayout from '../../components/Layouts/ScreenLayout';
 import LoadingScreen from '../../components/Common/LoadingScreen';
+import SwipeableRow from '../../components/Common/SwipeableRow';
 import { vehicleService } from '../../services/api/vehicleService';
 import { VehicleType, VehicleTypeLabels } from '../../utils/constants';
 import posthogService, { AnalyticsEvents } from '../../services/analytics/posthogService';
@@ -118,47 +119,53 @@ const VehiclesScreen = ({ navigation }) => {
         const typeLabel = VehicleTypeLabels[item.type] || 'Car';
 
         return (
-            <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                    <View style={styles.plateContainer}>
-                        <Ionicons name="car-outline" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-                        <Text style={styles.plateText}>{item.licensePlate || item.plateNumber}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <View style={styles.typeBadge}>
-                            <Text style={styles.typeText}>{typeLabel}</Text>
+            <SwipeableRow
+                onDelete={() => handleDelete(item.id)}
+                testID={`swipeable-vehicle-${item.id}`}
+                style={styles.swipeableWrapper}
+            >
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <View style={styles.plateContainer}>
+                            <Ionicons name="car-outline" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+                            <Text style={styles.plateText}>{item.licensePlate || item.plateNumber}</Text>
                         </View>
-                        {item.isDefault ? (
-                            <View style={styles.defaultBadge}>
-                                <Text style={styles.defaultText}>Primary</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View style={styles.typeBadge}>
+                                <Text style={styles.typeText}>{typeLabel}</Text>
                             </View>
-                        ) : (
-                            <TouchableOpacity
-                                style={styles.makeDefaultBtn}
-                                onPress={() => handleSetDefault(item)}
-                            >
-                                <Text style={styles.makeDefaultText}>Set Default</Text>
-                            </TouchableOpacity>
+                            {item.isDefault ? (
+                                <View style={styles.defaultBadge}>
+                                    <Text style={styles.defaultText}>Primary</Text>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.makeDefaultBtn}
+                                    onPress={() => handleSetDefault(item)}
+                                >
+                                    <Text style={styles.makeDefaultText}>Set Default</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+
+                    <View style={styles.cardBody}>
+                        <Text style={styles.vehicleName}>{item.make} {item.model}</Text>
+                        {item.color && item.color !== 'Unspecified' && (
+                            <Text style={styles.vehicleColor}>Color: {item.color}</Text>
                         )}
                     </View>
-                </View>
 
-                <View style={styles.cardBody}>
-                    <Text style={styles.vehicleName}>{item.make} {item.model}</Text>
-                    {item.color && item.color !== 'Unspecified' && (
-                        <Text style={styles.vehicleColor}>Color: {item.color}</Text>
-                    )}
+                    <View style={styles.cardFooter}>
+                        <Text style={styles.lprHint}>
+                            <Ionicons name="camera-outline" size={13} color={colors.textTertiary} /> LPR Gate Enabled
+                        </Text>
+                        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
+                            <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
-
-                <View style={styles.cardFooter}>
-                    <Text style={styles.lprHint}>
-                        <Ionicons name="camera-outline" size={13} color={colors.textTertiary} /> LPR Gate Enabled
-                    </Text>
-                    <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-                        <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                    </TouchableOpacity>
-                </View>
-            </View>
+            </SwipeableRow>
         );
     };
 
@@ -317,11 +324,14 @@ const styles = StyleSheet.create({
         padding: 15,
         flexGrow: 1,
     },
+    swipeableWrapper: {
+        marginBottom: 12,
+        borderRadius: 12,
+    },
     card: {
         backgroundColor: colors.surface,
         borderRadius: 12,
         padding: 16,
-        marginBottom: 12,
         borderWidth: 1,
         borderColor: colors.borderLight,
     },
