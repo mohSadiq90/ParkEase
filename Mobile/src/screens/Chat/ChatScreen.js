@@ -43,6 +43,7 @@ const ChatScreen = ({ route, navigation }) => {
     const [showScrollBottom, setShowScrollBottom] = useState(false);
     const flatListRef = useRef(null);
     const pollInterval = useRef(null);
+    const isSendingRef = useRef(false);
 
     // Hide bottom tab bar while in chat to give maximum viewport and avoid keyboard clashes
     useEffect(() => {
@@ -86,6 +87,10 @@ const ChatScreen = ({ route, navigation }) => {
     const loadMessages = useCallback(async (convId = currentConvId, isManualRefresh = false) => {
         if (!convId) {
             setLoading(false);
+            return;
+        }
+        // Skip background polling if a send/retry is in progress to avoid race conditions causing duplicate messages
+        if (isSendingRef.current && !isManualRefresh) {
             return;
         }
         if (isManualRefresh) setRefreshing(true);
@@ -145,12 +150,15 @@ const ChatScreen = ({ route, navigation }) => {
                 }
             }
         } catch (error) {
-            console.error('Failed to load messages:', error);
+            // Silence background polling blips to avoid noisy error popups during chat navigation
+            if (isManualRefresh) {
+                console.error('Failed to load messages:', error);
+            }
         } finally {
             setLoading(false);
             if (isManualRefresh) setRefreshing(false);
         }
-    }, [currentConvId]);
+    }, [currentConvId, user?.id]);
 
     const markRead = useCallback(async (convId = currentConvId) => {
         if (!convId) return;
@@ -252,6 +260,7 @@ const ChatScreen = ({ route, navigation }) => {
         }, 50);
 
         const effectiveSpaceId = currentSpaceId || targetSpaceId;
+        isSendingRef.current = true;
         try {
             const result = await chatService.sendMessage(effectiveSpaceId, content, currentConvId);
             if (result?.success && result?.data) {
@@ -296,6 +305,8 @@ const ChatScreen = ({ route, navigation }) => {
                         : m
                 )
             );
+        } finally {
+            isSendingRef.current = false;
         }
     };
 
@@ -315,6 +326,7 @@ const ChatScreen = ({ route, navigation }) => {
         );
 
         const effectiveSpaceId = currentSpaceId || targetSpaceId;
+        isSendingRef.current = true;
         try {
             const result = await chatService.sendMessage(effectiveSpaceId, failedMsg.content, currentConvId);
             if (result?.success && result?.data) {
@@ -345,6 +357,8 @@ const ChatScreen = ({ route, navigation }) => {
                         : m
                 )
             );
+        } finally {
+            isSendingRef.current = false;
         }
     };
 

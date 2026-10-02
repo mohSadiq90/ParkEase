@@ -10,6 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { 
     getBookingDetailThunk, cancelBookingThunk, checkInThunk, checkOutThunk, extendBookingThunk,
+    approveExtensionThunk, rejectExtensionThunk,
     requestValetThunk, cancelValetThunk, acknowledgeValetThunk, readyValetThunk, completeValetThunk, assignBayThunk,
     getAccessPassThunk, getGoogleWalletPassThunk, getEvSessionThunk
 } from '../../store/slices/bookingSlice';
@@ -59,6 +60,11 @@ const BookingDetailScreen = ({ navigation, route }) => {
     const [extendHours, setExtendHours] = useState(1);
     const [extending, setExtending] = useState(false);
     const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+
+    // Host / Vendor Extension Review Modal State
+    const [rejectExtensionModalVisible, setRejectExtensionModalVisible] = useState(false);
+    const [rejectExtensionReason, setRejectExtensionReason] = useState('');
+    const [actionExtensionLoading, setActionExtensionLoading] = useState(false);
 
     // Valet Modal State
     const [valetModalVisible, setValetModalVisible] = useState(false);
@@ -173,6 +179,42 @@ const BookingDetailScreen = ({ navigation, route }) => {
             Alert.alert('Extension Failed', res.payload || 'Could not process extension request.');
         }
     };
+
+    const handleApproveExtension = useCallback(() => {
+        Alert.alert('Approve Extension', 'Confirm approval of this time extension?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Approve',
+                onPress: async () => {
+                    setActionExtensionLoading(true);
+                    try {
+                        await dispatch(approveExtensionThunk(bookingId)).unwrap();
+                        dispatch(getBookingDetailThunk(bookingId));
+                        Alert.alert('Extension Approved', 'The time extension has been approved.');
+                    } catch (err) {
+                        Alert.alert('Approval Failed', err || 'Could not approve extension.');
+                    } finally {
+                        setActionExtensionLoading(false);
+                    }
+                },
+            },
+        ]);
+    }, [dispatch, bookingId]);
+
+    const handleRejectExtension = useCallback(async () => {
+        setActionExtensionLoading(true);
+        try {
+            await dispatch(rejectExtensionThunk({ id: bookingId, reason: rejectExtensionReason.trim() || 'Declined by host' })).unwrap();
+            setRejectExtensionModalVisible(false);
+            setRejectExtensionReason('');
+            dispatch(getBookingDetailThunk(bookingId));
+            Alert.alert('Extension Declined', 'The extension request has been declined.');
+        } catch (err) {
+            Alert.alert('Action Failed', err || 'Could not decline extension.');
+        } finally {
+            setActionExtensionLoading(false);
+        }
+    }, [dispatch, bookingId, rejectExtensionReason]);
 
     const openValetModal = () => {
         if (booking?.isValetEnabled === false) {
@@ -395,6 +437,31 @@ const BookingDetailScreen = ({ navigation, route }) => {
                                     </Text>
                                 </View>
                             </View>
+                            {(isVendorUser || isFacilityHost) && (
+                                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+                                    <Button
+                                        title="Approve Extension"
+                                        testID="approve-extension-btn"
+                                        onPress={handleApproveExtension}
+                                        variant="primary"
+                                        loading={actionExtensionLoading}
+                                        style={{ flex: 1 }}
+                                        icon={<Ionicons name="checkmark-circle-outline" size={18} color={colors.white} />}
+                                    />
+                                    <Button
+                                        title="Decline"
+                                        testID="decline-extension-btn"
+                                        onPress={() => {
+                                            setRejectExtensionReason('');
+                                            setRejectExtensionModalVisible(true);
+                                        }}
+                                        variant="danger"
+                                        loading={actionExtensionLoading}
+                                        style={{ flex: 1 }}
+                                        icon={<Ionicons name="close-circle-outline" size={18} color={colors.white} />}
+                                    />
+                                </View>
+                            )}
                         </Card>
                     )}
 
@@ -1097,6 +1164,86 @@ const BookingDetailScreen = ({ navigation, route }) => {
                                     onPress={handleConfirmAssignBay}
                                     variant="primary"
                                     loading={assigningBay}
+                                    style={{ flex: 1 }}
+                                />
+                            </View>
+                        </ScrollView>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Decline Extension Modal */}
+            <Modal
+                visible={rejectExtensionModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setRejectExtensionModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        style={styles.modalBackdrop}
+                        activeOpacity={1}
+                        onPress={() => {
+                            Keyboard.dismiss();
+                            setRejectExtensionModalVisible(false);
+                        }}
+                    />
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Decline Extension</Text>
+                            <TouchableOpacity
+                                testID="close-decline-modal-btn"
+                                onPress={() => {
+                                    Keyboard.dismiss();
+                                    setRejectExtensionModalVisible(false);
+                                }}
+                                style={styles.modalCloseBtn}
+                            >
+                                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                            contentContainerStyle={styles.modalScrollContent}
+                        >
+                            <Text style={styles.modalSubtitle}>
+                                Provide an optional reason why this extension request cannot be accommodated.
+                            </Text>
+
+                            <Input
+                                testID="decline-extension-reason-input"
+                                label="Decline Reason"
+                                placeholder="e.g. Space reserved for upcoming booking"
+                                value={rejectExtensionReason}
+                                onChangeText={setRejectExtensionReason}
+                                multiline
+                                numberOfLines={3}
+                                leftIcon="chatbox-outline"
+                                containerStyle={{ marginBottom: spacing.lg }}
+                            />
+
+                            <View style={styles.modalActions}>
+                                <Button
+                                    title="Cancel"
+                                    onPress={() => {
+                                        Keyboard.dismiss();
+                                        setRejectExtensionModalVisible(false);
+                                    }}
+                                    variant="outline"
+                                    style={{ flex: 1 }}
+                                />
+                                <Button
+                                    title="Confirm Decline"
+                                    testID="confirm-decline-extension-btn"
+                                    onPress={handleRejectExtension}
+                                    variant="danger"
+                                    loading={actionExtensionLoading}
                                     style={{ flex: 1 }}
                                 />
                             </View>

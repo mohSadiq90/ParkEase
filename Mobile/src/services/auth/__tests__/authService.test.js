@@ -39,6 +39,13 @@ jest.mock('../../analytics/posthogService', () => ({
     },
 }));
 
+jest.mock('../../notifications/NotificationService', () => ({
+    __esModule: true,
+    default: {
+        deregisterCurrentDevice: jest.fn().mockResolvedValue(true),
+    },
+}));
+
 jest.mock('../../../utils/logger', () => ({
     info: jest.fn(),
     warn: jest.fn(),
@@ -108,5 +115,27 @@ describe('authService - logout', () => {
         });
 
         await expect(authService.logout()).resolves.toBeUndefined();
+    });
+});
+
+describe('authService - deleteAccount', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        posthogService.resetUser.mockReset();
+    });
+
+    it('deregisters FCM token, tracks analytics, and clears local storage on account deletion', async () => {
+        const NotificationService = require('../../notifications/NotificationService').default;
+        apiClient.delete.mockResolvedValue({ data: { success: true } });
+        storageService.clearAll.mockResolvedValue(undefined);
+
+        const result = await authService.deleteAccount();
+
+        expect(apiClient.delete).toHaveBeenCalledWith(ENDPOINTS.USERS.ME);
+        expect(posthogService.trackEvent).toHaveBeenCalledWith('user_account_deleted');
+        expect(posthogService.resetUser).toHaveBeenCalledTimes(1);
+        expect(NotificationService.deregisterCurrentDevice).toHaveBeenCalled();
+        expect(storageService.clearAll).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ success: true });
     });
 });

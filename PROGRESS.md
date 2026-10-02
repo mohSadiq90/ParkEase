@@ -1,3 +1,22 @@
+### [2026-10-02] - Step 4: Chat Polling Optimization & Host Extension Management (<@U06FVANTNHL>)
+
+- **Step-by-Step Feature Integration from Unmerged Branch (`feature/chat-and-booking-management` commit `cebda93`)**:
+  - *Context:* Executed Step 4 of the incremental merge roadmap, finalizing the remaining chat resilience improvements, host time extension actions, and account lifecycle safeguards without disrupting real-time SignalR websockets, PostHog analytics, or existing navigation layouts.
+  - *Chat Polling Race Condition & Error Silencing (`Mobile/src/screens/Chat/ChatScreen.js`)*:
+    - Added `isSendingRef` guard to pause background REST polling (`loadMessages`) while a message transmission or retry is in-flight, preventing optimistic message collision and duplicate rendering.
+    - Added defensive error suppression for background polling blips (`if (isManualRefresh) console.error(...)`), ensuring transient network dips don't trigger console warnings or LogBox errors during active chat.
+  - *Booking Extension Host Review Controls (`Mobile/src/screens/Booking/BookingDetailScreen.js`)*:
+    - Added host extension review action buttons ("Approve Extension" and "Decline") to the pending extension banner on `BookingDetailScreen` for vendors and facility hosts (`isVendorUser || isFacilityHost`).
+    - Added Decline Extension modal with reason input and confirmation handler calling `rejectExtensionThunk({ id, reason })`.
+    - Fully enforced Rule 7 Keyboard Handling Checklist on the decline modal (`KeyboardAvoidingView`, `keyboardShouldPersistTaps="handled"`, `maxHeight: '90%'`, interactive backdrop dismiss, and accessible modal header).
+  - *Account Deletion Push Token Cleanup (`Mobile/src/services/auth/authService.js`)*:
+    - Added `NotificationService.deregisterCurrentDevice()` to `authService.deleteAccount()` prior to storage clearance to guarantee FCM device token cleanup.
+  - *Automated Unit Test Suites*:
+    - Updated `Mobile/src/screens/Chat/__tests__/ChatScreen.test.js` with background polling error silencing test (12/12 passing).
+    - Updated `Mobile/src/screens/Booking/__tests__/BookingDetailScreen.test.js` with host extension review and decline modal test (11/11 passing).
+    - Updated `Mobile/src/services/auth/__tests__/authService.test.js` with `deleteAccount` push token deregistration assertions (7/7 passing).
+    - Verified 100% test pass rate across targeted test suites (58/58 unit tests passing across Chat, BookingDetail, authService, RemoteConfig, SwipeableRow, chatSlice, and chatHub).
+
 ### [2026-10-02] - Step 3: Firebase Remote Config & In-App Network Logger Integration (<@U06FVANTNHL>)
 
 - **Step-by-Step Feature Integration from Unmerged Branch (`feature/chat-and-booking-management`)**:

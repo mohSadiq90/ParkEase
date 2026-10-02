@@ -277,6 +277,11 @@ export const authService = {
         const response = await apiClient.delete(ENDPOINTS.USERS.ME);
         posthogService.trackEvent('user_account_deleted');
         posthogService.resetUser();
+        try {
+            await NotificationService.deregisterCurrentDevice();
+        } catch (error) {
+            logger.warn(TAG, 'FCM token cleanup failed on deleteAccount', error);
+        }
         await storageService.clearAll();
         return response.data;
     },

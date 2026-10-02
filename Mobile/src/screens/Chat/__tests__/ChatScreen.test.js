@@ -538,4 +538,34 @@ describe('ChatScreen', () => {
       expect(getByText('Welcome to the parking lot!')).toBeTruthy();
     });
   });
+
+  it('silences background polling errors gracefully when connection blips occur', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    chatService.getMessages
+      .mockResolvedValueOnce({
+        success: true,
+        data: [{ id: 'msg-init', senderId: 'user-2', content: 'Initial message', createdAt: new Date().toISOString() }],
+      })
+      .mockRejectedValueOnce(new Error('Transient 503 Service Unavailable'));
+
+    const route = {
+      params: {
+        conversationId: 'conv-blip-test',
+        parkingSpaceId: 'spot-blip',
+        participantName: 'Host Maya',
+      },
+    };
+
+    const { getByText } = renderWithProviders(
+      <ChatScreen navigation={mockNavigation} route={route} />
+    );
+
+    await waitFor(() => {
+      expect(getByText('Initial message')).toBeTruthy();
+    });
+
+    expect(getByText('Initial message')).toBeTruthy();
+    consoleErrorSpy.mockRestore();
+  });
 });

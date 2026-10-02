@@ -490,4 +490,65 @@ describe('BookingDetailScreen', () => {
     );
     expect(handledScroll).toBeTruthy();
   });
+
+  it('renders Approve Extension and Decline buttons for host/vendor and processes decline with reason', async () => {
+    const { fireEvent } = require('../../../utils/test-utils');
+    const mockExtending = {
+      data: {
+        data: {
+          id: 'booking-ext-host-uuid',
+          bookingReference: 'PE-BK-EXT-HOST',
+          parkingSpaceTitle: 'Downtown Reserve Deck',
+          status: 2, // InProgress
+          hasPendingExtension: true,
+          pendingEndDateTime: '2026-08-18T16:00:00Z',
+          totalAmount: 220,
+          startDateTime: '2026-08-18T10:00:00Z',
+          endDateTime: '2026-08-18T14:00:00Z',
+          pricingType: 0,
+          vehicleType: 0,
+        },
+      },
+    };
+
+    apiClient.get.mockResolvedValueOnce(mockExtending);
+    apiClient.post.mockResolvedValueOnce({ data: { success: true, data: { id: 'booking-ext-host-uuid' } } });
+
+    const { findByTestId, findByText, getByTestId } = renderWithProviders(
+      <BookingDetailScreen
+        navigation={mockNavigation}
+        route={{ params: { bookingId: 'booking-ext-host-uuid', isVendor: true } }}
+      />,
+      {
+        preloadedState: {
+          auth: {
+            user: { id: 'host-1', role: 'Vendor' },
+          },
+        },
+      }
+    );
+
+    const approveBtn = await findByTestId('approve-extension-btn');
+    const declineBtn = await findByTestId('decline-extension-btn');
+    expect(approveBtn).toBeTruthy();
+    expect(declineBtn).toBeTruthy();
+
+    // Open decline modal
+    fireEvent.press(declineBtn);
+
+    const reasonInput = await findByTestId('decline-extension-reason-input');
+    expect(reasonInput).toBeTruthy();
+    fireEvent.changeText(reasonInput, 'Space reserved for next incoming booking');
+
+    const confirmDeclineBtn = getByTestId('confirm-decline-extension-btn');
+    fireEvent.press(confirmDeclineBtn);
+
+    const { waitFor } = require('@testing-library/react-native');
+    await waitFor(() => {
+      expect(apiClient.post).toHaveBeenCalledWith(
+        expect.stringContaining('/reject-extension'),
+        { reason: 'Space reserved for next incoming booking' }
+      );
+    });
+  });
 });
