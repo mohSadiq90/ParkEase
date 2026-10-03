@@ -1,3 +1,16 @@
+### [2026-10-03] - Revert API Base URL to MonsterASP & Trigger Release Build (<@U06FVANTNHL>)
+
+- **API Base URL Rollback**:
+  - *Context:* Google Cloud Run backend (`https://parkease-api-220869925972.asia-south1.run.app`) exceeded cloud usage limits and began returning HTTP 500 errors.
+  - *Configuration Update:* Reverted `API_BASE` in `Mobile/src/config/environment.js` back to the stable MonsterASP API endpoint: `https://parkeaseapp.runasp.net`.
+  - *Endpoint Verification:* Verified `https://parkeaseapp.runasp.net/api/parking/search` returns HTTP 200 OK with live database listings.
+- **Key Files Modified**:
+  - `Mobile/src/config/environment.js`
+  - `PROGRESS.md`
+- **Current Status & CI/CD Deployment**:
+  - JavaScript syntax validated via Node.js (`node -c`).
+  - Committed and pushed to `origin/main` to trigger the `Build and Distribute ParkEase Mobile` GitHub Actions workflow (Release APK compilation & Firebase App Distribution distribution to QA).
+
 ### [2026-10-02] - Step 4: Chat Polling Optimization & Host Extension Management (<@U06FVANTNHL>)
 
 - **Step-by-Step Feature Integration from Unmerged Branch (`feature/chat-and-booking-management` commit `cebda93`)**:
