@@ -1,3 +1,19 @@
+### [2026-10-06] - Migrate API Base URL to Fyro Cloud (`pe.fyro.cloud`) & Trigger Release Build (<@U06FVANTNHL>)
+
+- **API Base URL Migration**:
+  - *Context:* Received Slack implementation request to update ParkEase mobile application backend base URL to `https://pe.fyro.cloud`.
+  - *Configuration Update:* Updated `API_BASE` in `Mobile/src/config/environment.js` to `https://pe.fyro.cloud` (`apiUrl`, `uploadUrl`, and `hubsUrl` all routed through `pe.fyro.cloud`).
+  - *Endpoint Verification:* Verified live endpoint responses on `https://pe.fyro.cloud`:
+    - `/api/parking/search` returns HTTP 200 OK with active database listing responses.
+    - `/hubs/chat` returns HTTP 401 Bearer challenge indicating live SignalR hub endpoint.
+- **Key Files Modified**:
+  - `Mobile/src/config/environment.js`
+  - `PROGRESS.md`
+- **Current Status & CI/CD Deployment**:
+  - Verified JavaScript configuration syntax and runtime configuration via Node.js (`node -c`).
+  - Unit test baseline confirmed passing (65 test suites, 446 unit tests passing).
+  - Committed and pushed to `origin/main` to trigger GitHub Actions CI/CD workflow (`Build and Distribute ParkEase Mobile`) compiling Android Release APK and distributing to Firebase App Distribution QA tester group.
+
 ### [2026-10-03] - Revert API Base URL to MonsterASP & Trigger Release Build (<@U06FVANTNHL>)
 
 - **API Base URL Rollback**:

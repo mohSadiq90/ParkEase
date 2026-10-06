@@ -2,7 +2,7 @@
  * Environment Configuration
  */
 
-const API_BASE = 'https://parkeaseapp.runasp.net';
+const API_BASE = 'https://pe.fyro.cloud';
 
 export const environment = {
   isDevelopment: __DEV__,
